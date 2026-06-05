@@ -1,7 +1,4 @@
-import { readFile } from "node:fs/promises";
-import path from "node:path";
-
-import { EXPORTS_ROOT } from "@/lib/server-storage";
+import { readExport } from "@/lib/server-storage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,13 +12,16 @@ export async function GET(request: Request, context: RouteContext<"/api/exports/
   }
 
   try {
-    const filePath = path.join(EXPORTS_ROOT, day, `${id}.mp4`);
-    const file = await readFile(filePath);
+    const exportFile = await readExport(day, id);
 
-    return new Response(file, {
+    if (!exportFile) {
+      return Response.json({ error: "Export file was not found." }, { status: 404 });
+    }
+
+    return new Response(exportFile.body, {
       headers: {
         "Content-Disposition": `attachment; filename="stillora-${id}.mp4"`,
-        "Content-Type": "video/mp4",
+        "Content-Type": exportFile.contentType,
       },
     });
   } catch {

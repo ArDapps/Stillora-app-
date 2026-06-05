@@ -26,6 +26,7 @@ import {
   DEFAULT_DURATION_SECONDS,
   FitMode,
   FIXED_DURATION_SECONDS,
+  createUploadStoragePath,
   getFileExtension,
   getPreviewAspectRatio,
   MEDIA_ACCEPT,
@@ -41,6 +42,7 @@ import {
   VIDEO_MIME_TYPES,
   formatBytes,
 } from "@/lib/stillora";
+import { upload as uploadBlob } from "@vercel/blob/client";
 
 type SourceAsset = {
   kind: SourceMediaKind;
@@ -1165,6 +1167,12 @@ async function uploadSelectedFile(
 }
 
 async function uploadFile(endpoint: string, file: File) {
+  const blobUpload = await tryUploadToBlob(endpoint, file);
+
+  if (blobUpload) {
+    return blobUpload;
+  }
+
   const formData = new FormData();
   formData.append("file", file);
 
@@ -1183,6 +1191,61 @@ async function uploadFile(endpoint: string, file: File) {
   }
 
   return payload.upload;
+}
+
+async function tryUploadToBlob(endpoint: string, file: File): Promise<StoredUpload | null> {
+  const folder = getUploadFolder(endpoint);
+
+  if (!folder) {
+    return null;
+  }
+
+  const id = crypto.randomUUID();
+  const { relativePath, storedName } = createUploadStoragePath({
+    id,
+    filename: file.name,
+    mimeType: file.type,
+    folder,
+  });
+
+  try {
+    const blob = await uploadBlob(relativePath, file, {
+      access: "public",
+      handleUploadUrl: "/api/uploads/client",
+      contentType: file.type,
+      multipart: file.size > 4 * 1024 * 1024,
+    });
+
+    return {
+      id,
+      originalName: file.name,
+      storedName,
+      relativePath: blob.pathname,
+      size: file.size,
+      mimeType: file.type,
+      url: blob.url,
+      downloadUrl: blob.downloadUrl,
+      storage: "blob",
+    };
+  } catch {
+    return null;
+  }
+}
+
+function getUploadFolder(endpoint: string) {
+  if (endpoint.endsWith("/image")) {
+    return "images";
+  }
+
+  if (endpoint.endsWith("/video")) {
+    return "videos";
+  }
+
+  if (endpoint.endsWith("/audio")) {
+    return "audio";
+  }
+
+  return null;
 }
 
 function getAudioFitDuration(duration: number) {

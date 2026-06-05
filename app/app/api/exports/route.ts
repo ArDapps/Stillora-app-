@@ -1,4 +1,3 @@
-import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { spawn } from "node:child_process";
 
@@ -12,8 +11,10 @@ import {
   SourceMediaKind,
 } from "@/lib/stillora";
 import {
-  EXPORTS_ROOT,
-  getStoragePath,
+  createExportOutputPath,
+  getExportStoragePath,
+  materializeStoredFile,
+  saveExport,
 } from "@/lib/server-storage";
 import { getUserFromRequest } from "@/lib/auth";
 
@@ -82,13 +83,13 @@ export async function POST(request: Request) {
       return Response.json({ error: "Invalid source media type." }, { status: 400 });
     }
 
-    const audioPath = body.audioPath ? getStoragePath(body.audioPath) : null;
     const exportId = crypto.randomUUID();
     const day = new Date().toISOString().slice(0, 10);
-    const outputDir = path.join(EXPORTS_ROOT, day);
-    const outputPath = path.join(outputDir, `${exportId}.mp4`);
-
-    await mkdir(outputDir, { recursive: true });
+    const workDir = path.join("/tmp", "stillora-work", exportId);
+    const audioPath = body.audioPath
+      ? await materializeStoredFile(body.audioPath, workDir)
+      : null;
+    const outputPath = await createExportOutputPath(day, exportId);
 
     const width = evenDimension(preset.width ?? body.imageWidth);
     const height = evenDimension(preset.height ?? body.imageHeight);
@@ -96,9 +97,14 @@ export async function POST(request: Request) {
     if (body.slides?.length) {
       const slides = body.slides.map((slide) => ({
         ...slide,
-        absolutePath: getStoragePath(slide.path),
         duration: normalizeSlideDuration(slide.duration),
       }));
+      const materializedSlides = await Promise.all(
+        slides.map(async (slide) => ({
+          ...slide,
+          absolutePath: await materializeStoredFile(slide.path, workDir),
+        })),
+      );
       const totalDuration = slides.reduce((sum, slide) => sum + slide.duration, 0);
 
       if (totalDuration > MAX_VIDEO_DURATION_SECONDS) {
@@ -111,7 +117,7 @@ export async function POST(request: Request) {
       await runFfmpeg(
         ffmpegBinary,
         buildSlideshowArgs({
-          slides,
+          slides: materializedSlides,
           audioPath,
           width,
           height,
@@ -121,7 +127,10 @@ export async function POST(request: Request) {
         }),
       );
     } else {
-      const sourcePath = getStoragePath(body.sourcePath ?? body.imagePath ?? "");
+      const sourcePath = await materializeStoredFile(
+        body.sourcePath ?? body.imagePath ?? "",
+        workDir,
+      );
       const videoFilter = buildVideoFilter(width, height, body.fitMode);
       const args = ["-y"];
 
@@ -163,12 +172,16 @@ export async function POST(request: Request) {
       await runFfmpeg(ffmpegBinary, args);
     }
 
+    const blobPath = getExportStoragePath(day, exportId);
+    const storedExport = await saveExport(outputPath, blobPath);
+
     return Response.json(
       {
         export: {
           id: exportId,
           filename: `stillora-${exportId}.mp4`,
-          downloadUrl: `/api/exports/${exportId}/download?day=${day}`,
+          downloadUrl:
+            storedExport?.downloadUrl ?? `/api/exports/${exportId}/download?day=${day}`,
         },
       },
       { status: 201 },
