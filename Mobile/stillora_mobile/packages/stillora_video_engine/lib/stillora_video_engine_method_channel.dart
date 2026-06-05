@@ -24,6 +24,7 @@ class MethodChannelStilloraVideoEngine extends StilloraVideoEnginePlatform {
   @override
   Future<ExportResult> exportVideo({
     required String imagePath,
+    List<String> mediaPaths = const [],
     List<String> imagePaths = const [],
     String? audioPath,
     required int durationSeconds,
@@ -32,17 +33,20 @@ class MethodChannelStilloraVideoEngine extends StilloraVideoEnginePlatform {
     ResizeMode resizeMode = ResizeMode.fit,
     VideoEffect effect = VideoEffect.none,
   }) async {
-    final result = await methodChannel
-        .invokeMapMethod<Object?, Object?>('exportVideo', {
-          'imagePath': imagePath,
-          'imagePaths': imagePaths.isEmpty ? [imagePath] : imagePaths,
-          'audioPath': audioPath,
-          'durationSeconds': durationSeconds,
-          'width': width,
-          'height': height,
-          'resizeMode': resizeMode.name,
-          'effect': effect.name,
-        });
+    final result = await methodChannel.invokeMapMethod<Object?, Object?>(
+      'exportVideo',
+      {
+        'imagePath': imagePath,
+        'mediaPaths': mediaPaths.isEmpty ? [imagePath] : mediaPaths,
+        'imagePaths': imagePaths.isEmpty ? [imagePath] : imagePaths,
+        'audioPath': audioPath,
+        'durationSeconds': durationSeconds,
+        'width': width,
+        'height': height,
+        'resizeMode': resizeMode.name,
+        'effect': effect.name,
+      },
+    );
 
     if (result == null) {
       throw PlatformException(

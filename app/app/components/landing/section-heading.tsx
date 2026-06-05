@@ -2,16 +2,19 @@ export function SectionHeading({
   title,
   description,
   centered = false,
+  eyebrow,
 }: {
   title: string;
   description?: string;
   centered?: boolean;
+  eyebrow?: string;
 }) {
   return (
-    <div className={centered ? "mx-auto max-w-2xl text-center" : "max-w-2xl"}>
-      <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">{title}</h2>
+    <div className={centered ? "mx-auto max-w-3xl text-center" : "max-w-3xl"}>
+      {eyebrow ? <span className="landing-kicker">{eyebrow}</span> : null}
+      <h2 className="mt-4 text-4xl font-black leading-tight sm:text-5xl">{title}</h2>
       {description ? (
-        <p className="mt-4 text-lg leading-relaxed text-[var(--color-muted)]">{description}</p>
+        <p className="mt-4 text-lg leading-8 text-[var(--color-muted)]">{description}</p>
       ) : null}
     </div>
   );

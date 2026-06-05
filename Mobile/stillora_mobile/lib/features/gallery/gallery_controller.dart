@@ -21,20 +21,28 @@ class GalleryController extends AsyncNotifier<List<LocalExportRecord>> {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getStringList(_storageKey) ?? const [];
     final records = <LocalExportRecord>[];
+    var prunedMissingFiles = false;
     for (final entry in raw) {
       try {
         final record = LocalExportRecord.fromJson(
           jsonDecode(entry) as Map<String, dynamic>,
         );
-        // Drop records whose underlying file has been removed.
+        // The library stores local paths only. If the file was removed outside
+        // Stillora, drop that stale record and write the cleaned list back.
         if (File(record.outputPath).existsSync()) {
           records.add(record);
+        } else {
+          prunedMissingFiles = true;
         }
       } catch (_) {
+        prunedMissingFiles = true;
         // Skip malformed entries.
       }
     }
     records.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    if (prunedMissingFiles) {
+      await _persist(records);
+    }
     return records;
   }
 
@@ -47,7 +55,11 @@ class GalleryController extends AsyncNotifier<List<LocalExportRecord>> {
 
   Future<void> addRecord(LocalExportRecord record) async {
     final current = state.value ?? await _load();
-    final next = [record, ...current];
+    final next = [
+      record,
+      for (final item in current)
+        if (item.outputPath != record.outputPath && item.id != record.id) item,
+    ];
     state = AsyncData(next);
     await _persist(next);
   }
@@ -66,11 +78,18 @@ class GalleryController extends AsyncNotifier<List<LocalExportRecord>> {
     state = AsyncData(next);
     if (removed != null) {
       try {
-        File(removed.outputPath).deleteSync();
+        final file = File(removed.outputPath);
+        if (file.existsSync()) {
+          file.deleteSync();
+        }
       } catch (_) {
         // Ignore filesystem errors when deleting.
       }
     }
     await _persist(next);
+  }
+
+  Future<void> refresh() async {
+    state = AsyncData(await _load());
   }
 }

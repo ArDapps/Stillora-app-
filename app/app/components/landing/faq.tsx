@@ -10,9 +10,9 @@ export function Faq() {
   const baseId = useId();
 
   return (
-    <section id="faq" className="border-t border-[var(--color-border)] scroll-mt-20">
+    <section id="faq" className="landing-section scroll-mt-24">
       <div className="mx-auto w-full max-w-3xl px-5 py-20">
-        <SectionHeading title="Frequently asked questions" centered />
+        <SectionHeading title="Frequently asked questions" eyebrow="Details" centered />
         <ul className="mt-12 space-y-3">
           {FAQ_ITEMS.map((item, index) => {
             const isOpen = open === index;
@@ -21,7 +21,7 @@ export function Faq() {
             return (
               <li
                 key={item.question}
-                className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card)]"
+                className="landing-card overflow-hidden rounded-lg"
               >
                 <h3>
                   <button

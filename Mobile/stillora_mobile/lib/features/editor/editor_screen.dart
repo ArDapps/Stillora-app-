@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/auth/auth_controller.dart';
@@ -14,6 +15,15 @@ import '../auth/login_screen.dart';
 import '../export/export_progress_screen.dart';
 import 'editor_state.dart';
 import 'video_preset.dart';
+
+const _standardAudioExtensions = ['mp3', 'm4a', 'aac', 'wav'];
+const _androidAudioExtensions = ['m4a', 'aac'];
+
+List<String> get _supportedAudioExtensions =>
+    Platform.isAndroid ? _androidAudioExtensions : _standardAudioExtensions;
+
+String get _supportedAudioLabel =>
+    Platform.isAndroid ? 'M4A or AAC' : 'MP3, M4A, AAC, or WAV';
 
 class EditorScreen extends ConsumerWidget {
   const EditorScreen({super.key});
@@ -35,11 +45,11 @@ class EditorView extends ConsumerWidget {
   Future<void> _pickAudio(WidgetRef ref) async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: const ['mp3', 'm4a', 'aac', 'wav'],
+      allowedExtensions: _supportedAudioExtensions,
     );
     final path = result?.files.single.path;
     if (path != null) {
-      ref.read(editorControllerProvider.notifier).setAudioPath(path);
+      await ref.read(editorControllerProvider.notifier).setAudioPath(path);
     }
   }
 
@@ -70,11 +80,7 @@ class EditorView extends ConsumerWidget {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            Color(0xff0c0718),
-            Color(0xff060611),
-            Color(0xff030309),
-          ],
+          colors: [Color(0xff0c0718), Color(0xff060611), Color(0xff030309)],
           stops: [0.0, 0.5, 1.0],
         ),
       ),
@@ -88,34 +94,34 @@ class EditorView extends ConsumerWidget {
             StilloraSpacing.lg,
           ),
           children: [
-          const _StudioHeader(),
-          const SizedBox(height: StilloraSpacing.lg),
-          const _ProgressRail(),
-          const SizedBox(height: StilloraSpacing.lg),
-          _SourceMediaCard(editor: editor, controller: controller),
-          const SizedBox(height: StilloraSpacing.sm),
-          _SoundscapeCard(
-            editor: editor,
-            onPickAudio: () => _pickAudio(ref),
-            onRemoveAudio: controller.removeAudio,
-          ),
-          const SizedBox(height: StilloraSpacing.sm),
-          _PresetCard(editor: editor, controller: controller),
-          const SizedBox(height: StilloraSpacing.sm),
-          _PrivacyCard(isSignedIn: session != null),
-          const SizedBox(height: StilloraSpacing.sm),
-          _PreviewCard(editor: editor),
-          const SizedBox(height: StilloraSpacing.sm),
-          StilloraPrimaryButton(
-            onPressed: editor.canExport
-                ? () => _convert(context, ref, editor)
-                : null,
-            icon: session == null
-                ? Icons.lock_rounded
-                : Icons.auto_fix_high_rounded,
-            label: session == null ? 'Register to Convert' : 'Convert to MP4',
-          ),
-        ],
+            const _StudioHeader(),
+            const SizedBox(height: StilloraSpacing.lg),
+            const _ProgressRail(),
+            const SizedBox(height: StilloraSpacing.lg),
+            _SourceMediaCard(editor: editor, controller: controller),
+            const SizedBox(height: StilloraSpacing.sm),
+            _SoundscapeCard(
+              editor: editor,
+              onPickAudio: () => _pickAudio(ref),
+              onRemoveAudio: controller.removeAudio,
+            ),
+            const SizedBox(height: StilloraSpacing.sm),
+            _PresetCard(editor: editor, controller: controller),
+            const SizedBox(height: StilloraSpacing.sm),
+            _PrivacyCard(isSignedIn: session != null),
+            const SizedBox(height: StilloraSpacing.sm),
+            _PreviewCard(editor: editor),
+            const SizedBox(height: StilloraSpacing.sm),
+            StilloraPrimaryButton(
+              onPressed: editor.canExport
+                  ? () => _convert(context, ref, editor)
+                  : null,
+              icon: session == null
+                  ? Icons.lock_rounded
+                  : Icons.auto_fix_high_rounded,
+              label: session == null ? 'Register to Convert' : 'Convert to MP4',
+            ),
+          ],
         ),
       ),
     );
@@ -295,21 +301,24 @@ class _PreviewCard extends StatelessWidget {
           ),
           const SizedBox(height: StilloraSpacing.sm),
           Center(
-            child: AspectRatio(
-              aspectRatio: _aspectRatio,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: StilloraColors.surfaceContainerLowest,
-                  borderRadius: BorderRadius.circular(StilloraRadius.full),
-                  border: Border.all(
-                    color: StilloraColors.primary.withValues(alpha: 0.5),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 320, maxWidth: 420),
+              child: AspectRatio(
+                aspectRatio: _aspectRatio,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: StilloraColors.surfaceContainerLowest,
+                    borderRadius: BorderRadius.circular(StilloraRadius.full),
+                    border: Border.all(
+                      color: StilloraColors.primary.withValues(alpha: 0.5),
+                    ),
                   ),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(StilloraRadius.full),
-                  child: _PreviewMedia(
-                    media: media,
-                    resizeMode: editor.resizeMode,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(StilloraRadius.full),
+                    child: _PreviewMedia(
+                      media: media,
+                      resizeMode: editor.resizeMode,
+                    ),
                   ),
                 ),
               ),
@@ -410,10 +419,10 @@ class _SourceMediaCard extends StatelessWidget {
           if (!editor.hasMedia)
             _MediaDropZone(onTap: controller.pickMedia)
           else ...[
-            _MediaGrid(editor: editor, controller: controller),
+            _MediaTimeline(editor: editor, controller: controller),
             const SizedBox(height: StilloraSpacing.sm),
             Text(
-              'Selected ${editor.media.length} item${editor.media.length == 1 ? '' : 's'}. The highlighted one is exported.',
+              _mediaSummary(editor),
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: StilloraColors.onSurfaceVariant,
               ),
@@ -442,6 +451,24 @@ class _SourceMediaCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _mediaSummary(EditorState editor) {
+    final totalCount = editor.media.length;
+    final totalDuration = _formatDuration(editor.durationSeconds);
+    final segmentDuration = totalCount == 0
+        ? '0s'
+        : _formatSegmentDuration(editor.durationSeconds / totalCount);
+    if (editor.exportsMixedTimeline) {
+      return '$totalCount assets · final $totalDuration · about $segmentDuration each. Drag to reorder.';
+    }
+    if (editor.exportsImageSlideshow && totalCount > 1) {
+      return '$totalCount images · final $totalDuration · about $segmentDuration each. Drag to reorder.';
+    }
+    if (editor.exportsVideoSource) {
+      return 'Selected video exports as a $totalDuration MP4.';
+    }
+    return 'Selected $totalCount item${totalCount == 1 ? '' : 's'} · final $totalDuration.';
   }
 }
 
@@ -487,7 +514,7 @@ class _MediaDropZone extends StatelessWidget {
                   ),
                   const SizedBox(height: StilloraSpacing.xs),
                   Text(
-                    'Select multiple — images, videos, or a mix.',
+                    'Select photos and videos, then drag to reorder.',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: StilloraColors.onSurfaceVariant,
@@ -503,45 +530,102 @@ class _MediaDropZone extends StatelessWidget {
   }
 }
 
-class _MediaGrid extends StatelessWidget {
-  const _MediaGrid({required this.editor, required this.controller});
+class _MediaTimeline extends StatelessWidget {
+  const _MediaTimeline({required this.editor, required this.controller});
 
   final EditorState editor;
   final EditorController controller;
 
   @override
   Widget build(BuildContext context) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        mainAxisSpacing: StilloraSpacing.xs,
-        crossAxisSpacing: StilloraSpacing.xs,
+    final segmentDuration = editor.media.isEmpty
+        ? '0s'
+        : _formatSegmentDuration(editor.durationSeconds / editor.media.length);
+
+    return SizedBox(
+      height: 124,
+      child: ReorderableListView.builder(
+        scrollDirection: Axis.horizontal,
+        buildDefaultDragHandles: false,
+        proxyDecorator: (child, _, animation) {
+          return AnimatedBuilder(
+            animation: animation,
+            builder: (context, child) {
+              return Transform.scale(
+                scale: 1 + animation.value * 0.04,
+                child: Material(color: Colors.transparent, child: child),
+              );
+            },
+            child: child,
+          );
+        },
+        onReorder: controller.reorderMedia,
+        itemCount: editor.media.length,
+        itemBuilder: (context, index) {
+          final item = editor.media[index];
+          return Padding(
+            key: ValueKey(item.path),
+            padding: const EdgeInsets.only(right: StilloraSpacing.xs),
+            child: SizedBox(
+              width: 96,
+              child: _MediaThumb(
+                index: index,
+                item: item,
+                durationLabel: segmentDuration,
+                selected: index == editor.selectedIndex,
+                onTap: () => controller.selectMedia(index),
+                onRemove: () => controller.removeMediaAt(index),
+              ),
+            ),
+          );
+        },
       ),
-      itemCount: editor.media.length,
-      itemBuilder: (context, index) {
-        final item = editor.media[index];
-        return _MediaThumb(
-          item: item,
-          selected: index == editor.selectedIndex,
-          onTap: () => controller.selectMedia(index),
-          onRemove: () => controller.removeMediaAt(index),
-        );
-      },
+    );
+  }
+}
+
+class _TimelineBadge extends StatelessWidget {
+  const _TimelineBadge({required this.index});
+
+  final int index;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: stilloraBrandGradient,
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
+      ),
+      child: SizedBox.square(
+        dimension: 22,
+        child: Center(
+          child: Text(
+            '${index + 1}',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
 
 class _MediaThumb extends StatelessWidget {
   const _MediaThumb({
+    required this.index,
     required this.item,
+    required this.durationLabel,
     required this.selected,
     required this.onTap,
     required this.onRemove,
   });
 
+  final int index;
   final MediaItem item;
+  final String durationLabel;
   final bool selected;
   final VoidCallback onTap;
   final VoidCallback onRemove;
@@ -549,78 +633,150 @@ class _MediaThumb extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final radius = BorderRadius.circular(StilloraRadius.full);
-    return Stack(
-      fit: StackFit.expand,
+    final durationForeground = selected
+        ? Colors.white
+        : StilloraColors.onSurfaceVariant;
+
+    return Column(
       children: [
-        GestureDetector(
-          onTap: onTap,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: radius,
-              border: Border.all(
-                color: selected
-                    ? StilloraColors.primary
-                    : StilloraColors.outlineVariant,
-                width: selected ? 2 : 1,
-              ),
-            ),
-            child: ClipRRect(
-              borderRadius: radius,
-              child: item.kind == MediaKind.image
-                  ? Image.file(File(item.path), fit: BoxFit.cover)
-                  : ColoredBox(
-                      color: StilloraColors.surfaceContainerLowest,
-                      child: const Center(
-                        child: Icon(
-                          Icons.play_circle_outline_rounded,
-                          color: StilloraColors.primary,
-                          size: 32,
-                        ),
-                      ),
+        Expanded(
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              GestureDetector(
+                onTap: onTap,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: radius,
+                    border: Border.all(
+                      color: selected
+                          ? StilloraColors.primary
+                          : StilloraColors.outlineVariant,
+                      width: selected ? 2 : 1,
                     ),
-            ),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: radius,
+                    child: item.kind == MediaKind.image
+                        ? Image.file(File(item.path), fit: BoxFit.cover)
+                        : ColoredBox(
+                            color: StilloraColors.surfaceContainerLowest,
+                            child: const Center(
+                              child: Icon(
+                                Icons.play_circle_outline_rounded,
+                                color: StilloraColors.primary,
+                                size: 32,
+                              ),
+                            ),
+                          ),
+                  ),
+                ),
+              ),
+              if (item.kind == MediaKind.video)
+                const Positioned(
+                  right: 4,
+                  bottom: 4,
+                  child: Icon(
+                    Icons.videocam_rounded,
+                    size: 16,
+                    color: StilloraColors.onSurface,
+                  ),
+                ),
+              Positioned(
+                left: 4,
+                bottom: 4,
+                child: _TimelineBadge(index: index),
+              ),
+              Positioned(
+                right: 4,
+                top: 30,
+                child: ReorderableDragStartListener(
+                  index: index,
+                  child: Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      color: StilloraColors.surfaceContainerLowest.withValues(
+                        alpha: 0.75,
+                      ),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.drag_indicator_rounded,
+                      size: 16,
+                      color: StilloraColors.onSurface,
+                    ),
+                  ),
+                ),
+              ),
+              if (selected)
+                const Positioned(
+                  left: 4,
+                  top: 4,
+                  child: Icon(
+                    Icons.check_circle_rounded,
+                    size: 18,
+                    color: StilloraColors.primary,
+                  ),
+                ),
+              Positioned(
+                right: 0,
+                top: 0,
+                child: GestureDetector(
+                  onTap: onRemove,
+                  child: Container(
+                    margin: const EdgeInsets.all(2),
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: StilloraColors.surfaceContainerLowest.withValues(
+                        alpha: 0.7,
+                      ),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.close_rounded,
+                      size: 16,
+                      color: StilloraColors.onSurface,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
-        if (item.kind == MediaKind.video)
-          const Positioned(
-            left: 4,
-            bottom: 4,
-            child: Icon(
-              Icons.videocam_rounded,
-              size: 16,
-              color: StilloraColors.onSurface,
+        const SizedBox(height: 4),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          decoration: BoxDecoration(
+            gradient: selected ? stilloraBrandGradient : null,
+            color: selected
+                ? null
+                : StilloraColors.surfaceContainerLowest.withValues(alpha: 0.8),
+            borderRadius: BorderRadius.circular(StilloraRadius.full),
+            border: Border.all(
+              color: selected
+                  ? Colors.white.withValues(alpha: 0.24)
+                  : StilloraColors.glassStroke,
             ),
           ),
-        if (selected)
-          const Positioned(
-            left: 4,
-            top: 4,
-            child: Icon(
-              Icons.check_circle_rounded,
-              size: 18,
-              color: StilloraColors.primary,
-            ),
-          ),
-        Positioned(
-          right: 0,
-          top: 0,
-          child: GestureDetector(
-            onTap: onRemove,
-            child: Container(
-              margin: const EdgeInsets.all(2),
-              padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                color: StilloraColors.surfaceContainerLowest.withValues(
-                  alpha: 0.7,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.timer_outlined, size: 13, color: durationForeground),
+              const SizedBox(width: 3),
+              Flexible(
+                child: Text(
+                  durationLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: durationForeground,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-                shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.close_rounded,
-                size: 16,
-                color: StilloraColors.onSurface,
-              ),
-            ),
+            ],
           ),
         ),
       ],
@@ -641,6 +797,16 @@ class _SoundscapeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final String audioDetail;
+    if (editor.audioPath == null) {
+      audioDetail = _supportedAudioLabel;
+    } else if (editor.audioDurationSeconds == null) {
+      audioDetail = editor.audioPath!;
+    } else {
+      audioDetail =
+          '${_formatDuration(editor.audioDurationSeconds!)} · ${editor.audioPath!}';
+    }
+
     return StilloraGlassCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -685,7 +851,7 @@ class _SoundscapeCard extends StatelessWidget {
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                         Text(
-                          editor.audioPath ?? 'MP3, M4A, AAC, or WAV',
+                          audioDetail,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.bodyMedium
@@ -805,18 +971,189 @@ class _PresetCard extends StatelessWidget {
           const SizedBox(height: StilloraSpacing.sm),
           Text('Duration', style: Theme.of(context).textTheme.labelMedium),
           const SizedBox(height: StilloraSpacing.xs),
-          SegmentedButton<int>(
-            segments: const [
-              ButtonSegment(value: 10, label: Text('10s')),
-              ButtonSegment(value: 30, label: Text('30s')),
+          Wrap(
+            spacing: StilloraSpacing.xs,
+            runSpacing: StilloraSpacing.xs,
+            children: [
+              _DurationChip(
+                label: '10s',
+                selected: editor.durationSeconds == 10,
+                onSelected: () => controller.setDuration(10),
+              ),
+              _DurationChip(
+                label: '30s',
+                selected: editor.durationSeconds == 30,
+                onSelected: () => controller.setDuration(30),
+              ),
+              if (editor.audioDurationSeconds != null)
+                _DurationChip(
+                  label:
+                      'Use audio ${_formatDuration(editor.audioDurationSeconds!)}',
+                  selected:
+                      editor.durationSeconds == editor.audioDurationSeconds,
+                  onSelected: () =>
+                      controller.setDuration(editor.audioDurationSeconds!),
+                ),
             ],
-            selected: {editor.durationSeconds},
-            onSelectionChanged: (value) => controller.setDuration(value.first),
+          ),
+          const SizedBox(height: StilloraSpacing.xs),
+          Slider(
+            value: editor.durationSeconds.toDouble(),
+            min: minDurationSeconds.toDouble(),
+            max: maxDurationSeconds.toDouble(),
+            divisions: maxDurationSeconds - minDurationSeconds,
+            label: _formatDuration(editor.durationSeconds),
+            onChanged: (value) => controller.setDuration(value.round()),
+          ),
+          Row(
+            children: [
+              IconButton.filledTonal(
+                tooltip: 'Shorter',
+                onPressed: () =>
+                    controller.setDuration(editor.durationSeconds - 1),
+                icon: const Icon(Icons.remove_rounded),
+              ),
+              const SizedBox(width: StilloraSpacing.xs),
+              Expanded(
+                child: TextFormField(
+                  key: ValueKey('duration-${editor.durationSeconds}'),
+                  initialValue: editor.durationSeconds.toString(),
+                  textAlign: TextAlign.center,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    suffixText: 's',
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
+                  ),
+                  onFieldSubmitted: (value) {
+                    final seconds = int.tryParse(value);
+                    if (seconds != null) {
+                      controller.setDuration(seconds);
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(width: StilloraSpacing.xs),
+              IconButton.filledTonal(
+                tooltip: 'Longer',
+                onPressed: () =>
+                    controller.setDuration(editor.durationSeconds + 1),
+                icon: const Icon(Icons.add_rounded),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
+}
+
+class _DurationChip extends StatelessWidget {
+  const _DurationChip({
+    required this.label,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(StilloraRadius.full);
+    final textStyle = Theme.of(context).textTheme.labelLarge?.copyWith(
+      color: selected ? Colors.white : StilloraColors.onSurfaceVariant,
+      fontWeight: FontWeight.w800,
+    );
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onSelected,
+        borderRadius: radius,
+        child: Ink(
+          decoration: BoxDecoration(
+            gradient: selected ? stilloraBrandGradient : null,
+            color: selected ? null : StilloraColors.surfaceContainerLow,
+            borderRadius: radius,
+            border: Border.all(
+              color: selected
+                  ? Colors.white.withValues(alpha: 0.28)
+                  : StilloraColors.outlineVariant,
+            ),
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: const Color(0xff8b5cf6).withValues(alpha: 0.42),
+                      blurRadius: 14,
+                      offset: const Offset(0, 6),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 140),
+                  child: selected
+                      ? const Icon(
+                          Icons.check_circle_rounded,
+                          key: ValueKey('selected'),
+                          color: Colors.white,
+                          size: 18,
+                        )
+                      : Icon(
+                          Icons.radio_button_unchecked_rounded,
+                          key: const ValueKey('unselected'),
+                          color: StilloraColors.onSurfaceVariant.withValues(
+                            alpha: 0.78,
+                          ),
+                          size: 18,
+                        ),
+                ),
+                const SizedBox(width: 7),
+                Text(label, style: textStyle),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+String _formatDuration(int seconds) {
+  final minutes = seconds ~/ 60;
+  final remainder = seconds % 60;
+  if (minutes == 0) {
+    return '${seconds}s';
+  }
+  return '$minutes:${remainder.toString().padLeft(2, '0')}';
+}
+
+String _formatSegmentDuration(double seconds) {
+  if (seconds <= 0) {
+    return '0s';
+  }
+  if (seconds < 60) {
+    final rounded = (seconds * 10).round() / 10;
+    if (rounded == rounded.truncateToDouble()) {
+      return '${rounded.toInt()}s';
+    }
+    return '${rounded.toStringAsFixed(1)}s';
+  }
+  final roundedSeconds = seconds.round();
+  final minutes = roundedSeconds ~/ 60;
+  final remainder = roundedSeconds % 60;
+  return '$minutes:${remainder.toString().padLeft(2, '0')}';
 }
 
 class _PrivacyCard extends StatelessWidget {
@@ -837,7 +1174,7 @@ class _PrivacyCard extends StatelessWidget {
           Expanded(
             child: Text(
               isSignedIn
-                  ? 'Ready to convert locally. Media files stay on your phone.'
+                  ? 'Ready to convert. Media files stay on your phone.'
                   : 'Explore freely. Register only when you convert.',
               style: Theme.of(context).textTheme.bodyMedium,
             ),

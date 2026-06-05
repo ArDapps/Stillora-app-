@@ -68,26 +68,39 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
 
   private enum EngineError: Error { case render, write, export, cancelled, missingSource }
 
+  private enum TimelineSource {
+    case image(UIImage)
+    case video(AVAssetImageGenerator, CMTime)
+  }
+
   private func runExport(args: [String: Any], result: @escaping FlutterResult) {
     let imagePath = args["imagePath"] as? String ?? ""
+    let mediaPaths = (args["mediaPaths"] as? [String]) ?? []
     let imagePaths = (args["imagePaths"] as? [String]) ?? []
     let audioPath = args["audioPath"] as? String
-    let duration = max(1, args["durationSeconds"] as? Int ?? 10)
+    let duration = min(max(1, args["durationSeconds"] as? Int ?? 10), 300)
     let width = evenDimension(args["width"] as? Int ?? 1080)
     let height = evenDimension(args["height"] as? Int ?? 1920)
     let fill = (args["resizeMode"] as? String ?? "fit") == "fill"
 
     do {
       let outputURL = try makeOutputURL()
+      let timelinePaths =
+        mediaPaths.isEmpty
+        ? (imagePaths.isEmpty ? [imagePath] : imagePaths)
+        : mediaPaths
 
-      if isVideoFile(imagePath) {
+      if timelinePaths.count == 1, let path = timelinePaths.first, isVideoFile(path) {
         try exportFromVideo(
-          sourceURL: URL(fileURLWithPath: imagePath), audioPath: audioPath, width: width,
+          sourceURL: URL(fileURLWithPath: path), audioPath: audioPath, width: width,
           height: height, duration: duration, fill: fill, outputURL: outputURL)
+      } else if timelinePaths.contains(where: { isVideoFile($0) }) {
+        try exportFromTimeline(
+          mediaPaths: timelinePaths, audioPath: audioPath, width: width, height: height,
+          duration: duration, fill: fill, outputURL: outputURL)
       } else {
-        let paths = imagePaths.isEmpty ? [imagePath] : imagePaths
         try exportFromImage(
-          imagePaths: paths, audioPath: audioPath, width: width, height: height,
+          imagePaths: timelinePaths, audioPath: audioPath, width: width, height: height,
           duration: duration, fill: fill, outputURL: outputURL)
       }
 
@@ -105,6 +118,141 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
       result(
         FlutterError(
           code: "export_failed", message: error.localizedDescription, details: nil))
+    }
+  }
+
+  // MARK: - Mixed timeline source
+
+  private func exportFromTimeline(
+    mediaPaths: [String], audioPath: String?, width: Int, height: Int, duration: Int, fill: Bool,
+    outputURL: URL
+  ) throws {
+    emit(stage: "preparingImage", percentage: 0.05, message: "Preparing media")
+    let sources = makeTimelineSources(mediaPaths)
+    guard !sources.isEmpty else { throw EngineError.missingSource }
+
+    let needsAudio = (audioPath != nil) && FileManager.default.fileExists(atPath: audioPath!)
+    let videoURL = needsAudio ? try makeTempURL() : outputURL
+
+    try writeTimeline(
+      sources: sources, width: width, height: height, duration: duration, fill: fill, to: videoURL)
+
+    if needsAudio {
+      emit(stage: "mergingAudio", percentage: 0.85, message: "Merging audio")
+      try mux(
+        videoURL: videoURL, audioURL: URL(fileURLWithPath: audioPath!), duration: duration,
+        to: outputURL)
+      try? FileManager.default.removeItem(at: videoURL)
+    }
+    emit(stage: "savingVideo", percentage: 0.95, message: "Saving")
+  }
+
+  private func makeTimelineSources(_ paths: [String]) -> [TimelineSource] {
+    var sources: [TimelineSource] = []
+    for path in paths {
+      if isVideoFile(path) {
+        let asset = loadedAsset(URL(fileURLWithPath: path))
+        guard asset.tracks(withMediaType: .video).first != nil else { continue }
+        let generator = AVAssetImageGenerator(asset: asset)
+        generator.appliesPreferredTrackTransform = true
+        generator.requestedTimeToleranceBefore = .zero
+        generator.requestedTimeToleranceAfter = .zero
+        sources.append(.video(generator, asset.duration))
+      } else if let rawImage = UIImage(contentsOfFile: path) {
+        sources.append(.image(normalizedImage(rawImage)))
+      }
+    }
+    return sources
+  }
+
+  private func writeTimeline(
+    sources: [TimelineSource], width: Int, height: Int, duration: Int, fill: Bool, to url: URL
+  ) throws {
+    try? FileManager.default.removeItem(at: url)
+    let writer = try AVAssetWriter(outputURL: url, fileType: .mp4)
+    let settings: [String: Any] = [
+      AVVideoCodecKey: AVVideoCodecType.h264,
+      AVVideoWidthKey: width,
+      AVVideoHeightKey: height,
+    ]
+    let input = AVAssetWriterInput(mediaType: .video, outputSettings: settings)
+    input.expectsMediaDataInRealTime = false
+    let attrs: [String: Any] = [
+      kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32ARGB,
+      kCVPixelBufferWidthKey as String: width,
+      kCVPixelBufferHeightKey as String: height,
+    ]
+    let adaptor = AVAssetWriterInputPixelBufferAdaptor(
+      assetWriterInput: input, sourcePixelBufferAttributes: attrs)
+
+    guard writer.canAdd(input) else { throw EngineError.write }
+    writer.add(input)
+    guard writer.startWriting() else { throw writer.error ?? EngineError.write }
+    writer.startSession(atSourceTime: .zero)
+
+    let fps: Int32 = 30
+    let totalFrames = max(1, duration * Int(fps))
+    let count = sources.count
+    var frame = 0
+
+    while frame < totalFrames {
+      if isCancelled {
+        input.markAsFinished()
+        writer.cancelWriting()
+        throw EngineError.cancelled
+      }
+      if input.isReadyForMoreMediaData {
+        let sourceIndex = min(count - 1, frame * count / totalFrames)
+        let segmentStart = sourceIndex * totalFrames / count
+        let segmentEnd = (sourceIndex + 1) * totalFrames / count
+        let segmentFrames = max(1, segmentEnd - segmentStart)
+        let localFrame = frame - segmentStart
+        guard
+          let buffer = try timelinePixelBuffer(
+            source: sources[sourceIndex], localFrame: localFrame, segmentFrames: segmentFrames,
+            width: width, height: height, fill: fill)
+        else { throw EngineError.render }
+
+        let time = CMTime(value: CMTimeValue(frame), timescale: fps)
+        if !adaptor.append(buffer, withPresentationTime: time) {
+          throw writer.error ?? EngineError.write
+        }
+        frame += 1
+        if frame % 15 == 0 {
+          emit(
+            stage: "generatingVideo",
+            percentage: 0.1 + (Double(frame) / Double(totalFrames)) * 0.7,
+            message: "Generating video")
+        }
+      } else {
+        usleep(4000)
+      }
+    }
+
+    input.markAsFinished()
+    let semaphore = DispatchSemaphore(value: 0)
+    writer.finishWriting { semaphore.signal() }
+    semaphore.wait()
+    if writer.status != .completed {
+      throw writer.error ?? EngineError.write
+    }
+  }
+
+  private func timelinePixelBuffer(
+    source: TimelineSource, localFrame: Int, segmentFrames: Int, width: Int, height: Int, fill: Bool
+  ) throws -> CVPixelBuffer? {
+    switch source {
+    case .image(let image):
+      return pixelBuffer(from: image, width: width, height: height, fill: fill)
+    case .video(let generator, let sourceDuration):
+      let sourceDurationSeconds = max(0.001, CMTimeGetSeconds(sourceDuration))
+      let progress =
+        segmentFrames <= 1 ? 0 : Double(localFrame) / Double(max(1, segmentFrames - 1))
+      let seconds = min(sourceDurationSeconds - 0.001, sourceDurationSeconds * progress)
+      let time = CMTime(seconds: max(0, seconds), preferredTimescale: 600)
+      let cgImage = try generator.copyCGImage(at: time, actualTime: nil)
+      return pixelBuffer(
+        from: UIImage(cgImage: cgImage), width: width, height: height, fill: fill)
     }
   }
 

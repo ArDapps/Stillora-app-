@@ -8,11 +8,15 @@ void main() {
   MethodChannelStilloraVideoEngine platform =
       MethodChannelStilloraVideoEngine();
   const MethodChannel channel = MethodChannel('stillora_video_engine');
+  late Map<Object?, Object?> exportArguments;
 
   setUp(() {
+    exportArguments = {};
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
           if (methodCall.method == 'exportVideo') {
+            exportArguments =
+                (methodCall.arguments as Map<Object?, Object?>?) ?? {};
             return {
               'outputPath': '/tmp/export.mp4',
               'width': 1080,
@@ -38,5 +42,49 @@ void main() {
     );
 
     expect(result.outputPath, '/tmp/export.mp4');
+    expect(exportArguments['mediaPaths'], ['/tmp/image.jpg']);
+    expect(exportArguments['imagePaths'], ['/tmp/image.jpg']);
+  });
+
+  test('exportVideo forwards image timeline paths', () async {
+    await platform.exportVideo(
+      imagePath: '/tmp/image-a.jpg',
+      imagePaths: const ['/tmp/image-a.jpg', '/tmp/image-b.png'],
+      durationSeconds: 12,
+      width: 1080,
+      height: 1920,
+    );
+
+    expect(exportArguments['imagePath'], '/tmp/image-a.jpg');
+    expect(exportArguments['imagePaths'], [
+      '/tmp/image-a.jpg',
+      '/tmp/image-b.png',
+    ]);
+  });
+
+  test('exportVideo forwards mixed media timeline paths', () async {
+    await platform.exportVideo(
+      imagePath: '/tmp/clip.mp4',
+      mediaPaths: const [
+        '/tmp/clip.mp4',
+        '/tmp/image-a.jpg',
+        '/tmp/image-b.png',
+      ],
+      imagePaths: const ['/tmp/image-a.jpg', '/tmp/image-b.png'],
+      durationSeconds: 12,
+      width: 1080,
+      height: 1920,
+    );
+
+    expect(exportArguments['imagePath'], '/tmp/clip.mp4');
+    expect(exportArguments['mediaPaths'], [
+      '/tmp/clip.mp4',
+      '/tmp/image-a.jpg',
+      '/tmp/image-b.png',
+    ]);
+    expect(exportArguments['imagePaths'], [
+      '/tmp/image-a.jpg',
+      '/tmp/image-b.png',
+    ]);
   });
 }

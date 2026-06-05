@@ -40,7 +40,7 @@ export const NAV_LINKS: NavLink[] = [
 export type TrustMetric = { icon: LucideIcon; label: string };
 
 export const TRUST_METRICS: TrustMetric[] = [
-  { icon: LayoutGrid, label: "5+ platform formats" },
+  { icon: LayoutGrid, label: "6 platform formats" },
   { icon: MonitorPlay, label: "1080p crisp output" },
   { icon: Film, label: "Up to 5 minutes" },
   { icon: Images, label: "Images, clips, and audio" },

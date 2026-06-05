@@ -23,7 +23,7 @@ class ExportController extends AsyncNotifier<engine.ExportResult?> {
 
   Future<void> start(EditorState editor) async {
     if (!editor.canExport) {
-      throw StateError('Select an image before exporting.');
+      throw StateError('Select media before exporting.');
     }
 
     state = const AsyncLoading();
@@ -38,6 +38,7 @@ class ExportController extends AsyncNotifier<engine.ExportResult?> {
     state = await AsyncValue.guard(() {
       return videoEngine.exportVideo(
         imagePath: editor.imagePath!,
+        mediaPaths: editor.mediaPaths,
         imagePaths: editor.imagePaths,
         audioPath: editor.audioPath,
         durationSeconds: editor.durationSeconds,

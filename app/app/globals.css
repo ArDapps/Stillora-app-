@@ -24,6 +24,57 @@ input {
   font: inherit;
 }
 
+.landing-shell {
+  background:
+    var(--landing-hero-glow),
+    linear-gradient(180deg, var(--color-background) 0%, var(--color-surface-dim) 48%, var(--color-background) 100%);
+}
+
+.landing-shell::before {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  content: "";
+  background-image:
+    linear-gradient(var(--color-border-subtle) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-border-subtle) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: linear-gradient(to bottom, black, transparent 72%);
+  opacity: 0.42;
+}
+
+.landing-section {
+  position: relative;
+  isolation: isolate;
+}
+
+.landing-card {
+  border: 1px solid var(--color-border);
+  background: linear-gradient(180deg, var(--color-card-high), var(--color-card));
+  box-shadow: var(--shadow-card);
+}
+
+.landing-glass {
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-card-high) 78%, transparent);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(22px);
+}
+
+.landing-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-card);
+  padding: 0.375rem 0.75rem;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
 .editor-frame {
   background: var(--editor-frame-bg);
   border-color: var(--editor-frame-border);
@@ -150,11 +201,54 @@ input {
   }
 }
 
+.landing-float-icon {
+  animation: landing-float 3.2s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes landing-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-5px) rotate(-3deg);
+  }
+}
+
+.landing-pulse-ring {
+  position: relative;
+}
+
+.landing-pulse-ring::after {
+  position: absolute;
+  inset: -8px;
+  z-index: -1;
+  content: "";
+  border: 1px solid var(--color-primary);
+  border-radius: 999px;
+  opacity: 0.42;
+  animation: landing-pulse 1.8s ease-out infinite;
+}
+
+@keyframes landing-pulse {
+  0% {
+    transform: scale(0.72);
+    opacity: 0.52;
+  }
+  100% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .landing-wave-bar,
   .landing-progress,
   .landing-mock-sheen,
-  .landing-hero-glow {
+  .landing-hero-glow,
+  .landing-float-icon,
+  .landing-pulse-ring::after {
     animation: none;
   }
   .landing-progress {

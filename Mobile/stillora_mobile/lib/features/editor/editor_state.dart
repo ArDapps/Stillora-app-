@@ -1,12 +1,20 @@
+import 'dart:io';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:video_player/video_player.dart';
 
 import 'video_preset.dart';
 
 enum ResizeMode { fit, fill }
 
 enum MediaKind { image, video }
+
+const defaultDurationSeconds = 10;
+const minDurationSeconds = 1;
+const maxDurationSeconds = 300;
+const _unset = Object();
 
 const _videoExtensions = {
   'mp4',
@@ -51,14 +59,16 @@ class EditorState extends Equatable {
     this.media = const [],
     this.selectedIndex = 0,
     this.audioPath,
+    this.audioDurationSeconds,
     this.preset = defaultVideoPreset,
-    this.durationSeconds = 10,
+    this.durationSeconds = defaultDurationSeconds,
     this.resizeMode = ResizeMode.fit,
   });
 
   final List<MediaItem> media;
   final int selectedIndex;
   final String? audioPath;
+  final int? audioDurationSeconds;
   final VideoPreset preset;
   final int durationSeconds;
   final ResizeMode resizeMode;
@@ -66,23 +76,29 @@ class EditorState extends Equatable {
   MediaItem? get selectedMedia =>
       media.isEmpty ? null : media[selectedIndex.clamp(0, media.length - 1)];
 
-  /// Primary path handed to the engine. A selected video is exported on its
-  /// own; otherwise this is the first image of the slideshow.
-  String? get imagePath {
-    final selected = selectedMedia;
-    if (selected != null && selected.kind == MediaKind.video) {
-      return selected.path;
-    }
-    return imagePaths.isNotEmpty ? imagePaths.first : selected?.path;
-  }
+  /// Primary path handed to the engine for backwards compatibility.
+  String? get imagePath => mediaPaths.isNotEmpty ? mediaPaths.first : null;
 
-  /// All picked images, in selection order. These are rendered as a slideshow
-  /// when exporting. Videos are excluded — a video selection is exported on its
-  /// own via [selectedMedia].
+  /// Every selected media item in timeline order.
+  List<String> get mediaPaths => [for (final item in media) item.path];
+
+  /// Picked images in timeline order. Older native engines use this as a
+  /// fallback, while mixed timeline export uses [mediaPaths].
   List<String> get imagePaths => [
     for (final item in media)
       if (item.kind == MediaKind.image) item.path,
   ];
+
+  bool get hasImages => imagePaths.isNotEmpty;
+
+  bool get hasVideos => media.any((item) => item.kind == MediaKind.video);
+
+  bool get exportsMixedTimeline => hasImages && hasVideos;
+
+  bool get exportsImageSlideshow => hasImages && !hasVideos;
+
+  bool get exportsVideoSource =>
+      !hasImages && media.length == 1 && selectedMedia?.kind == MediaKind.video;
 
   bool get hasMedia => media.isNotEmpty;
 
@@ -93,16 +109,29 @@ class EditorState extends Equatable {
     int? selectedIndex,
     String? audioPath,
     bool clearAudio = false,
+    Object? audioDurationSeconds = _unset,
     VideoPreset? preset,
     int? durationSeconds,
     ResizeMode? resizeMode,
   }) {
+    final int? nextAudioDurationSeconds;
+    if (clearAudio) {
+      nextAudioDurationSeconds = null;
+    } else if (identical(audioDurationSeconds, _unset)) {
+      nextAudioDurationSeconds = this.audioDurationSeconds;
+    } else {
+      nextAudioDurationSeconds = audioDurationSeconds as int?;
+    }
+
     return EditorState(
       media: media ?? this.media,
       selectedIndex: selectedIndex ?? this.selectedIndex,
       audioPath: clearAudio ? null : audioPath ?? this.audioPath,
+      audioDurationSeconds: nextAudioDurationSeconds,
       preset: preset ?? this.preset,
-      durationSeconds: durationSeconds ?? this.durationSeconds,
+      durationSeconds: normalizeDurationSeconds(
+        durationSeconds ?? this.durationSeconds,
+      ),
       resizeMode: resizeMode ?? this.resizeMode,
     );
   }
@@ -112,10 +141,15 @@ class EditorState extends Equatable {
     media,
     selectedIndex,
     audioPath,
+    audioDurationSeconds,
     preset,
     durationSeconds,
     resizeMode,
   ];
+}
+
+int normalizeDurationSeconds(num seconds) {
+  return seconds.round().clamp(minDurationSeconds, maxDurationSeconds).toInt();
 }
 
 final editorControllerProvider =
@@ -175,18 +209,63 @@ class EditorController extends Notifier<EditorState> {
     state = state.copyWith(media: next, selectedIndex: selected);
   }
 
-  void clearMedia() => state = state.copyWith(media: const [], selectedIndex: 0);
+  void reorderMedia(int oldIndex, int newIndex) {
+    if (oldIndex < 0 || oldIndex >= state.media.length) {
+      return;
+    }
+    var targetIndex = newIndex;
+    if (targetIndex > oldIndex) {
+      targetIndex -= 1;
+    }
+    if (targetIndex < 0 || targetIndex >= state.media.length) {
+      return;
+    }
+    final next = [...state.media];
+    final moved = next.removeAt(oldIndex);
+    next.insert(targetIndex, moved);
+    state = state.copyWith(media: next, selectedIndex: targetIndex);
+  }
 
-  void setAudioPath(String path) => state = state.copyWith(audioPath: path);
+  void clearMedia() =>
+      state = state.copyWith(media: const [], selectedIndex: 0);
+
+  Future<void> setAudioPath(String path) async {
+    state = state.copyWith(audioPath: path, audioDurationSeconds: null);
+    final duration = await _readMediaDurationSeconds(path);
+    if (state.audioPath != path || duration == null) {
+      return;
+    }
+    state = state.copyWith(
+      audioDurationSeconds: duration,
+      durationSeconds: duration,
+    );
+  }
 
   void removeAudio() => state = state.copyWith(clearAudio: true);
 
   void setPreset(VideoPreset preset) => state = state.copyWith(preset: preset);
 
-  void setDuration(int seconds) =>
-      state = state.copyWith(durationSeconds: seconds);
+  void setDuration(int seconds) => state = state.copyWith(
+    durationSeconds: normalizeDurationSeconds(seconds),
+  );
 
   void setResizeMode(ResizeMode resizeMode) {
     state = state.copyWith(resizeMode: resizeMode);
+  }
+
+  Future<int?> _readMediaDurationSeconds(String path) async {
+    final controller = VideoPlayerController.file(File(path));
+    try {
+      await controller.initialize();
+      final duration = controller.value.duration;
+      if (duration <= Duration.zero) {
+        return null;
+      }
+      return normalizeDurationSeconds(duration.inMilliseconds / 1000);
+    } catch (_) {
+      return null;
+    } finally {
+      await controller.dispose();
+    }
   }
 }

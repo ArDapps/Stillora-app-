@@ -1,27 +1,27 @@
 :root {
   color-scheme: dark;
-  --color-background: #0b1326;
-  --color-foreground: #dae2fd;
-  --color-muted: #ccc3d8;
-  --color-muted-strong: #958da1;
-  --color-surface: #131b2e;
-  --color-header: rgb(19 27 46 / 90%);
-  --color-surface-dim: #060e20;
-  --color-surface-bright: #31394d;
-  --color-card: #171f33;
-  --color-card-high: #222a3d;
-  --color-card-highest: #2d3449;
-  --color-border: #4a4455;
-  --color-border-subtle: rgb(149 141 161 / 70%);
-  --color-border-strong: #958da1;
-  --color-primary: #7c3aed;
-  --color-primary-hover: #5f5db1;
-  --color-primary-soft: #2d3449;
-  --color-primary-text: #ede0ff;
-  --color-secondary: #eec200;
-  --color-secondary-hover: #ffe083;
-  --color-secondary-soft: #3c2f00;
-  --color-secondary-text: #ffe083;
+  --color-background: #060711;
+  --color-foreground: #f5f7ff;
+  --color-muted: #b7bfd5;
+  --color-muted-strong: #8993ad;
+  --color-surface: #0b0f1d;
+  --color-header: rgb(8 10 22 / 74%);
+  --color-surface-dim: #050713;
+  --color-surface-bright: #192236;
+  --color-card: rgb(15 20 35 / 78%);
+  --color-card-high: rgb(24 32 52 / 88%);
+  --color-card-highest: #25304b;
+  --color-border: rgb(255 255 255 / 12%);
+  --color-border-subtle: rgb(255 255 255 / 8%);
+  --color-border-strong: rgb(255 255 255 / 24%);
+  --color-primary: #8b5cf6;
+  --color-primary-hover: #7c3aed;
+  --color-primary-soft: rgb(139 92 246 / 14%);
+  --color-primary-text: #ffffff;
+  --color-secondary: #22d3ee;
+  --color-secondary-hover: #67e8f9;
+  --color-secondary-soft: rgb(34 211 238 / 12%);
+  --color-secondary-text: #a5f3fc;
   --color-danger: #ffb4ab;
   --color-danger-soft: #93000a;
   --color-success: #ffe083;
@@ -37,18 +37,19 @@
   --color-overlay-text: #dae2fd;
   --color-disabled: #4a4455;
   --color-disabled-text: #958da1;
-  --shadow-card: 0 16px 40px rgb(0 0 0 / 18%);
-  --shadow-primary: 0 0 0 1px rgb(210 187 255 / 16%), inset 0 0 18px rgb(210 187 255 / 12%);
+  --shadow-card: 0 24px 70px rgb(0 0 0 / 32%);
+  --shadow-primary: 0 0 0 1px rgb(210 187 255 / 18%), 0 16px 36px rgb(139 92 246 / 20%);
   --shadow-success: 0 0 0 1px rgb(255 224 131 / 16%), inset 0 0 18px rgb(255 224 131 / 12%);
   /* Landing/brand accents — derived from the editor palette (purple → fuchsia → cyan). */
-  --brand-gradient: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
+  --brand-gradient: linear-gradient(135deg, #22d3ee 0%, #8b5cf6 45%, #f472b6 100%);
   --brand-mark: linear-gradient(145deg, #2dd4ff, #8b5cf6 55%, #ec4899);
   --brand-mark-glow: rgb(124 58 237 / 42%);
   --landing-hero-glow:
-    radial-gradient(60% 60% at 20% 0%, rgb(124 58 237 / 22%), transparent 60%),
-    radial-gradient(50% 50% at 90% 10%, rgb(34 211 238 / 16%), transparent 55%);
-  --landing-cta-glow: radial-gradient(60% 120% at 50% 0%, rgb(124 58 237 / 18%), transparent 70%);
-  --landing-mock-bg: linear-gradient(160deg, #1b1144 0%, #060e20 55%, #131b2e 100%);
+    linear-gradient(135deg, rgb(34 211 238 / 14%), transparent 36%),
+    linear-gradient(315deg, rgb(244 114 182 / 14%), transparent 38%),
+    linear-gradient(180deg, rgb(139 92 246 / 16%), transparent 58%);
+  --landing-cta-glow: linear-gradient(135deg, rgb(34 211 238 / 14%), transparent 42%), linear-gradient(315deg, rgb(244 114 182 / 16%), transparent 48%);
+  --landing-mock-bg: linear-gradient(145deg, #27115f 0%, #062235 52%, #0b1020 100%);
   --editor-page-bg:
     radial-gradient(circle at top left, rgb(124 58 237 / 34%), transparent 34%),
     radial-gradient(circle at bottom right, rgb(14 165 233 / 26%), transparent 38%),
@@ -70,28 +71,28 @@
 /* Light theme — applied when <html class="light">. Default (no class) stays dark. */
 :root.light {
   color-scheme: light;
-  --color-background: #f7f6fc;
-  --color-foreground: #1b1530;
-  --color-muted: #4a4458;
-  --color-muted-strong: #6b6478;
+  --color-background: #f7f9ff;
+  --color-foreground: #111827;
+  --color-muted: #536078;
+  --color-muted-strong: #6f7890;
   --color-surface: #ffffff;
-  --color-header: rgb(255 255 255 / 85%);
-  --color-surface-dim: #ece9f5;
+  --color-header: rgb(255 255 255 / 78%);
+  --color-surface-dim: #edf2ff;
   --color-surface-bright: #ffffff;
-  --color-card: #ffffff;
-  --color-card-high: #f3f1fa;
+  --color-card: rgb(255 255 255 / 82%);
+  --color-card-high: rgb(255 255 255 / 92%);
   --color-card-highest: #ebe7f6;
-  --color-border: #e3dff0;
-  --color-border-subtle: rgb(120 113 130 / 22%);
-  --color-border-strong: #cbc4dd;
+  --color-border: rgb(17 24 39 / 12%);
+  --color-border-subtle: rgb(17 24 39 / 8%);
+  --color-border-strong: rgb(17 24 39 / 24%);
   --color-primary: #7c3aed;
   --color-primary-hover: #6d28d9;
-  --color-primary-soft: #efe8ff;
+  --color-primary-soft: rgb(124 58 237 / 10%);
   --color-primary-text: #ffffff;
-  --color-secondary: #b8860b;
-  --color-secondary-hover: #9a6f08;
-  --color-secondary-soft: #fbf3da;
-  --color-secondary-text: #8a6500;
+  --color-secondary: #0891b2;
+  --color-secondary-hover: #0e7490;
+  --color-secondary-soft: rgb(8 145 178 / 10%);
+  --color-secondary-text: #0e7490;
   --color-danger: #c0392b;
   --color-danger-soft: #fce4e0;
   --color-success: #b8860b;
@@ -108,17 +109,18 @@
   --color-overlay-text: #dae2fd;
   --color-disabled: #d9d4e6;
   --color-disabled-text: #9a93a8;
-  --shadow-card: 0 16px 40px rgb(76 29 149 / 10%);
-  --shadow-primary: 0 0 0 1px rgb(124 58 237 / 18%), inset 0 0 18px rgb(124 58 237 / 8%);
+  --shadow-card: 0 24px 70px rgb(31 41 55 / 12%);
+  --shadow-primary: 0 0 0 1px rgb(124 58 237 / 18%), 0 16px 34px rgb(124 58 237 / 16%);
   --shadow-success: 0 0 0 1px rgb(184 134 11 / 18%), inset 0 0 18px rgb(184 134 11 / 8%);
   /* Landing/brand accents — softer in light theme, same editor-derived hues. */
-  --brand-gradient: linear-gradient(135deg, #7c3aed 0%, #d946ef 100%);
+  --brand-gradient: linear-gradient(135deg, #0891b2 0%, #7c3aed 48%, #db2777 100%);
   --brand-mark: linear-gradient(145deg, #2dd4ff, #8b5cf6 55%, #ec4899);
   --brand-mark-glow: rgb(124 58 237 / 28%);
   --landing-hero-glow:
-    radial-gradient(60% 60% at 20% 0%, rgb(124 58 237 / 12%), transparent 60%),
-    radial-gradient(50% 50% at 90% 10%, rgb(14 165 233 / 10%), transparent 55%);
-  --landing-cta-glow: radial-gradient(60% 120% at 50% 0%, rgb(124 58 237 / 10%), transparent 70%);
+    linear-gradient(135deg, rgb(14 165 233 / 14%), transparent 40%),
+    linear-gradient(315deg, rgb(219 39 119 / 10%), transparent 42%),
+    linear-gradient(180deg, rgb(124 58 237 / 10%), transparent 62%);
+  --landing-cta-glow: linear-gradient(135deg, rgb(14 165 233 / 12%), transparent 42%), linear-gradient(315deg, rgb(219 39 119 / 12%), transparent 48%);
   --landing-mock-bg: linear-gradient(160deg, #1b1144 0%, #060e20 55%, #131b2e 100%);
   --editor-page-bg:
     radial-gradient(circle at top left, rgb(124 58 237 / 16%), transparent 34%),

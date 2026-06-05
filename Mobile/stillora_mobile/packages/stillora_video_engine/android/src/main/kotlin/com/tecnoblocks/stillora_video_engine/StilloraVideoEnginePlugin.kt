@@ -79,30 +79,42 @@ class StilloraVideoEnginePlugin :
 
     private fun runExport(call: MethodCall, result: Result) {
         val imagePath = call.argument<String>("imagePath") ?: ""
+        val requestedMediaPaths = (call.argument<List<*>>("mediaPaths") ?: emptyList<Any>())
+            .filterIsInstance<String>()
+            .filter { it.isNotBlank() }
+        val requestedImagePaths = (call.argument<List<*>>("imagePaths") ?: emptyList<Any>())
+            .filterIsInstance<String>()
+            .filter { it.isNotBlank() }
+        val mediaSourcePaths =
+            when {
+                requestedMediaPaths.isNotEmpty() -> requestedMediaPaths
+                requestedImagePaths.isNotEmpty() -> requestedImagePaths
+                else -> listOf(imagePath)
+            }.distinct()
         val audioPath = call.argument<String>("audioPath")
-        val duration = (call.argument<Int>("durationSeconds") ?: 10).coerceAtLeast(1)
+        val duration = (call.argument<Int>("durationSeconds") ?: 10).coerceIn(1, 300)
         val width = evenDimension(call.argument<Int>("width") ?: 1080)
         val height = evenDimension(call.argument<Int>("height") ?: 1920)
         val fill = (call.argument<String>("resizeMode") ?: "fit") == "fill"
 
         try {
-            if (isVideoFile(imagePath)) {
-                // Video sources require a decode/scale pipeline that is not implemented on
-                // Android yet. Surface a clear error rather than producing a broken file.
-                failOnMain(
-                    result,
-                    "video_source_unsupported",
-                    "Converting an existing video is not supported on Android yet. Pick a photo.",
-                )
+            emit("preparingImage", 0.05, "Preparing media")
+            val bitmaps = mutableListOf<Bitmap>()
+            val timelineMedia = mutableListOf<StilloraTimelineMedia>()
+            for (path in mediaSourcePaths) {
+                if (isVideoFile(path)) {
+                    timelineMedia.add(StilloraTimelineMedia.Video(path))
+                } else {
+                    decodeBitmap(path)?.let { bitmap ->
+                        bitmaps.add(bitmap)
+                        timelineMedia.add(StilloraTimelineMedia.Image(bitmap))
+                    }
+                }
+            }
+            if (timelineMedia.isEmpty()) {
+                failOnMain(result, "missing_source", "The selected media could not be read.")
                 return
             }
-
-            emit("preparingImage", 0.05, "Preparing image")
-            val bitmap = decodeBitmap(imagePath)
-                ?: run {
-                    failOnMain(result, "missing_source", "The selected image could not be read.")
-                    return
-                }
 
             val outputDir = outputDirectory()
             val finalPath = File(outputDir, "stillora-${UUID.randomUUID()}.mp4").absolutePath
@@ -115,8 +127,17 @@ class StilloraVideoEnginePlugin :
                 isCancelled = { cancelled },
                 onProgress = { emit("generatingVideo", it, "Generating video") },
             )
-            exporter.encodeStillImage(bitmap, width, height, duration, fill, videoPath)
-            bitmap.recycle()
+            try {
+                if (timelineMedia.all { it is StilloraTimelineMedia.Image }) {
+                    exporter.encodeStillImages(bitmaps, width, height, duration, fill, videoPath)
+                } else {
+                    exporter.encodeTimeline(timelineMedia, width, height, duration, fill, videoPath)
+                }
+            } finally {
+                bitmaps.forEach { bitmap ->
+                    if (!bitmap.isRecycled) bitmap.recycle()
+                }
+            }
 
             if (cancelled) {
                 File(videoPath).delete()
@@ -128,8 +149,13 @@ class StilloraVideoEnginePlugin :
                 emit("mergingAudio", 0.85, "Merging audio")
                 val merged = muxVideoAndAudio(videoPath, audioPath!!, duration, finalPath)
                 if (!merged) {
-                    // Audio format was not muxable (e.g. MP3); fall back to silent video.
-                    File(videoPath).copyToOrIgnore(finalPath)
+                    File(videoPath).delete()
+                    failOnMain(
+                        result,
+                        "audio_mix_failed",
+                        "This audio file could not be mixed. Use M4A or AAC on Android.",
+                    )
+                    return
                 }
                 File(videoPath).delete()
             }
@@ -298,12 +324,5 @@ class StilloraVideoEnginePlugin :
 
     private fun failOnMain(result: Result, code: String, message: String) {
         mainHandler.post { result.error(code, message, null) }
-    }
-}
-
-private fun File.copyToOrIgnore(destinationPath: String) {
-    try {
-        copyTo(File(destinationPath), overwrite = true)
-    } catch (_: Exception) {
     }
 }

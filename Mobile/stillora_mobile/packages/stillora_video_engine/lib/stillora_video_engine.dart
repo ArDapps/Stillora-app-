@@ -12,6 +12,7 @@ abstract interface class StilloraVideoEngine {
 
   Future<ExportResult> exportVideo({
     required String imagePath,
+    List<String> mediaPaths = const [],
     List<String> imagePaths = const [],
     String? audioPath,
     required int durationSeconds,
@@ -38,6 +39,7 @@ class PlatformStilloraVideoEngine implements StilloraVideoEngine {
   @override
   Future<ExportResult> exportVideo({
     required String imagePath,
+    List<String> mediaPaths = const [],
     List<String> imagePaths = const [],
     String? audioPath,
     required int durationSeconds,
@@ -48,6 +50,7 @@ class PlatformStilloraVideoEngine implements StilloraVideoEngine {
   }) {
     return _platform.exportVideo(
       imagePath: imagePath,
+      mediaPaths: mediaPaths,
       imagePaths: imagePaths,
       audioPath: audioPath,
       durationSeconds: durationSeconds,

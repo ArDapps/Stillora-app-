@@ -8,6 +8,7 @@ import 'package:video_player/video_player.dart';
 
 import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_spacing.dart';
+import '../../core/widgets/stillora_video_player_panel.dart';
 import '../export/export_controller.dart';
 import '../tabs/app_tabs_screen.dart';
 
@@ -63,16 +64,6 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
     super.dispose();
   }
 
-  void _togglePlayback() {
-    final controller = _controller;
-    if (controller == null || !controller.value.isInitialized) {
-      return;
-    }
-    setState(() {
-      controller.value.isPlaying ? controller.pause() : controller.play();
-    });
-  }
-
   Future<void> _share() async {
     final path = _outputPath;
     if (path == null) {
@@ -101,7 +92,6 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
           ? _EmptyPreview(onOpenEditor: () => _openTab(0))
           : _ReadyPreview(
               controller: _controller,
-              onTogglePlayback: _togglePlayback,
               onShare: _share,
               onCreateAnother: () => _openTab(0),
               onLibrary: () => _openTab(1),
@@ -113,14 +103,12 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
 class _ReadyPreview extends StatelessWidget {
   const _ReadyPreview({
     required this.controller,
-    required this.onTogglePlayback,
     required this.onShare,
     required this.onCreateAnother,
     required this.onLibrary,
   });
 
   final VideoPlayerController? controller;
-  final VoidCallback onTogglePlayback;
   final Future<void> Function() onShare;
   final VoidCallback onCreateAnother;
   final VoidCallback onLibrary;
@@ -128,51 +116,28 @@ class _ReadyPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ready = controller != null && controller!.value.isInitialized;
-    final isPlaying = ready && controller!.value.isPlaying;
 
     return ListView(
       padding: const EdgeInsets.all(StilloraSpacing.sm),
       children: [
-        Card(
-          clipBehavior: Clip.antiAlias,
-          child: AspectRatio(
-            aspectRatio: ready ? controller!.value.aspectRatio : 9 / 16,
-            child: ready
-                ? GestureDetector(
-                    onTap: onTogglePlayback,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      fit: StackFit.expand,
-                      children: [
-                        VideoPlayer(controller!),
-                        if (!isPlaying)
-                          const ColoredBox(
-                            color: Color(0x55000000),
-                            child: Icon(
-                              Icons.play_circle_fill_rounded,
-                              size: 72,
-                              color: Colors.white,
-                            ),
-                          ),
-                      ],
-                    ),
-                  )
-                : Container(
-                    alignment: Alignment.center,
-                    color: StilloraColors.surfaceContainerHighest,
-                    child: const Icon(Icons.movie_rounded, size: 72),
-                  ),
+        Text(
+          'Final Preview',
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: StilloraSpacing.xs),
+        Text(
+          'Review the timing, scrub the video, then save or share.',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: StilloraColors.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: StilloraSpacing.sm),
-        FilledButton.icon(
-          onPressed: ready ? onTogglePlayback : null,
-          icon: Icon(isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded),
-          label: Text(isPlaying ? 'Pause' : 'Play'),
-        ),
+        StilloraVideoPlayerPanel(controller: controller),
         const SizedBox(height: StilloraSpacing.xs),
         OutlinedButton.icon(
-          onPressed: () => onShare(),
+          onPressed: ready ? () => onShare() : null,
           icon: const Icon(Icons.ios_share_rounded),
           label: const Text('Save or Share'),
         ),

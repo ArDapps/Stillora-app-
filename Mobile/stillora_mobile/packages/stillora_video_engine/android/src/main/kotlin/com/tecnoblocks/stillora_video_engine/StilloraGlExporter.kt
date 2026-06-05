@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.media.MediaCodec
 import android.media.MediaCodecInfo
 import android.media.MediaFormat
+import android.media.MediaMetadataRetriever
 import android.media.MediaMuxer
 import android.opengl.EGL14
 import android.opengl.EGLConfig
@@ -18,9 +19,8 @@ import java.nio.ByteOrder
 import java.nio.FloatBuffer
 
 /**
- * Renders a still [Bitmap] into an H.264 MP4 (video-only) using a MediaCodec input surface driven
- * by OpenGL ES. Returns the index/format of the encoded video track via the supplied [MediaMuxer]
- * so audio can be muxed into the same file.
+ * Renders still [Bitmap] frames into an H.264 MP4 (video-only) using a MediaCodec input surface
+ * driven by OpenGL ES. Multiple bitmaps are spread evenly across the requested duration.
  */
 internal class StilloraGlExporter(
     private val isCancelled: () -> Boolean,
@@ -33,7 +33,18 @@ internal class StilloraGlExporter(
         durationSeconds: Int,
         fill: Boolean,
         outputPath: String,
+    ) = encodeStillImages(listOf(bitmap), width, height, durationSeconds, fill, outputPath)
+
+    fun encodeStillImages(
+        bitmaps: List<Bitmap>,
+        width: Int,
+        height: Int,
+        durationSeconds: Int,
+        fill: Boolean,
+        outputPath: String,
     ) {
+        require(bitmaps.isNotEmpty()) { "At least one bitmap is required." }
+
         val fps = 30
         val bitRate = (width * height * fps * 0.12).toInt().coerceAtLeast(2_000_000)
 
@@ -50,23 +61,31 @@ internal class StilloraGlExporter(
         encoder.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
         val inputSurface = encoder.createInputSurface()
         val egl = EglCore(inputSurface)
-        val renderer = BitmapRenderer(bitmap, width, height, fill)
+        val renderers = bitmaps.map { bitmap -> BitmapRenderer(bitmap, width, height, fill) }
         encoder.start()
 
         val muxer = MediaMuxer(outputPath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
         var trackIndex = -1
         var muxerStarted = false
         val bufferInfo = MediaCodec.BufferInfo()
-        val totalFrames = durationSeconds * fps
+        val totalFrames = durationSeconds.coerceAtLeast(1) * fps
 
         try {
             for (frame in 0 until totalFrames) {
                 if (isCancelled()) throw ExportCancelledException()
-                drainEncoder(encoder, muxer, bufferInfo, endOfStream = false) { index, started ->
+                drainEncoder(
+                    encoder,
+                    muxer,
+                    bufferInfo,
+                    endOfStream = false,
+                    currentTrackIndex = trackIndex,
+                    currentMuxerStarted = muxerStarted,
+                ) { index, started ->
                     trackIndex = index
                     muxerStarted = started
                 }
-                renderer.draw()
+                val rendererIndex = minOf(renderers.size - 1, frame * renderers.size / totalFrames)
+                renderers[rendererIndex].draw()
                 val presentationNs = frame.toLong() * 1_000_000_000L / fps
                 egl.setPresentationTime(presentationNs)
                 egl.swapBuffers()
@@ -75,7 +94,119 @@ internal class StilloraGlExporter(
                 }
             }
             encoder.signalEndOfInputStream()
-            drainEncoder(encoder, muxer, bufferInfo, endOfStream = true) { index, started ->
+            drainEncoder(
+                encoder,
+                muxer,
+                bufferInfo,
+                endOfStream = true,
+                currentTrackIndex = trackIndex,
+                currentMuxerStarted = muxerStarted,
+            ) { index, started ->
+                trackIndex = index
+                muxerStarted = started
+            }
+        } finally {
+            try {
+                encoder.stop()
+            } catch (_: Exception) {
+            }
+            encoder.release()
+            renderers.forEach { renderer -> renderer.release() }
+            egl.release()
+            try {
+                if (muxerStarted) muxer.stop()
+            } catch (_: Exception) {
+            }
+            muxer.release()
+        }
+    }
+
+    fun encodeTimeline(
+        media: List<StilloraTimelineMedia>,
+        width: Int,
+        height: Int,
+        durationSeconds: Int,
+        fill: Boolean,
+        outputPath: String,
+    ) {
+        require(media.isNotEmpty()) { "At least one media item is required." }
+
+        val sources = media.mapNotNull { it.open() }
+        require(sources.isNotEmpty()) { "At least one readable media item is required." }
+
+        val firstFrame = sources.firstNotNullOfOrNull { source ->
+            source.frameAt(localFrame = 0, segmentFrames = 1)
+        } ?: throw IllegalArgumentException("The selected media could not be rendered.")
+
+        val fps = 30
+        val bitRate = (width * height * fps * 0.12).toInt().coerceAtLeast(2_000_000)
+
+        val format = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, width, height)
+        format.setInteger(
+            MediaFormat.KEY_COLOR_FORMAT,
+            MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface,
+        )
+        format.setInteger(MediaFormat.KEY_BIT_RATE, bitRate)
+        format.setInteger(MediaFormat.KEY_FRAME_RATE, fps)
+        format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1)
+
+        val encoder = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
+        encoder.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
+        val inputSurface = encoder.createInputSurface()
+        val egl = EglCore(inputSurface)
+        val renderer = BitmapRenderer(firstFrame.bitmap, width, height, fill)
+        firstFrame.recycleIfNeeded()
+        encoder.start()
+
+        val muxer = MediaMuxer(outputPath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
+        var trackIndex = -1
+        var muxerStarted = false
+        val bufferInfo = MediaCodec.BufferInfo()
+        val totalFrames = durationSeconds.coerceAtLeast(1) * fps
+
+        try {
+            for (frame in 0 until totalFrames) {
+                if (isCancelled()) throw ExportCancelledException()
+                drainEncoder(
+                    encoder,
+                    muxer,
+                    bufferInfo,
+                    endOfStream = false,
+                    currentTrackIndex = trackIndex,
+                    currentMuxerStarted = muxerStarted,
+                ) { index, started ->
+                    trackIndex = index
+                    muxerStarted = started
+                }
+
+                val sourceIndex = minOf(sources.size - 1, frame * sources.size / totalFrames)
+                val segmentStart = sourceIndex * totalFrames / sources.size
+                val segmentEnd = (sourceIndex + 1) * totalFrames / sources.size
+                val segmentFrames = (segmentEnd - segmentStart).coerceAtLeast(1)
+                val localFrame = frame - segmentStart
+                val timelineFrame = sources[sourceIndex].frameAt(localFrame, segmentFrames)
+                if (timelineFrame != null) {
+                    renderer.updateBitmap(timelineFrame.bitmap)
+                    renderer.draw()
+                    timelineFrame.recycleIfNeeded()
+                }
+
+                val presentationNs = frame.toLong() * 1_000_000_000L / fps
+                egl.setPresentationTime(presentationNs)
+                egl.swapBuffers()
+                if (frame % 15 == 0) {
+                    onProgress(0.1 + (frame.toDouble() / totalFrames) * 0.7)
+                }
+            }
+            encoder.signalEndOfInputStream()
+            drainEncoder(
+                encoder,
+                muxer,
+                bufferInfo,
+                endOfStream = true,
+                currentTrackIndex = trackIndex,
+                currentMuxerStarted = muxerStarted,
+            ) { index, started ->
                 trackIndex = index
                 muxerStarted = started
             }
@@ -92,6 +223,7 @@ internal class StilloraGlExporter(
             } catch (_: Exception) {
             }
             muxer.release()
+            sources.forEach { it.release() }
         }
     }
 
@@ -100,11 +232,13 @@ internal class StilloraGlExporter(
         muxer: MediaMuxer,
         bufferInfo: MediaCodec.BufferInfo,
         endOfStream: Boolean,
+        currentTrackIndex: Int,
+        currentMuxerStarted: Boolean,
         onMuxerState: (trackIndex: Int, started: Boolean) -> Unit,
     ) {
         val timeoutUs = if (endOfStream) 10_000L else 0L
-        var trackIndex = -1
-        var muxerStarted = false
+        var trackIndex = currentTrackIndex
+        var muxerStarted = currentMuxerStarted
         while (true) {
             val status = encoder.dequeueOutputBuffer(bufferInfo, timeoutUs)
             if (status == MediaCodec.INFO_TRY_AGAIN_LATER) {
@@ -115,17 +249,88 @@ internal class StilloraGlExporter(
                 muxerStarted = true
                 onMuxerState(trackIndex, muxerStarted)
             } else if (status >= 0) {
-                val encoded = encoder.getOutputBuffer(status) ?: continue
-                if (bufferInfo.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG != 0) {
-                    bufferInfo.size = 0
-                }
-                if (bufferInfo.size != 0 && muxerStarted) {
-                    encoded.position(bufferInfo.offset)
-                    encoded.limit(bufferInfo.offset + bufferInfo.size)
-                    muxer.writeSampleData(trackIndex, encoded, bufferInfo)
+                val encoded = encoder.getOutputBuffer(status)
+                if (encoded != null) {
+                    if (bufferInfo.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG != 0) {
+                        bufferInfo.size = 0
+                    }
+                    if (bufferInfo.size != 0 && muxerStarted) {
+                        encoded.position(bufferInfo.offset)
+                        encoded.limit(bufferInfo.offset + bufferInfo.size)
+                        muxer.writeSampleData(trackIndex, encoded, bufferInfo)
+                    }
                 }
                 encoder.releaseOutputBuffer(status, false)
                 if (bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) break
+            }
+        }
+    }
+}
+
+internal sealed class StilloraTimelineMedia {
+    data class Image(val bitmap: Bitmap) : StilloraTimelineMedia()
+    data class Video(val path: String) : StilloraTimelineMedia()
+
+    fun open(): TimelineSource? {
+        return when (this) {
+            is Image -> TimelineSource.Image(bitmap)
+            is Video -> TimelineSource.Video.open(path)
+        }
+    }
+}
+
+internal data class TimelineFrame(val bitmap: Bitmap, val recycleAfterDraw: Boolean) {
+    fun recycleIfNeeded() {
+        if (recycleAfterDraw && !bitmap.isRecycled) bitmap.recycle()
+    }
+}
+
+internal sealed class TimelineSource {
+    abstract fun frameAt(localFrame: Int, segmentFrames: Int): TimelineFrame?
+    open fun release() {}
+
+    class Image(private val bitmap: Bitmap) : TimelineSource() {
+        override fun frameAt(localFrame: Int, segmentFrames: Int): TimelineFrame {
+            return TimelineFrame(bitmap, recycleAfterDraw = false)
+        }
+    }
+
+    class Video private constructor(
+        private val retriever: MediaMetadataRetriever,
+        private val durationUs: Long,
+    ) : TimelineSource() {
+        override fun frameAt(localFrame: Int, segmentFrames: Int): TimelineFrame? {
+            val progress = if (segmentFrames <= 1) 0.0
+            else localFrame.toDouble() / (segmentFrames - 1).toDouble()
+            val sourceTimeUs = (durationUs * progress)
+                .toLong()
+                .coerceIn(0L, (durationUs - 1).coerceAtLeast(0L))
+            val bitmap = retriever.getFrameAtTime(
+                sourceTimeUs,
+                MediaMetadataRetriever.OPTION_CLOSEST,
+            ) ?: return null
+            return TimelineFrame(bitmap, recycleAfterDraw = true)
+        }
+
+        override fun release() {
+            try {
+                retriever.release()
+            } catch (_: Exception) {
+            }
+        }
+
+        companion object {
+            fun open(path: String): Video? {
+                return try {
+                    val retriever = MediaMetadataRetriever()
+                    retriever.setDataSource(path)
+                    val durationMs = retriever.extractMetadata(
+                        MediaMetadataRetriever.METADATA_KEY_DURATION,
+                    )?.toLongOrNull() ?: 1L
+                    Video(retriever, (durationMs * 1_000L).coerceAtLeast(1L))
+                } catch (_: Exception) {
+                    null
+                }
             }
         }
     }
@@ -191,14 +396,14 @@ private class BitmapRenderer(
     bitmap: Bitmap,
     private val targetWidth: Int,
     private val targetHeight: Int,
-    fill: Boolean,
+    private val fill: Boolean,
 ) {
     private val program: Int
     private val positionHandle: Int
     private val texCoordHandle: Int
     private val textureHandle: Int
     private val textureId: Int
-    private val vertexBuffer: FloatBuffer
+    private var vertexBuffer: FloatBuffer
 
     init {
         program = buildProgram(VERTEX_SHADER, FRAGMENT_SHADER)
@@ -206,32 +411,7 @@ private class BitmapRenderer(
         texCoordHandle = GLES20.glGetAttribLocation(program, "aTexCoord")
         textureHandle = GLES20.glGetUniformLocation(program, "uTexture")
 
-        val imageAspect = bitmap.width.toFloat() / bitmap.height
-        val targetAspect = targetWidth.toFloat() / targetHeight
-        var scaleX = 1f
-        var scaleY = 1f
-        if (fill) {
-            if (imageAspect > targetAspect) scaleX = imageAspect / targetAspect
-            else scaleY = targetAspect / imageAspect
-        } else {
-            if (imageAspect > targetAspect) scaleY = targetAspect / imageAspect
-            else scaleX = imageAspect / targetAspect
-        }
-
-        // x, y, u, v — texture V is flipped because bitmaps are top-down.
-        val vertices = floatArrayOf(
-            -scaleX, -scaleY, 0f, 1f,
-            scaleX, -scaleY, 1f, 1f,
-            -scaleX, scaleY, 0f, 0f,
-            scaleX, scaleY, 1f, 0f,
-        )
-        vertexBuffer = ByteBuffer.allocateDirect(vertices.size * 4)
-            .order(ByteOrder.nativeOrder())
-            .asFloatBuffer()
-            .apply {
-                put(vertices)
-                position(0)
-            }
+        vertexBuffer = makeVertexBuffer(bitmap)
 
         val textures = IntArray(1)
         GLES20.glGenTextures(1, textures, 0)
@@ -249,6 +429,12 @@ private class BitmapRenderer(
         GLES20.glTexParameteri(
             GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE,
         )
+        GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0)
+    }
+
+    fun updateBitmap(bitmap: Bitmap) {
+        vertexBuffer = makeVertexBuffer(bitmap)
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId)
         GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0)
     }
 
@@ -296,6 +482,35 @@ private class BitmapRenderer(
         GLES20.glShaderSource(shader, source)
         GLES20.glCompileShader(shader)
         return shader
+    }
+
+    private fun makeVertexBuffer(bitmap: Bitmap): FloatBuffer {
+        val imageAspect = bitmap.width.toFloat() / bitmap.height
+        val targetAspect = targetWidth.toFloat() / targetHeight
+        var scaleX = 1f
+        var scaleY = 1f
+        if (fill) {
+            if (imageAspect > targetAspect) scaleX = imageAspect / targetAspect
+            else scaleY = targetAspect / imageAspect
+        } else {
+            if (imageAspect > targetAspect) scaleY = targetAspect / imageAspect
+            else scaleX = imageAspect / targetAspect
+        }
+
+        // x, y, u, v — texture V is flipped because bitmaps are top-down.
+        val vertices = floatArrayOf(
+            -scaleX, -scaleY, 0f, 1f,
+            scaleX, -scaleY, 1f, 1f,
+            -scaleX, scaleY, 0f, 0f,
+            scaleX, scaleY, 1f, 0f,
+        )
+        return ByteBuffer.allocateDirect(vertices.size * 4)
+            .order(ByteOrder.nativeOrder())
+            .asFloatBuffer()
+            .apply {
+                put(vertices)
+                position(0)
+            }
     }
 
     companion object {

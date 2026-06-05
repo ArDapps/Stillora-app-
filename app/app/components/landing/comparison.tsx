@@ -1,24 +1,36 @@
 import { Check, Minus } from "lucide-react";
 import { COMPARISON_ROWS } from "@/lib/landing-content";
+import { LandingVisual, MiniMediaFlow } from "./landing-illustrations";
 import { SectionHeading } from "./section-heading";
 
 export function Comparison() {
   return (
     <section
       aria-label="Stillora compared to a traditional video editor"
-      className="border-t border-[var(--color-border)] bg-[var(--color-surface)]"
+      className="landing-section"
     >
       <div className="mx-auto w-full max-w-7xl px-5 py-20">
-        <SectionHeading title="Create the video, not the editing project" />
+        <SectionHeading eyebrow="Why it feels faster" title="Create the video, not the editing project" />
+
+        <div className="mt-10 grid gap-5 lg:grid-cols-[1fr_1.15fr] lg:items-stretch">
+          <LandingVisual label="Stillora output" ratio="16 / 9" tone="blue" />
+          <div className="landing-card rounded-lg p-5">
+            <MiniMediaFlow />
+            <p className="mt-5 text-sm leading-relaxed text-[var(--color-muted)]">
+              Stillora keeps the work close to the goal: upload media, choose the right format, render,
+              and download the finished MP4.
+            </p>
+          </div>
+        </div>
 
         {/* Desktop / tablet: table */}
-        <div className="mt-12 hidden overflow-hidden rounded-2xl border border-[var(--color-border)] md:block">
+        <div className="landing-card mt-12 hidden overflow-hidden rounded-lg md:block">
           <table className="w-full border-collapse text-left">
             <caption className="sr-only">
               Capability comparison between Stillora and a traditional video editor
             </caption>
             <thead>
-              <tr className="bg-[var(--color-card)]">
+              <tr className="bg-[var(--color-card-high)]">
                 <th scope="col" className="px-6 py-4 text-sm font-semibold">
                   Capability
                 </th>
@@ -62,7 +74,7 @@ export function Comparison() {
           {COMPARISON_ROWS.map((row) => (
             <li
               key={row.capability}
-              className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-sm"
+              className="landing-card rounded-lg p-5"
             >
               <p className="text-sm font-semibold">{row.capability}</p>
               <dl className="mt-3 space-y-2 text-sm">

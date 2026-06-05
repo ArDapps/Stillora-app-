@@ -19,8 +19,8 @@ export function SiteHeader({
   showCta?: boolean;
 }) {
   return (
-    <header className="sticky top-0 z-30 border-b border-[var(--color-border)] bg-[var(--color-header)] backdrop-blur supports-[backdrop-filter]:bg-[var(--color-header)]">
-      <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-5 py-4">
+    <header className="fixed inset-x-0 top-0 z-50 px-3 py-3">
+      <div className="landing-glass mx-auto flex w-full max-w-7xl items-center justify-between gap-4 rounded-lg px-4 py-3">
         <Link href="/" className="flex items-center gap-3">
           <div className="grid size-10 place-items-center rounded-lg bg-[image:var(--brand-mark)] text-white shadow-[0_0_24px_var(--brand-mark-glow)]">
             <Sparkles size={20} strokeWidth={2.4} aria-hidden />
@@ -36,11 +36,11 @@ export function SiteHeader({
         {showNav ? (
           <nav
             aria-label="Primary"
-            className="hidden items-center gap-7 text-sm font-medium text-[var(--color-muted)] md:flex"
+            className="hidden items-center rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]/55 p-1 text-sm font-semibold text-[var(--color-muted)] md:flex"
           >
             {NAV_LINKS.map((link) => (
               <a
-                className="transition hover:text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+                className="rounded-md px-3 py-1.5 transition hover:bg-[var(--color-primary-soft)] hover:text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
                 href={link.href}
                 key={link.href}
               >

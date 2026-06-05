@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_spacing.dart';
+import '../../core/widgets/stillora_video_player_panel.dart';
 import 'gallery_controller.dart';
 import 'local_export_record.dart';
 
@@ -20,6 +22,7 @@ class GalleryVideoScreen extends ConsumerStatefulWidget {
 
 class _GalleryVideoScreenState extends ConsumerState<GalleryVideoScreen> {
   VideoPlayerController? _controller;
+  bool _deleting = false;
 
   @override
   void initState() {
@@ -28,7 +31,9 @@ class _GalleryVideoScreenState extends ConsumerState<GalleryVideoScreen> {
   }
 
   Future<void> _setUp() async {
-    final controller = VideoPlayerController.file(File(widget.record.outputPath));
+    final controller = VideoPlayerController.file(
+      File(widget.record.outputPath),
+    );
     try {
       await controller.initialize();
       await controller.setLooping(true);
@@ -49,16 +54,6 @@ class _GalleryVideoScreenState extends ConsumerState<GalleryVideoScreen> {
     super.dispose();
   }
 
-  void _togglePlayback() {
-    final controller = _controller;
-    if (controller == null || !controller.value.isInitialized) {
-      return;
-    }
-    setState(() {
-      controller.value.isPlaying ? controller.pause() : controller.play();
-    });
-  }
-
   Future<void> _share() async {
     await SharePlus.instance.share(
       ShareParams(
@@ -69,6 +64,40 @@ class _GalleryVideoScreenState extends ConsumerState<GalleryVideoScreen> {
   }
 
   Future<void> _delete() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Delete local video?'),
+          content: const Text(
+            'This removes the video from your Stillora library and deletes the local file from this phone.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton.icon(
+              onPressed: () => Navigator.of(context).pop(true),
+              icon: const Icon(Icons.delete_outline_rounded),
+              label: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true || !mounted || _deleting) {
+      return;
+    }
+
+    setState(() => _deleting = true);
+    final controller = _controller;
+    _controller = null;
+    if (controller != null) {
+      await controller.pause();
+      await controller.dispose();
+    }
+
     await ref
         .read(galleryControllerProvider.notifier)
         .removeRecord(widget.record.id);
@@ -81,7 +110,6 @@ class _GalleryVideoScreenState extends ConsumerState<GalleryVideoScreen> {
   Widget build(BuildContext context) {
     final controller = _controller;
     final ready = controller != null && controller.value.isInitialized;
-    final isPlaying = ready && controller.value.isPlaying;
 
     return Scaffold(
       appBar: AppBar(
@@ -90,49 +118,31 @@ class _GalleryVideoScreenState extends ConsumerState<GalleryVideoScreen> {
           IconButton(
             tooltip: 'Delete',
             icon: const Icon(Icons.delete_outline_rounded),
-            onPressed: _delete,
+            onPressed: _deleting ? null : _delete,
           ),
         ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(StilloraSpacing.sm),
         children: [
-          Card(
-            clipBehavior: Clip.antiAlias,
-            child: AspectRatio(
-              aspectRatio: ready ? controller.value.aspectRatio : 9 / 16,
-              child: ready
-                  ? GestureDetector(
-                      onTap: _togglePlayback,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        fit: StackFit.expand,
-                        children: [
-                          VideoPlayer(controller),
-                          if (!isPlaying)
-                            const ColoredBox(
-                              color: Color(0x55000000),
-                              child: Icon(
-                                Icons.play_circle_fill_rounded,
-                                size: 72,
-                                color: Colors.white,
-                              ),
-                            ),
-                        ],
-                      ),
-                    )
-                  : const Center(child: CircularProgressIndicator()),
+          Text(
+            '${widget.record.preset} · ${widget.record.width}×${widget.record.height}',
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '${widget.record.durationSeconds}s · Saved locally',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: StilloraColors.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: StilloraSpacing.sm),
-          FilledButton.icon(
-            onPressed: ready ? _togglePlayback : null,
-            icon: Icon(isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded),
-            label: Text(isPlaying ? 'Pause' : 'Play'),
-          ),
+          StilloraVideoPlayerPanel(controller: controller),
           const SizedBox(height: StilloraSpacing.xs),
           OutlinedButton.icon(
-            onPressed: _share,
+            onPressed: ready ? _share : null,
             icon: const Icon(Icons.ios_share_rounded),
             label: const Text('Save or Share'),
           ),
