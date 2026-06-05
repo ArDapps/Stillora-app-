@@ -13,10 +13,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Stillora - Image to MP4",
+  title: "Stillora - Turn images into share-ready videos",
   description:
-    "Stillora turns images into ready-to-share social videos in seconds.",
+    "Stillora turns images and clips into polished, perfectly-sized social videos in seconds. Reels, Shorts, TikTok, and square posts with optional audio.",
 };
+
+// Runs before paint so the saved theme is applied without a flash. Defaults to dark.
+const themeInitScript = `(function(){try{var t=localStorage.getItem("stillora-theme");if(t==="light"){document.documentElement.classList.add("light");}}catch(e){}})();`;
 
 export default function RootLayout({
   children,
@@ -28,6 +31,9 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );

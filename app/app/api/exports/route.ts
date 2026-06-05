@@ -15,6 +15,7 @@ import {
   EXPORTS_ROOT,
   getStoragePath,
 } from "@/lib/server-storage";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,6 +41,15 @@ type ExportRequest = {
 
 export async function POST(request: Request) {
   try {
+    const user = await getUserFromRequest(request);
+
+    if (!user) {
+      return Response.json(
+        { error: "Sign in with Google to export your video." },
+        { status: 401 },
+      );
+    }
+
     const ffmpegBinary = getFfmpegPath();
 
     if (!ffmpegBinary) {

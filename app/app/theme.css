@@ -1,4 +1,5 @@
 :root {
+  color-scheme: dark;
   --color-background: #0b1326;
   --color-foreground: #dae2fd;
   --color-muted: #ccc3d8;
@@ -39,4 +40,50 @@
   --shadow-card: 0 16px 40px rgb(0 0 0 / 18%);
   --shadow-primary: 0 0 0 1px rgb(210 187 255 / 16%), inset 0 0 18px rgb(210 187 255 / 12%);
   --shadow-success: 0 0 0 1px rgb(255 224 131 / 16%), inset 0 0 18px rgb(255 224 131 / 12%);
+}
+
+/* Light theme — applied when <html class="light">. Default (no class) stays dark. */
+:root.light {
+  color-scheme: light;
+  --color-background: #f7f6fc;
+  --color-foreground: #1b1530;
+  --color-muted: #4a4458;
+  --color-muted-strong: #6b6478;
+  --color-surface: #ffffff;
+  --color-header: rgb(255 255 255 / 85%);
+  --color-surface-dim: #ece9f5;
+  --color-surface-bright: #ffffff;
+  --color-card: #ffffff;
+  --color-card-high: #f3f1fa;
+  --color-card-highest: #ebe7f6;
+  --color-border: #e3dff0;
+  --color-border-subtle: rgb(120 113 130 / 22%);
+  --color-border-strong: #cbc4dd;
+  --color-primary: #7c3aed;
+  --color-primary-hover: #6d28d9;
+  --color-primary-soft: #efe8ff;
+  --color-primary-text: #ffffff;
+  --color-secondary: #b8860b;
+  --color-secondary-hover: #9a6f08;
+  --color-secondary-soft: #fbf3da;
+  --color-secondary-text: #8a6500;
+  --color-danger: #c0392b;
+  --color-danger-soft: #fce4e0;
+  --color-success: #b8860b;
+  --color-success-soft: #fbf3da;
+  --color-success-text: #ffffff;
+  --color-warning: #8a6500;
+  --color-warning-soft: #fbf3da;
+  /* Media canvas stays dark in both themes so previews read true to color. */
+  --color-preview: #0e1424;
+  --color-preview-panel: #060e20;
+  --color-overlay: rgb(6 14 32 / 72%);
+  --color-overlay-track: rgb(218 226 253 / 24%);
+  --color-overlay-fill: #dae2fd;
+  --color-overlay-text: #dae2fd;
+  --color-disabled: #d9d4e6;
+  --color-disabled-text: #9a93a8;
+  --shadow-card: 0 16px 40px rgb(76 29 149 / 10%);
+  --shadow-primary: 0 0 0 1px rgb(124 58 237 / 18%), inset 0 0 18px rgb(124 58 237 / 8%);
+  --shadow-success: 0 0 0 1px rgb(184 134 11 / 18%), inset 0 0 18px rgb(184 134 11 / 8%);
 }
