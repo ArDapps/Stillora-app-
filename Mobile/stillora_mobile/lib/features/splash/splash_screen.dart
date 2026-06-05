@@ -3,11 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/auth/auth_controller.dart';
-import '../../core/storage/app_preferences.dart';
 import '../../core/widgets/stillora_mark.dart';
-import '../auth/login_screen.dart';
-import '../home/home_screen.dart';
-import '../onboarding/onboarding_screen.dart';
+import '../tabs/app_tabs_screen.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -26,19 +23,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   Future<void> _route() async {
-    final preferences = await ref.read(appPreferencesBootstrapProvider.future);
-    final session = await ref.read(authControllerProvider.future);
+    ref.read(authControllerProvider.future);
     if (!mounted) {
       return;
     }
-
-    if (!preferences.isOnboardingComplete) {
-      context.go(OnboardingScreen.routePath);
-    } else if (session == null) {
-      context.go(LoginScreen.routePath);
-    } else {
-      context.go(HomeScreen.routePath);
-    }
+    context.go(AppTabsScreen.routePath);
   }
 
   @override

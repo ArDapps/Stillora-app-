@@ -5,12 +5,14 @@ import 'package:go_router/go_router.dart';
 import '../../core/auth/auth_controller.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/widgets/stillora_mark.dart';
-import '../home/home_screen.dart';
+import '../tabs/app_tabs_screen.dart';
 
 class LoginScreen extends ConsumerWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({super.key, this.nextPath});
 
   static const routePath = '/login';
+
+  final String? nextPath;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -18,7 +20,7 @@ class LoginScreen extends ConsumerWidget {
 
     ref.listen(authControllerProvider, (_, next) {
       if (next.asData?.value != null) {
-        context.go(HomeScreen.routePath);
+        context.go(nextPath ?? AppTabsScreen.routePath);
       }
     });
 
@@ -41,7 +43,7 @@ class LoginScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 8),
               const Text(
-                'Turn images into videos in seconds.',
+                'Register to convert. You can explore Stillora before signing in.',
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),

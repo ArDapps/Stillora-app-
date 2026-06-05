@@ -1,0 +1,78 @@
+import { Clock, ImagePlus, Music2, Play, Square, Wand2 } from "lucide-react";
+import { formatDuration } from "../editor-utils";
+import type { EditorModel } from "../types";
+import { SocialTargetPills } from "./shared";
+
+export function PreviewPanel({ model }: { model: EditorModel }) {
+  const { state } = model;
+
+  return (
+    <section className="editor-preview-panel order-2 flex min-h-[360px] flex-col rounded-lg border border-[var(--editor-card-border)] shadow-[inset_0_0_34px_rgb(14_165_233_/_0.08)] sm:min-h-[460px] lg:sticky lg:top-5 lg:col-start-2 lg:row-span-2 lg:min-h-[520px]">
+      <div className="flex items-center justify-between border-b border-[var(--editor-card-border)] px-4 py-3">
+        <div>
+          <p className="editor-title text-sm font-semibold">MP4 Preview</p>
+          <p className="editor-subtle text-xs">
+            {state.outputDimensions} - {formatDuration(state.duration)} - {state.fitMode.toUpperCase()}
+          </p>
+        </div>
+        <div className="editor-control-soft flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs font-medium">
+          <Clock size={14} />
+          Timeline ready
+        </div>
+      </div>
+      <div className="grid flex-1 place-items-center overflow-hidden p-5">
+        <SocialTargetPills />
+        <div
+          className="editor-preview-frame relative grid max-h-[min(72vh,680px)] max-w-full place-items-center overflow-hidden rounded-[18px] border border-cyan-300/60 shadow-[0_0_34px_rgb(14_165_233_/_0.22),0_28px_50px_rgb(0_0_0_/_0.38)]"
+          style={{ aspectRatio: state.previewAspectRatio, width: `min(100%, ${state.previewFrameWidth}px)` }}
+        >
+          <PreviewMedia model={model} />
+          <div className="absolute bottom-0 left-0 right-0 bg-[var(--color-overlay)] px-4 py-3 text-[var(--color-primary-text)] backdrop-blur">
+            <div className="mb-2 flex items-center justify-between text-xs">
+              <span>0:00</span>
+              <span>{formatDuration(state.duration)}</span>
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-[var(--color-overlay-track)]">
+              <div className="h-full w-1/3 rounded-full bg-[var(--color-overlay-fill)]" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function PreviewMedia({ model }: { model: EditorModel }) {
+  const { state } = model;
+  const className = `h-full w-full ${state.fitMode === "fit" ? "object-contain" : "object-cover"}`;
+
+  if (state.selectedSlide) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img alt="Selected timeline slide preview" className={className} src={state.selectedSlide.url} />;
+  }
+
+  if (state.imageAsset?.kind === "image") {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img alt="Uploaded composition preview" className={className} src={state.imageAsset.url} />;
+  }
+
+  if (state.imageAsset?.kind === "video") {
+    return <video className={className} controls muted playsInline src={state.imageAsset.url} />;
+  }
+
+  return (
+    <div className="flex max-w-xs flex-col items-center gap-3 px-6 text-center text-[var(--color-primary-text)]">
+      <Wand2 size={34} />
+      <p className="text-lg font-semibold">Upload media to begin</p>
+      <p className="text-sm text-[var(--color-muted)]">
+        The preview will match the final video frame without stretching your media.
+      </p>
+      <div className="mt-1 flex items-center gap-2 text-xs">
+        <ImagePlus size={14} />
+        <Play size={14} />
+        <Music2 size={14} />
+        <Square size={14} />
+      </div>
+    </div>
+  );
+}

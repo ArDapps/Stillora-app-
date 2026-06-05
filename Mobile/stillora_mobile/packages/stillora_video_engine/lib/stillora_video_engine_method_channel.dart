@@ -24,6 +24,7 @@ class MethodChannelStilloraVideoEngine extends StilloraVideoEnginePlatform {
   @override
   Future<ExportResult> exportVideo({
     required String imagePath,
+    List<String> imagePaths = const [],
     String? audioPath,
     required int durationSeconds,
     required int width,
@@ -34,6 +35,7 @@ class MethodChannelStilloraVideoEngine extends StilloraVideoEnginePlatform {
     final result = await methodChannel
         .invokeMapMethod<Object?, Object?>('exportVideo', {
           'imagePath': imagePath,
+          'imagePaths': imagePaths.isEmpty ? [imagePath] : imagePaths,
           'audioPath': audioPath,
           'durationSeconds': durationSeconds,
           'width': width,

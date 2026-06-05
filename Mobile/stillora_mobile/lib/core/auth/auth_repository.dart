@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../api/api_client.dart';
+import '../constants/app_constants.dart';
 import 'session.dart';
 import 'token_storage.dart';
 
@@ -50,7 +51,7 @@ class AuthRepository {
   }
 
   Future<AuthSession> signInWithGoogle() async {
-    await _googleSignIn.initialize();
+    await _googleSignIn.initialize(clientId: AppConstants.googleIosClientId);
     final account = await _googleSignIn.authenticate();
     final authorization = await account.authorizationClient
         .authorizationForScopes(const ['openid', 'email', 'profile']);

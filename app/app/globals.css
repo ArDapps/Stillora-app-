@@ -23,3 +23,144 @@ button,
 input {
   font: inherit;
 }
+
+.editor-frame {
+  background: var(--editor-frame-bg);
+  border-color: var(--editor-frame-border);
+  box-shadow: var(--editor-frame-shadow);
+}
+
+.editor-card {
+  background: var(--editor-card-bg);
+  border-color: var(--editor-card-border);
+  box-shadow: 0 12px 34px rgb(0 0 0 / 10%);
+}
+
+.editor-control {
+  background: var(--editor-control-bg);
+  border-color: var(--editor-card-border);
+}
+
+.editor-control-soft {
+  background: var(--editor-control-bg-soft);
+  border-color: var(--editor-card-border);
+}
+
+.editor-title {
+  color: var(--editor-title);
+}
+
+.editor-subtle {
+  color: var(--editor-subtle);
+}
+
+.editor-active {
+  background: rgb(217 70 239 / 14%);
+  border-color: #e879f9;
+  color: var(--editor-title);
+  box-shadow: 0 0 18px var(--editor-glow);
+}
+
+.editor-preview-panel {
+  background: var(--editor-preview-bg);
+}
+
+.editor-preview-frame {
+  background: var(--editor-preview-frame-bg);
+}
+
+/* ------------------------------------------------------------------ */
+/* Landing page motion — subtle, GPU-friendly, reduced-motion aware.  */
+/* ------------------------------------------------------------------ */
+
+/* Audio waveform bars in the hero mockup. */
+.landing-wave-bar {
+  height: 35%;
+  transform-origin: bottom;
+  animation: landing-wave 1.4s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes landing-wave {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+/* Export progress bar that fills and resets. */
+.landing-progress {
+  width: 8%;
+  animation: landing-progress 4.5s ease-in-out infinite;
+  will-change: width;
+}
+
+@keyframes landing-progress {
+  0% {
+    width: 8%;
+  }
+  70% {
+    width: 92%;
+  }
+  100% {
+    width: 92%;
+  }
+}
+
+/* Slow gradient sheen drifting across preview frames. */
+.landing-mock-sheen {
+  background: linear-gradient(
+    115deg,
+    transparent 30%,
+    rgb(255 255 255 / 8%) 50%,
+    transparent 70%
+  );
+  background-size: 250% 250%;
+  animation: landing-sheen 7s ease-in-out infinite;
+  will-change: background-position;
+}
+
+@keyframes landing-sheen {
+  0% {
+    background-position: 150% 0;
+  }
+  100% {
+    background-position: -50% 0;
+  }
+}
+
+/* Gentle breathing on the large background glows. */
+.landing-hero-glow {
+  animation: landing-glow 12s ease-in-out infinite;
+  will-change: opacity, transform;
+}
+
+@keyframes landing-glow {
+  0%,
+  100% {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-wave-bar,
+  .landing-progress,
+  .landing-mock-sheen,
+  .landing-hero-glow {
+    animation: none;
+  }
+  .landing-progress {
+    width: 45%;
+  }
+  .landing-wave-bar {
+    height: 60%;
+  }
+}

@@ -5,12 +5,11 @@ import '../features/auth/login_screen.dart';
 import '../features/editor/editor_screen.dart';
 import '../features/export/export_progress_screen.dart';
 import '../features/gallery/gallery_screen.dart';
-import '../features/home/home_screen.dart';
-import '../features/onboarding/onboarding_screen.dart';
 import '../features/preview/preview_screen.dart';
 import '../features/profile/profile_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/splash/splash_screen.dart';
+import '../features/tabs/app_tabs_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -21,16 +20,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const SplashScreen(),
       ),
       GoRoute(
-        path: OnboardingScreen.routePath,
-        builder: (context, state) => const OnboardingScreen(),
-      ),
-      GoRoute(
         path: LoginScreen.routePath,
-        builder: (context, state) => const LoginScreen(),
+        builder: (context, state) =>
+            LoginScreen(nextPath: state.uri.queryParameters['next']),
       ),
       GoRoute(
-        path: HomeScreen.routePath,
-        builder: (context, state) => const HomeScreen(),
+        path: AppTabsScreen.routePath,
+        builder: (context, state) => const AppTabsScreen(),
       ),
       GoRoute(
         path: EditorScreen.routePath,

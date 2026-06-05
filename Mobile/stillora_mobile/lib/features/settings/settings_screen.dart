@@ -4,9 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/auth/auth_controller.dart';
 import '../../core/constants/app_constants.dart';
-import '../../core/storage/app_preferences.dart';
 import '../auth/login_screen.dart';
-import '../onboarding/onboarding_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -43,19 +41,6 @@ class SettingsScreen extends ConsumerWidget {
             leading: Icon(Icons.fit_screen_rounded),
             title: Text('Default resize mode'),
             subtitle: Text('Fit'),
-          ),
-          ListTile(
-            leading: const Icon(Icons.replay_rounded),
-            title: const Text('Replay onboarding'),
-            onTap: () async {
-              final preferences = await ref.read(
-                appPreferencesBootstrapProvider.future,
-              );
-              await preferences.setOnboardingComplete(false);
-              if (context.mounted) {
-                context.go(OnboardingScreen.routePath);
-              }
-            },
           ),
           const ListTile(
             leading: Icon(Icons.cleaning_services_rounded),

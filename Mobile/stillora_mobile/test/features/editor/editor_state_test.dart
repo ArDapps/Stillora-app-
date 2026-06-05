@@ -18,11 +18,14 @@ void main() {
     expect(filled.resizeMode, ResizeMode.fill);
   });
 
-  test('image is required before export', () {
+  test('media is required before export', () {
     const empty = EditorState();
-    final ready = empty.copyWith(imagePath: '/local/image.jpg');
+    final ready = empty.copyWith(
+      media: [MediaItem.fromPath('/local/image.jpg')],
+    );
 
     expect(empty.canExport, isFalse);
     expect(ready.canExport, isTrue);
+    expect(ready.imagePath, '/local/image.jpg');
   });
 }

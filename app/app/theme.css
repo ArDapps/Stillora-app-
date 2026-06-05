@@ -40,6 +40,31 @@
   --shadow-card: 0 16px 40px rgb(0 0 0 / 18%);
   --shadow-primary: 0 0 0 1px rgb(210 187 255 / 16%), inset 0 0 18px rgb(210 187 255 / 12%);
   --shadow-success: 0 0 0 1px rgb(255 224 131 / 16%), inset 0 0 18px rgb(255 224 131 / 12%);
+  /* Landing/brand accents — derived from the editor palette (purple → fuchsia → cyan). */
+  --brand-gradient: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
+  --brand-mark: linear-gradient(145deg, #2dd4ff, #8b5cf6 55%, #ec4899);
+  --brand-mark-glow: rgb(124 58 237 / 42%);
+  --landing-hero-glow:
+    radial-gradient(60% 60% at 20% 0%, rgb(124 58 237 / 22%), transparent 60%),
+    radial-gradient(50% 50% at 90% 10%, rgb(34 211 238 / 16%), transparent 55%);
+  --landing-cta-glow: radial-gradient(60% 120% at 50% 0%, rgb(124 58 237 / 18%), transparent 70%);
+  --landing-mock-bg: linear-gradient(160deg, #1b1144 0%, #060e20 55%, #131b2e 100%);
+  --editor-page-bg:
+    radial-gradient(circle at top left, rgb(124 58 237 / 34%), transparent 34%),
+    radial-gradient(circle at bottom right, rgb(14 165 233 / 26%), transparent 38%),
+    linear-gradient(135deg, #090816 0%, #071426 48%, #04111f 100%);
+  --editor-frame-bg: rgb(2 6 23 / 72%);
+  --editor-frame-border: rgb(34 211 238 / 70%);
+  --editor-frame-shadow: 0 0 0 1px rgb(236 72 153 / 45%), 0 28px 90px rgb(0 0 0 / 42%), inset 0 0 44px rgb(124 58 237 / 14%);
+  --editor-card-bg: rgb(255 255 255 / 6%);
+  --editor-card-border: rgb(255 255 255 / 10%);
+  --editor-control-bg: rgb(2 6 23 / 45%);
+  --editor-control-bg-soft: rgb(2 6 23 / 30%);
+  --editor-title: #ffffff;
+  --editor-subtle: #cbd5e1;
+  --editor-glow: rgb(217 70 239 / 22%);
+  --editor-preview-bg: rgb(2 6 23 / 35%);
+  --editor-preview-frame-bg: #020617;
 }
 
 /* Light theme — applied when <html class="light">. Default (no class) stays dark. */
@@ -86,4 +111,29 @@
   --shadow-card: 0 16px 40px rgb(76 29 149 / 10%);
   --shadow-primary: 0 0 0 1px rgb(124 58 237 / 18%), inset 0 0 18px rgb(124 58 237 / 8%);
   --shadow-success: 0 0 0 1px rgb(184 134 11 / 18%), inset 0 0 18px rgb(184 134 11 / 8%);
+  /* Landing/brand accents — softer in light theme, same editor-derived hues. */
+  --brand-gradient: linear-gradient(135deg, #7c3aed 0%, #d946ef 100%);
+  --brand-mark: linear-gradient(145deg, #2dd4ff, #8b5cf6 55%, #ec4899);
+  --brand-mark-glow: rgb(124 58 237 / 28%);
+  --landing-hero-glow:
+    radial-gradient(60% 60% at 20% 0%, rgb(124 58 237 / 12%), transparent 60%),
+    radial-gradient(50% 50% at 90% 10%, rgb(14 165 233 / 10%), transparent 55%);
+  --landing-cta-glow: radial-gradient(60% 120% at 50% 0%, rgb(124 58 237 / 10%), transparent 70%);
+  --landing-mock-bg: linear-gradient(160deg, #1b1144 0%, #060e20 55%, #131b2e 100%);
+  --editor-page-bg:
+    radial-gradient(circle at top left, rgb(124 58 237 / 16%), transparent 34%),
+    radial-gradient(circle at bottom right, rgb(14 165 233 / 14%), transparent 38%),
+    linear-gradient(135deg, #faf7ff 0%, #eff8ff 52%, #ffffff 100%);
+  --editor-frame-bg: rgb(255 255 255 / 78%);
+  --editor-frame-border: rgb(14 165 233 / 58%);
+  --editor-frame-shadow: 0 0 0 1px rgb(236 72 153 / 20%), 0 28px 80px rgb(76 29 149 / 16%), inset 0 0 38px rgb(14 165 233 / 8%);
+  --editor-card-bg: rgb(255 255 255 / 78%);
+  --editor-card-border: rgb(124 58 237 / 16%);
+  --editor-control-bg: rgb(255 255 255 / 68%);
+  --editor-control-bg-soft: rgb(248 250 252 / 80%);
+  --editor-title: #1b1530;
+  --editor-subtle: #5f5870;
+  --editor-glow: rgb(124 58 237 / 16%);
+  --editor-preview-bg: rgb(255 255 255 / 58%);
+  --editor-preview-frame-bg: #071426;
 }

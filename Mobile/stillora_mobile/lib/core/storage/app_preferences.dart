@@ -15,19 +15,11 @@ final appPreferencesBootstrapProvider = FutureProvider<AppPreferences>((
 class AppPreferences {
   AppPreferences(this._preferences);
 
-  static const _onboardingCompleteKey = 'stillora.onboarding.complete';
   static const _defaultDurationKey = 'stillora.editor.defaultDuration';
   static const _defaultPresetKey = 'stillora.editor.defaultPreset';
   static const _defaultResizeModeKey = 'stillora.editor.defaultResizeMode';
 
   final SharedPreferences _preferences;
-
-  bool get isOnboardingComplete =>
-      _preferences.getBool(_onboardingCompleteKey) ?? false;
-
-  Future<void> setOnboardingComplete(bool value) {
-    return _preferences.setBool(_onboardingCompleteKey, value);
-  }
 
   int get defaultDurationSeconds =>
       _preferences.getInt(_defaultDurationKey) ?? 10;

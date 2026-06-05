@@ -14,6 +14,7 @@ class MockStilloraVideoEnginePlatform
   @override
   Future<ExportResult> exportVideo({
     required String imagePath,
+    List<String> imagePaths = const [],
     String? audioPath,
     required int durationSeconds,
     required int width,

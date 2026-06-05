@@ -3,14 +3,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:stillora_mobile/core/storage/app_preferences.dart';
 
 void main() {
-  test('onboarding completion state persists locally', () async {
+  test('default video duration persists locally', () async {
     SharedPreferences.setMockInitialValues({});
     final preferences = AppPreferences(await SharedPreferences.getInstance());
 
-    expect(preferences.isOnboardingComplete, isFalse);
+    expect(preferences.defaultDurationSeconds, 10);
 
-    await preferences.setOnboardingComplete(true);
+    await preferences.setDefaultDurationSeconds(30);
 
-    expect(preferences.isOnboardingComplete, isTrue);
+    expect(preferences.defaultDurationSeconds, 30);
   });
 }
