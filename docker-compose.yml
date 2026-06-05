@@ -1,0 +1,45 @@
+services:
+  stillora:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+      PORT: "3087"
+      HOSTNAME: 0.0.0.0
+      AUTH_SECRET: ${AUTH_SECRET}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-stillora}:${POSTGRES_PASSWORD:-change-me}@postgres:55432/${POSTGRES_DB:-stillora}
+      MEDIA_ROOT: /data/stillora
+      PUBLIC_MEDIA_BASE_URL: ${PUBLIC_MEDIA_BASE_URL:-}
+    ports:
+      - "${APP_PORT:-8317}:3087"
+    volumes:
+      - stillora_media:/data/stillora
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-stillora}
+      POSTGRES_USER: ${POSTGRES_USER:-stillora}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      PGPORT: "55432"
+    command: ["postgres", "-p", "55432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB} -p 55432"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - stillora_postgres:/var/lib/postgresql/data
+
+volumes:
+  stillora_media:
+  stillora_postgres:

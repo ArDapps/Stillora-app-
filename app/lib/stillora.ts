@@ -83,9 +83,10 @@ export const VIDEO_ACCEPT = ".mp4,.mov,.webm,.m4v";
 export const MEDIA_ACCEPT = `${IMAGE_ACCEPT},${VIDEO_ACCEPT}`;
 export const AUDIO_ACCEPT = ".mp3,.wav,.m4a,.aac,.ogg";
 
-export const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
+export const MAX_UPLOAD_BYTES = 200 * 1024 * 1024;
+export const MAX_IMAGE_BYTES = MAX_UPLOAD_BYTES;
 export const MAX_SOURCE_VIDEO_BYTES = 200 * 1024 * 1024;
-export const MAX_AUDIO_BYTES = 50 * 1024 * 1024;
+export const MAX_AUDIO_BYTES = MAX_UPLOAD_BYTES;
 export const DEFAULT_DURATION_SECONDS = 10;
 export const FIXED_DURATION_SECONDS = [10, 30] as const;
 export const MAX_VIDEO_DURATION_SECONDS = 300;

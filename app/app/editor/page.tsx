@@ -26,13 +26,13 @@ import {
   DEFAULT_DURATION_SECONDS,
   FitMode,
   FIXED_DURATION_SECONDS,
-  createUploadStoragePath,
   getFileExtension,
   getPreviewAspectRatio,
   MEDIA_ACCEPT,
   MAX_AUDIO_BYTES,
   MAX_IMAGE_BYTES,
   MAX_SOURCE_VIDEO_BYTES,
+  MAX_UPLOAD_BYTES,
   MAX_VIDEO_DURATION_SECONDS,
   OUTPUT_PRESETS,
   OutputPresetId,
@@ -42,7 +42,6 @@ import {
   VIDEO_MIME_TYPES,
   formatBytes,
 } from "@/lib/stillora";
-import { upload as uploadBlob } from "@vercel/blob/client";
 
 type SourceAsset = {
   kind: SourceMediaKind;
@@ -82,6 +81,7 @@ type ExportResult = {
 };
 
 const emptyUploadState: UploadState = { status: "idle", upload: null, error: "" };
+const EXPORT_RESULT_TTL_MS = 20 * 60 * 1000;
 
 export default function Editor() {
   const { user } = useSession();
@@ -166,6 +166,22 @@ export default function Editor() {
     };
   }, [audioAsset]);
 
+  useEffect(() => {
+    if (!exportResult) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setExportResult((current) => (current?.id === exportResult.id ? null : current));
+      setExportStatus((current) => (current === "ready" ? "idle" : current));
+    }, EXPORT_RESULT_TTL_MS);
+
+    return () => {
+      window.clearTimeout(timeout);
+      URL.revokeObjectURL(exportResult.downloadUrl);
+    };
+  }, [exportResult]);
+
   async function handleMediaFiles(files: FileList | File[] | null | undefined) {
     const selectedFiles = Array.from(files ?? []);
 
@@ -190,6 +206,13 @@ export default function Editor() {
 
     if (invalidFile) {
       setImageError("Multiple-file timelines support images only. Use one video at a time.");
+      return;
+    }
+
+    const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
+
+    if (totalBytes > MAX_UPLOAD_BYTES) {
+      setImageError("Total image timeline media must be 200 MB or smaller.");
       return;
     }
 
@@ -390,7 +413,7 @@ export default function Editor() {
     if (
       (!imageAsset && !isImageTimeline) ||
       !sourceUploadReady ||
-      (audioAsset && !audioUpload.upload) ||
+      (audioAsset && audioUpload.status !== "saved") ||
       exportStatus === "exporting"
     ) {
       return;
@@ -402,47 +425,64 @@ export default function Editor() {
     setExportError("");
 
     try {
-      const response = await fetch("/api/exports", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          sourcePath: imageUpload.upload?.relativePath,
+      const formData = new FormData();
+
+      formData.append(
+        "metadata",
+        JSON.stringify({
           sourceKind: imageAsset?.kind ?? "image",
           slides: isImageTimeline
             ? imageSlides.map((slide) => ({
-                path: slide.upload.upload?.relativePath,
                 duration: slide.duration,
                 width: slide.width,
                 height: slide.height,
               }))
             : undefined,
           transition: isImageTimeline ? "fade" : undefined,
-          audioPath: audioUpload.upload?.relativePath ?? null,
           presetId,
           fitMode,
           duration,
           imageWidth: imageAsset?.width ?? selectedSlide?.width ?? 1080,
           imageHeight: imageAsset?.height ?? selectedSlide?.height ?? 1920,
         }),
+      );
+
+      if (isImageTimeline) {
+        imageSlides.forEach((slide, index) => {
+          formData.append(`slide-${index}`, slide.file);
+        });
+      } else if (imageAsset) {
+        formData.append("source", imageAsset.file);
+      }
+
+      if (audioAsset) {
+        formData.append("audio", audioAsset.file);
+      }
+
+      const response = await fetch("/api/exports", {
+        method: "POST",
+        body: formData,
       });
       if (response.status === 401) {
         startGoogleSignIn("/editor");
         return;
       }
 
-      const payload = (await response.json()) as {
-        export?: ExportResult;
-        error?: string;
-      };
-
-      if (!response.ok || !payload.export) {
-        throw new Error(payload.error ?? "Export failed.");
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(payload?.error ?? "Export failed.");
       }
 
+      const video = await response.blob();
+      const downloadUrl = URL.createObjectURL(video);
+      const filename = response.headers.get("X-Export-Filename") ?? `stillora-${crypto.randomUUID()}.mp4`;
+
       setExportProgress(100);
-      setExportResult(payload.export);
+      setExportResult({
+        id: crypto.randomUUID(),
+        filename,
+        downloadUrl,
+      });
       setExportStatus("ready");
     } catch (error) {
       setExportStatus("idle");
@@ -456,6 +496,15 @@ export default function Editor() {
     setExportProgress(0);
     setExportResult(null);
     setExportError("");
+  }
+
+  function handleExportDownload() {
+    const downloadedExportId = exportResult?.id;
+
+    window.setTimeout(() => {
+      setExportResult((current) => (current?.id === downloadedExportId ? null : current));
+      setExportStatus((current) => (current === "ready" ? "idle" : current));
+    }, 1000);
   }
 
   function revokeSourceUrls() {
@@ -1060,6 +1109,7 @@ export default function Editor() {
                   className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-[var(--color-success)] px-3 py-2 text-center text-sm font-semibold leading-tight text-[var(--color-success-text)] shadow-sm shadow-[var(--shadow-success)] transition hover:bg-[var(--color-secondary-hover)] sm:px-4"
                   download={exportResult.filename}
                   href={exportResult.downloadUrl}
+                  onClick={handleExportDownload}
                 >
                   <Download size={18} className="shrink-0" />
                   <span className="min-w-0">Download final MP4</span>
@@ -1136,14 +1186,14 @@ function UploadStatus({ state }: { state: UploadState }) {
   }
 
   if (state.status === "uploading") {
-    return <p className="mt-1 text-xs text-[var(--color-warning)]">Uploading to server...</p>;
+    return <p className="mt-1 text-xs text-[var(--color-warning)]">Preparing...</p>;
   }
 
   if (state.status === "failed") {
     return <p className="mt-1 text-xs text-[var(--color-danger)]">{state.error}</p>;
   }
 
-  return <p className="mt-1 text-xs text-[var(--color-success)]">Saved on server</p>;
+  return <p className="mt-1 text-xs text-[var(--color-success)]">Ready for export</p>;
 }
 
 async function uploadSelectedFile(
@@ -1166,86 +1216,18 @@ async function uploadSelectedFile(
   }
 }
 
-async function uploadFile(endpoint: string, file: File) {
-  const blobUpload = await tryUploadToBlob(endpoint, file);
-
-  if (blobUpload) {
-    return blobUpload;
-  }
-
-  const formData = new FormData();
-  formData.append("file", file);
-
-  const response = await fetch(endpoint, {
-    method: "POST",
-    body: formData,
-  });
-
-  const payload = (await response.json()) as {
-    upload?: StoredUpload;
-    error?: string;
-  };
-
-  if (!response.ok || !payload.upload) {
-    throw new Error(payload.error ?? "Upload failed.");
-  }
-
-  return payload.upload;
-}
-
-async function tryUploadToBlob(endpoint: string, file: File): Promise<StoredUpload | null> {
-  const folder = getUploadFolder(endpoint);
-
-  if (!folder) {
-    return null;
-  }
-
+async function uploadFile(_endpoint: string, file: File) {
   const id = crypto.randomUUID();
-  const { relativePath, storedName } = createUploadStoragePath({
+
+  return {
     id,
-    filename: file.name,
+    originalName: file.name,
+    storedName: file.name,
+    relativePath: id,
+    size: file.size,
     mimeType: file.type,
-    folder,
-  });
-
-  try {
-    const blob = await uploadBlob(relativePath, file, {
-      access: "public",
-      handleUploadUrl: "/api/uploads/client",
-      contentType: file.type,
-      multipart: file.size > 4 * 1024 * 1024,
-    });
-
-    return {
-      id,
-      originalName: file.name,
-      storedName,
-      relativePath: blob.pathname,
-      size: file.size,
-      mimeType: file.type,
-      url: blob.url,
-      downloadUrl: blob.downloadUrl,
-      storage: "blob",
-    };
-  } catch {
-    return null;
-  }
-}
-
-function getUploadFolder(endpoint: string) {
-  if (endpoint.endsWith("/image")) {
-    return "images";
-  }
-
-  if (endpoint.endsWith("/video")) {
-    return "videos";
-  }
-
-  if (endpoint.endsWith("/audio")) {
-    return "audio";
-  }
-
-  return null;
+    storage: "local" as const,
+  };
 }
 
 function getAudioFitDuration(duration: number) {

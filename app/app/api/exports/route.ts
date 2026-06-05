@@ -1,38 +1,32 @@
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { spawn } from "node:child_process";
 
 import ffmpegPath from "ffmpeg-static";
 
 import {
+  AUDIO_MIME_TYPES,
   FitMode,
   MAX_VIDEO_DURATION_SECONDS,
+  MAX_UPLOAD_BYTES,
   OUTPUT_PRESETS,
   OutputPresetId,
+  SOURCE_MEDIA_MIME_TYPES,
   SourceMediaKind,
 } from "@/lib/stillora";
-import {
-  createExportOutputPath,
-  getExportStoragePath,
-  materializeStoredFile,
-  saveExport,
-} from "@/lib/server-storage";
 import { getUserFromRequest } from "@/lib/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type ExportRequest = {
-  sourcePath?: string;
   sourceKind?: SourceMediaKind;
-  imagePath?: string;
   slides?: Array<{
-    path: string;
     duration: number;
     width: number;
     height: number;
   }>;
   transition?: "none" | "fade";
-  audioPath?: string | null;
   presetId: OutputPresetId;
   fitMode: FitMode;
   duration: number;
@@ -41,6 +35,8 @@ type ExportRequest = {
 };
 
 export async function POST(request: Request) {
+  let workDir: string | null = null;
+
   try {
     const user = await getUserFromRequest(request);
 
@@ -57,7 +53,14 @@ export async function POST(request: Request) {
       return Response.json({ error: "FFmpeg is not available." }, { status: 500 });
     }
 
-    const body = (await request.json()) as ExportRequest;
+    const formData = await request.formData();
+    const metadataValue = formData.get("metadata");
+
+    if (typeof metadataValue !== "string") {
+      return Response.json({ error: "Export metadata is required." }, { status: 400 });
+    }
+
+    const body = JSON.parse(metadataValue) as ExportRequest;
     const preset = OUTPUT_PRESETS.find((item) => item.id === body.presetId);
 
     if (!preset) {
@@ -84,12 +87,22 @@ export async function POST(request: Request) {
     }
 
     const exportId = crypto.randomUUID();
-    const day = new Date().toISOString().slice(0, 10);
-    const workDir = path.join("/tmp", "stillora-work", exportId);
-    const audioPath = body.audioPath
-      ? await materializeStoredFile(body.audioPath, workDir)
+    workDir = path.join("/tmp", "stillora-work", exportId);
+    await mkdir(workDir, { recursive: true });
+    const activeWorkDir = workDir;
+
+    const uploadedFiles = getUploadedFiles(formData);
+    const totalBytes = uploadedFiles.reduce((sum, file) => sum + file.size, 0);
+
+    if (totalBytes > MAX_UPLOAD_BYTES) {
+      return Response.json({ error: "Total media must be 200 MB or smaller." }, { status: 413 });
+    }
+
+    const audioFile = getOptionalFile(formData, "audio");
+    const audioPath = audioFile
+      ? await writeTempFile(audioFile, activeWorkDir, "audio", AUDIO_MIME_TYPES)
       : null;
-    const outputPath = await createExportOutputPath(day, exportId);
+    const outputPath = path.join(activeWorkDir, `${exportId}.mp4`);
 
     const width = evenDimension(preset.width ?? body.imageWidth);
     const height = evenDimension(preset.height ?? body.imageHeight);
@@ -100,9 +113,14 @@ export async function POST(request: Request) {
         duration: normalizeSlideDuration(slide.duration),
       }));
       const materializedSlides = await Promise.all(
-        slides.map(async (slide) => ({
+        slides.map(async (slide, index) => ({
           ...slide,
-          absolutePath: await materializeStoredFile(slide.path, workDir),
+          absolutePath: await writeTempFile(
+            getRequiredFile(formData, `slide-${index}`),
+            activeWorkDir,
+            `slide-${index}`,
+            SOURCE_MEDIA_MIME_TYPES,
+          ),
         })),
       );
       const totalDuration = slides.reduce((sum, slide) => sum + slide.duration, 0);
@@ -127,9 +145,11 @@ export async function POST(request: Request) {
         }),
       );
     } else {
-      const sourcePath = await materializeStoredFile(
-        body.sourcePath ?? body.imagePath ?? "",
-        workDir,
+      const sourcePath = await writeTempFile(
+        getRequiredFile(formData, "source"),
+        activeWorkDir,
+        "source",
+        SOURCE_MEDIA_MIME_TYPES,
       );
       const videoFilter = buildVideoFilter(width, height, body.fitMode);
       const args = ["-y"];
@@ -172,20 +192,16 @@ export async function POST(request: Request) {
       await runFfmpeg(ffmpegBinary, args);
     }
 
-    const blobPath = getExportStoragePath(day, exportId);
-    const storedExport = await saveExport(outputPath, blobPath);
+    const video = await readFile(outputPath);
 
-    return Response.json(
-      {
-        export: {
-          id: exportId,
-          filename: `stillora-${exportId}.mp4`,
-          downloadUrl:
-            storedExport?.downloadUrl ?? `/api/exports/${exportId}/download?day=${day}`,
-        },
+    return new Response(video, {
+      status: 201,
+      headers: {
+        "Content-Disposition": `attachment; filename="stillora-${exportId}.mp4"`,
+        "Content-Type": "video/mp4",
+        "X-Export-Filename": `stillora-${exportId}.mp4`,
       },
-      { status: 201 },
-    );
+    });
   } catch (error) {
     return Response.json(
       {
@@ -193,7 +209,53 @@ export async function POST(request: Request) {
       },
       { status: 500 },
     );
+  } finally {
+    if (workDir) {
+      await rm(workDir, { recursive: true, force: true });
+    }
   }
+}
+
+function getUploadedFiles(formData: FormData) {
+  return Array.from(formData.values()).filter((value): value is File => value instanceof File);
+}
+
+function getRequiredFile(formData: FormData, name: string) {
+  const file = formData.get(name);
+
+  if (!(file instanceof File)) {
+    throw new Error(`${name} file is required.`);
+  }
+
+  return file;
+}
+
+function getOptionalFile(formData: FormData, name: string) {
+  const file = formData.get(name);
+
+  return file instanceof File ? file : null;
+}
+
+async function writeTempFile(
+  file: File,
+  workDir: string,
+  basename: string,
+  allowedMimeTypes: Set<string>,
+) {
+  if (!allowedMimeTypes.has(file.type)) {
+    throw new Error("Unsupported file format.");
+  }
+
+  if (file.size > MAX_UPLOAD_BYTES) {
+    throw new Error("Each file must be 200 MB or smaller.");
+  }
+
+  const extension = file.name.split(".").pop()?.replace(/[^a-z0-9]/gi, "").toLowerCase() || "bin";
+  const filePath = path.join(workDir, `${basename}.${extension}`);
+
+  await writeFile(filePath, Buffer.from(await file.arrayBuffer()));
+
+  return filePath;
 }
 
 function buildSlideshowArgs({

@@ -1,5 +1,3 @@
-import { readExport } from "@/lib/server-storage";
-
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -11,22 +9,10 @@ export async function GET(request: Request, context: RouteContext<"/api/exports/
     return Response.json({ error: "Invalid download request." }, { status: 400 });
   }
 
-  try {
-    const exportFile = await readExport(day, id);
-
-    if (!exportFile) {
-      return Response.json({ error: "Export file was not found." }, { status: 404 });
-    }
-
-    return new Response(exportFile.body, {
-      headers: {
-        "Content-Disposition": `attachment; filename="stillora-${id}.mp4"`,
-        "Content-Type": exportFile.contentType,
-      },
-    });
-  } catch {
-    return Response.json({ error: "Export file was not found." }, { status: 404 });
-  }
+  return Response.json(
+    { error: "Exports are processed temporarily and are not saved on the server." },
+    { status: 410 },
+  );
 }
 
 function isUuid(value: string) {
