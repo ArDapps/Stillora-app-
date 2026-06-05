@@ -28,6 +28,8 @@ import {
   FIXED_DURATION_SECONDS,
   getFileExtension,
   getPreviewAspectRatio,
+  IMAGE_ACCEPT,
+  IMAGE_MIME_TYPES,
   MEDIA_ACCEPT,
   MAX_AUDIO_BYTES,
   MAX_IMAGE_BYTES,
@@ -86,6 +88,7 @@ const EXPORT_RESULT_TTL_MS = 20 * 60 * 1000;
 export default function Editor() {
   const { user } = useSession();
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const addImagesInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const [imageAsset, setImageAsset] = useState<SourceAsset | null>(null);
@@ -197,6 +200,26 @@ export default function Editor() {
     await handleImageFile(selectedFiles[0]);
   }
 
+  async function handleAdditionalImageFiles(files: FileList | File[] | null | undefined) {
+    const selectedFiles = Array.from(files ?? []);
+
+    if (selectedFiles.length === 0) {
+      return;
+    }
+
+    const nextFiles = [
+      ...(isImageTimeline ? imageSlides.map((slide) => slide.file) : imageAsset?.kind === "image" ? [imageAsset.file] : []),
+      ...selectedFiles,
+    ];
+
+    if (nextFiles.length === selectedFiles.length && selectedFiles.length === 1) {
+      await handleImageFile(selectedFiles[0]);
+      return;
+    }
+
+    await handleImageTimelineFiles(nextFiles);
+  }
+
   async function handleImageTimelineFiles(files: File[]) {
     resetExportState();
     setImageError("");
@@ -219,8 +242,8 @@ export default function Editor() {
     const slides: ImageSlide[] = [];
 
     for (const file of files) {
-      if (!SOURCE_MEDIA_MIME_TYPES.has(file.type) || file.size > MAX_IMAGE_BYTES) {
-        setImageError("Use JPG, PNG, or WebP images up to 20 MB each.");
+      if (!IMAGE_MIME_TYPES.has(file.type) || file.size > MAX_IMAGE_BYTES) {
+        setImageError("Use JPG, PNG, or WebP images up to 200 MB each.");
         slides.forEach((slide) => URL.revokeObjectURL(slide.url));
         return;
       }
@@ -293,7 +316,7 @@ export default function Editor() {
     const maxBytes = isVideo ? MAX_SOURCE_VIDEO_BYTES : MAX_IMAGE_BYTES;
 
     if (file.size > maxBytes) {
-      setImageError(isVideo ? "Video must be 200 MB or smaller." : "Image must be 20 MB or smaller.");
+      setImageError(isVideo ? "Video must be 200 MB or smaller." : "Image must be 200 MB or smaller.");
       return;
     }
 
@@ -339,7 +362,7 @@ export default function Editor() {
     }
 
     if (file.size > MAX_AUDIO_BYTES) {
-      setAudioError("Audio must be 50 MB or smaller.");
+      setAudioError("Audio must be 200 MB or smaller.");
       return;
     }
 
@@ -673,10 +696,10 @@ export default function Editor() {
               >
                 <UploadCloud size={30} className="text-[var(--color-primary)]" />
                 <span className="text-sm font-semibold">
-                  {imageAsset ? "Replace media" : "Drop image or video"}
+                  {imageAsset ? "Replace media" : "Drop image, images, or video"}
                 </span>
                 <span className="text-xs text-[var(--color-muted-strong)]">
-                  JPG, PNG, WebP, MP4, MOV, M4V, or WebM
+                  Select multiple images for a slideshow. Use one video at a time.
                 </span>
               </button>
               <input
@@ -684,9 +707,21 @@ export default function Editor() {
                 accept={MEDIA_ACCEPT}
                 className="sr-only"
                 multiple
-                onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                  void handleMediaFiles(event.target.files)
-                }
+                onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                  void handleMediaFiles(event.target.files);
+                  event.target.value = "";
+                }}
+                type="file"
+              />
+              <input
+                ref={addImagesInputRef}
+                accept={IMAGE_ACCEPT}
+                className="sr-only"
+                multiple
+                onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                  void handleAdditionalImageFiles(event.target.files);
+                  event.target.value = "";
+                }}
                 type="file"
               />
               {imageError ? <p className="mt-3 text-sm text-[var(--color-danger)]">{imageError}</p> : null}
@@ -721,6 +756,17 @@ export default function Editor() {
                     </button>
                   </div>
                 </div>
+              ) : null}
+
+              {imageAsset?.kind === "image" ? (
+                <button
+                  className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md border border-[var(--color-border)] px-3 text-sm font-semibold text-[var(--color-foreground)] transition hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-soft)]"
+                  onClick={() => addImagesInputRef.current?.click()}
+                  type="button"
+                >
+                  <ImagePlus size={16} />
+                  <span>{isImageTimeline ? "Add more images" : "Add images to slideshow"}</span>
+                </button>
               ) : null}
 
               {isImageTimeline ? (
@@ -1095,7 +1141,7 @@ export default function Editor() {
                   <dd className="font-medium">{formatDuration(duration)}</dd>
                 </div>
                 <div className="flex justify-between gap-3">
-                  <dt className="text-[var(--color-muted-strong)]">Server files</dt>
+                  <dt className="text-[var(--color-muted-strong)]">Media</dt>
                   <dd className="text-right font-medium">
                     {sourceUploadReady && (!audioAsset || audioUpload.status === "saved")
                       ? "Ready"
