@@ -6,6 +6,7 @@ export type OutputPresetId =
   | "square";
 
 export type FitMode = "fit" | "fill";
+export type SourceMediaKind = "image" | "video";
 
 export type OutputPreset = {
   id: OutputPresetId;
@@ -75,9 +76,12 @@ export const OUTPUT_PRESETS: OutputPreset[] = [
 ];
 
 export const IMAGE_ACCEPT = ".jpg,.jpeg,.png,.webp";
+export const VIDEO_ACCEPT = ".mp4,.mov,.webm,.m4v";
+export const MEDIA_ACCEPT = `${IMAGE_ACCEPT},${VIDEO_ACCEPT}`;
 export const AUDIO_ACCEPT = ".mp3,.wav,.m4a,.aac,.ogg";
 
 export const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
+export const MAX_SOURCE_VIDEO_BYTES = 200 * 1024 * 1024;
 export const MAX_AUDIO_BYTES = 50 * 1024 * 1024;
 export const DEFAULT_DURATION_SECONDS = 10;
 export const FIXED_DURATION_SECONDS = [10, 30] as const;
@@ -87,6 +91,18 @@ export const IMAGE_MIME_TYPES = new Set([
   "image/jpeg",
   "image/png",
   "image/webp",
+]);
+
+export const VIDEO_MIME_TYPES = new Set([
+  "video/mp4",
+  "video/quicktime",
+  "video/webm",
+  "video/x-m4v",
+]);
+
+export const SOURCE_MEDIA_MIME_TYPES = new Set([
+  ...IMAGE_MIME_TYPES,
+  ...VIDEO_MIME_TYPES,
 ]);
 
 export const AUDIO_MIME_TYPES = new Set([

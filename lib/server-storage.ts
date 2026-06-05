@@ -8,7 +8,7 @@ export const EXPORTS_ROOT = path.join(STORAGE_ROOT, "exports");
 
 export type SaveUploadOptions = {
   file: File;
-  folder: "images" | "audio";
+  folder: "images" | "videos" | "audio";
   allowedMimeTypes: Set<string>;
   maxBytes: number;
 };
@@ -94,6 +94,14 @@ function getSafeExtension(filename: string, mimeType: string) {
       return "aac";
     case "audio/ogg":
       return "ogg";
+    case "video/mp4":
+      return "mp4";
+    case "video/quicktime":
+      return "mov";
+    case "video/webm":
+      return "webm";
+    case "video/x-m4v":
+      return "m4v";
     default:
       return "bin";
   }

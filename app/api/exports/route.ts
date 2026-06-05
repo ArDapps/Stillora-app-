@@ -9,6 +9,7 @@ import {
   MAX_VIDEO_DURATION_SECONDS,
   OUTPUT_PRESETS,
   OutputPresetId,
+  SourceMediaKind,
 } from "@/lib/stillora";
 import {
   EXPORTS_ROOT,
@@ -19,7 +20,9 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type ExportRequest = {
-  imagePath: string;
+  sourcePath?: string;
+  sourceKind?: SourceMediaKind;
+  imagePath?: string;
   audioPath?: string | null;
   presetId: OutputPresetId;
   fitMode: FitMode;
@@ -56,7 +59,13 @@ export async function POST(request: Request) {
       );
     }
 
-    const imagePath = getStoragePath(body.imagePath);
+    const sourceKind = body.sourceKind ?? "image";
+
+    if (!["image", "video"].includes(sourceKind)) {
+      return Response.json({ error: "Invalid source media type." }, { status: 400 });
+    }
+
+    const sourcePath = getStoragePath(body.sourcePath ?? body.imagePath ?? "");
     const audioPath = body.audioPath ? getStoragePath(body.audioPath) : null;
     const exportId = crypto.randomUUID();
     const day = new Date().toISOString().slice(0, 10);
@@ -68,15 +77,13 @@ export async function POST(request: Request) {
     const width = evenDimension(preset.width ?? body.imageWidth);
     const height = evenDimension(preset.height ?? body.imageHeight);
     const videoFilter = buildVideoFilter(width, height, body.fitMode);
-    const args = [
-      "-y",
-      "-loop",
-      "1",
-      "-framerate",
-      "30",
-      "-i",
-      imagePath,
-    ];
+    const args = ["-y"];
+
+    if (sourceKind === "image") {
+      args.push("-loop", "1", "-framerate", "30", "-i", sourcePath);
+    } else {
+      args.push("-stream_loop", "-1", "-i", sourcePath);
+    }
 
     if (audioPath) {
       args.push("-i", audioPath);
@@ -87,6 +94,8 @@ export async function POST(request: Request) {
       String(duration),
       "-vf",
       videoFilter,
+      "-map",
+      "0:v:0",
       "-c:v",
       "libx264",
       "-pix_fmt",
@@ -96,7 +105,9 @@ export async function POST(request: Request) {
     );
 
     if (audioPath) {
-      args.push("-c:a", "aac");
+      args.push("-map", "1:a:0", "-c:a", "aac");
+    } else if (sourceKind === "video") {
+      args.push("-map", "0:a:0?", "-c:a", "aac");
     } else {
       args.push("-an");
     }

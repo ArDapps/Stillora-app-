@@ -5,6 +5,7 @@ import {
   Download,
   FileAudio,
   FileImage,
+  FileVideo,
   ImagePlus,
   Loader2,
   Pause,
@@ -23,22 +24,27 @@ import {
   FIXED_DURATION_SECONDS,
   getFileExtension,
   getPreviewAspectRatio,
-  IMAGE_ACCEPT,
-  IMAGE_MIME_TYPES,
+  MEDIA_ACCEPT,
   MAX_AUDIO_BYTES,
   MAX_IMAGE_BYTES,
+  MAX_SOURCE_VIDEO_BYTES,
   MAX_VIDEO_DURATION_SECONDS,
   OUTPUT_PRESETS,
   OutputPresetId,
+  SOURCE_MEDIA_MIME_TYPES,
+  SourceMediaKind,
   StoredUpload,
+  VIDEO_MIME_TYPES,
   formatBytes,
 } from "@/lib/stillora";
 
-type ImageAsset = {
+type SourceAsset = {
+  kind: SourceMediaKind;
   file: File;
   url: string;
   width: number;
   height: number;
+  duration: number | null;
 };
 
 type AudioAsset = {
@@ -65,7 +71,7 @@ export default function Home() {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
-  const [imageAsset, setImageAsset] = useState<ImageAsset | null>(null);
+  const [imageAsset, setImageAsset] = useState<SourceAsset | null>(null);
   const [audioAsset, setAudioAsset] = useState<AudioAsset | null>(null);
   const [presetId, setPresetId] = useState<OutputPresetId>("reels");
   const [fitMode, setFitMode] = useState<FitMode>("fit");
@@ -100,7 +106,7 @@ export default function Home() {
     }
 
     if (!imageAsset) {
-      return "Upload image";
+      return "Upload media";
     }
 
     const width = imageAsset.width % 2 === 0 ? imageAsset.width : imageAsset.width + 1;
@@ -137,22 +143,27 @@ export default function Home() {
       return;
     }
 
-    if (!IMAGE_MIME_TYPES.has(file.type)) {
-      setImageError("Use a JPG, PNG, or WebP image.");
+    if (!SOURCE_MEDIA_MIME_TYPES.has(file.type)) {
+      setImageError("Use a JPG, PNG, WebP, MP4, MOV, M4V, or WebM file.");
       return;
     }
 
-    if (file.size > MAX_IMAGE_BYTES) {
-      setImageError("Image must be 20 MB or smaller.");
+    const isVideo = VIDEO_MIME_TYPES.has(file.type);
+    const maxBytes = isVideo ? MAX_SOURCE_VIDEO_BYTES : MAX_IMAGE_BYTES;
+
+    if (file.size > maxBytes) {
+      setImageError(isVideo ? "Video must be 200 MB or smaller." : "Image must be 20 MB or smaller.");
       return;
     }
 
     const url = URL.createObjectURL(file);
-    const dimensions = await readImageDimensions(url);
+    const metadata = isVideo
+      ? await readVideoMetadata(url)
+      : await readImageDimensions(url);
 
-    if (!dimensions) {
+    if (!metadata) {
       URL.revokeObjectURL(url);
-      setImageError("This image could not be read. Try another file.");
+      setImageError("This media file could not be read. Try another file.");
       return;
     }
 
@@ -160,8 +171,20 @@ export default function Home() {
       URL.revokeObjectURL(imageAsset.url);
     }
 
-    setImageAsset({ file, url, ...dimensions });
-    void uploadSelectedFile("/api/uploads/image", file, setImageUpload);
+    setImageAsset({
+      kind: isVideo ? "video" : "image",
+      file,
+      url,
+      ...metadata,
+    });
+    if (isVideo && metadata.duration) {
+      setDuration(getAudioFitDuration(metadata.duration));
+    }
+    void uploadSelectedFile(
+      isVideo ? "/api/uploads/video" : "/api/uploads/image",
+      file,
+      setImageUpload,
+    );
   }
 
   async function handleAudioFile(file: File | undefined) {
@@ -223,7 +246,11 @@ export default function Home() {
     setAudioUpload(emptyUploadState);
     setIsAudioPlaying(false);
     if (!FIXED_DURATION_SECONDS.includes(duration as 10 | 30)) {
-      setDuration(DEFAULT_DURATION_SECONDS);
+      setDuration(
+        imageAsset?.kind === "video" && imageAsset.duration
+          ? getAudioFitDuration(imageAsset.duration)
+          : DEFAULT_DURATION_SECONDS,
+      );
     }
     setExportStatus("idle");
     setExportProgress(0);
@@ -263,7 +290,8 @@ export default function Home() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          imagePath: imageUpload.upload.relativePath,
+          sourcePath: imageUpload.upload.relativePath,
+          sourceKind: imageAsset.kind,
           audioPath: audioUpload.upload?.relativePath ?? null,
           presetId,
           fitMode,
@@ -336,7 +364,7 @@ export default function Home() {
             <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
               <div className="mb-3 flex items-center gap-2">
                 <ImagePlus size={18} className="text-[#7C3AED]" />
-                <h1 className="text-base font-semibold">Image</h1>
+                <h1 className="text-base font-semibold">Source media</h1>
               </div>
 
               <button
@@ -348,13 +376,15 @@ export default function Home() {
               >
                 <UploadCloud size={30} className="text-[#7C3AED]" />
                 <span className="text-sm font-semibold">
-                  {imageAsset ? "Replace image" : "Drop image or browse"}
+                  {imageAsset ? "Replace media" : "Drop image or video"}
                 </span>
-                <span className="text-xs text-slate-500">JPG, PNG, or WebP up to 20 MB</span>
+                <span className="text-xs text-slate-500">
+                  JPG, PNG, WebP, MP4, MOV, M4V, or WebM
+                </span>
               </button>
               <input
                 ref={imageInputRef}
-                accept={IMAGE_ACCEPT}
+                accept={MEDIA_ACCEPT}
                 className="sr-only"
                 onChange={(event: ChangeEvent<HTMLInputElement>) =>
                   void handleImageFile(event.target.files?.[0])
@@ -366,18 +396,25 @@ export default function Home() {
               {imageAsset ? (
                 <div className="mt-4 rounded-lg border border-slate-200 p-3">
                   <div className="flex items-start gap-3">
-                    <FileImage size={18} className="mt-0.5 text-slate-500" />
+                    {imageAsset.kind === "video" ? (
+                      <FileVideo size={18} className="mt-0.5 text-slate-500" />
+                    ) : (
+                      <FileImage size={18} className="mt-0.5 text-slate-500" />
+                    )}
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold">{imageAsset.file.name}</p>
                       <p className="text-xs text-slate-500">
                         {imageAsset.width} x {imageAsset.height} -{" "}
                         {formatBytes(imageAsset.file.size)} -{" "}
                         {getFileExtension(imageAsset.file.name)}
+                        {imageAsset.duration
+                          ? ` - ${formatDuration(imageAsset.duration)}`
+                          : ""}
                       </p>
                       <UploadStatus state={imageUpload} />
                     </div>
                     <button
-                      aria-label="Remove image"
+                      aria-label="Remove media"
                       className="rounded-md p-1.5 text-slate-500 transition hover:bg-red-50 hover:text-[#DC2626]"
                       onClick={removeImage}
                       type="button"
@@ -481,7 +518,7 @@ export default function Home() {
                   width: `min(100%, ${previewFrameWidth}px)`,
                 }}
               >
-                {imageAsset ? (
+                {imageAsset?.kind === "image" ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     alt="Uploaded composition preview"
@@ -490,12 +527,22 @@ export default function Home() {
                     }`}
                     src={imageAsset.url}
                   />
+                ) : imageAsset?.kind === "video" ? (
+                  <video
+                    className={`h-full w-full ${
+                      fitMode === "fit" ? "object-contain" : "object-cover"
+                    }`}
+                    controls
+                    muted
+                    playsInline
+                    src={imageAsset.url}
+                  />
                 ) : (
                   <div className="flex max-w-xs flex-col items-center gap-3 px-6 text-center text-white">
                     <Wand2 size={34} />
-                    <p className="text-lg font-semibold">Upload an image to begin</p>
+                    <p className="text-lg font-semibold">Upload media to begin</p>
                     <p className="text-sm text-slate-300">
-                      The preview will match the final video frame without stretching your image.
+                      The preview will match the final video frame without stretching your media.
                     </p>
                   </div>
                 )}
@@ -610,6 +657,25 @@ export default function Home() {
                     Fit audio - {formatDuration(getAudioFitDuration(audioAsset.duration))}
                   </button>
                 ) : null}
+                {imageAsset?.kind === "video" && imageAsset.duration ? (
+                  <button
+                    className={`col-span-2 rounded-md border px-3 py-2 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-[#2563EB] ${
+                      duration === getAudioFitDuration(imageAsset.duration)
+                        ? "border-[#2563EB] bg-blue-50 text-[#2563EB]"
+                        : "border-slate-200 hover:border-slate-300"
+                    }`}
+                    onClick={() => {
+                      setDuration(getAudioFitDuration(imageAsset.duration ?? 0));
+                      setExportStatus("idle");
+                      setExportProgress(0);
+                      setExportResult(null);
+                      setExportError("");
+                    }}
+                    type="button"
+                  >
+                    Fit video - {formatDuration(getAudioFitDuration(imageAsset.duration))}
+                  </button>
+                ) : null}
               </div>
             </section>
 
@@ -626,7 +692,13 @@ export default function Home() {
                 </div>
                 <div className="flex justify-between gap-3">
                   <dt className="text-slate-500">Audio</dt>
-                  <dd className="font-medium">{audioAsset ? "Included" : "Silent"}</dd>
+                  <dd className="font-medium">
+                    {audioAsset
+                      ? "Added audio"
+                      : imageAsset?.kind === "video"
+                        ? "Source audio"
+                        : "Silent"}
+                  </dd>
                 </div>
                 <div className="flex justify-between gap-3">
                   <dt className="text-slate-500">Duration</dt>
@@ -776,13 +848,36 @@ function formatDuration(duration: number) {
 }
 
 function readImageDimensions(url: string) {
-  return new Promise<{ width: number; height: number } | null>((resolve) => {
+  return new Promise<{ width: number; height: number; duration: null } | null>((resolve) => {
     const image = new Image();
 
-    image.onload = () => resolve({ width: image.naturalWidth, height: image.naturalHeight });
+    image.onload = () =>
+      resolve({
+        width: image.naturalWidth,
+        height: image.naturalHeight,
+        duration: null,
+      });
     image.onerror = () => resolve(null);
     image.src = url;
   });
+}
+
+function readVideoMetadata(url: string) {
+  return new Promise<{ width: number; height: number; duration: number | null } | null>(
+    (resolve) => {
+      const video = document.createElement("video");
+
+      video.onloadedmetadata = () =>
+        resolve({
+          width: video.videoWidth,
+          height: video.videoHeight,
+          duration: Number.isFinite(video.duration) ? video.duration : null,
+        });
+      video.onerror = () => resolve(null);
+      video.preload = "metadata";
+      video.src = url;
+    },
+  );
 }
 
 function readAudioDuration(url: string) {
