@@ -255,7 +255,7 @@ function buildSlideshowArgs({
   );
 
   if (audioPath) {
-    args.push("-map", `${slides.length}:a:0`, "-c:a", "aac", "-shortest");
+    args.push("-map", `${slides.length}:a:0`, "-c:a", "aac");
   } else {
     args.push("-an");
   }
