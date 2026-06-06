@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/auth/auth_controller.dart';
 import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_glow.dart';
+import '../../core/widgets/ad_widget.dart';
 import '../../core/design/stillora_spacing.dart';
 import '../../core/design/stillora_surface.dart';
 import '../../core/platform/platform_info.dart';
@@ -173,6 +174,8 @@ class _MobileEditorFlow extends StatelessWidget {
               : Icons.auto_fix_high_rounded,
           label: session == null ? 'Register to Convert' : 'Create MP4',
         ),
+        const SizedBox(height: StilloraSpacing.sm),
+        const AdSlotWidget(placement: 'HOME_BANNER'),
       ],
     );
   }
@@ -430,6 +433,8 @@ class _DesktopEditorWorkspace extends StatelessWidget {
                 maxPreviewHeight: 320,
                 maxPreviewWidth: 360,
               ),
+              const SizedBox(height: 10),
+              const AdSlotWidget(placement: 'USER_DASHBOARD_LEFT'),
             ],
           );
         }
@@ -501,6 +506,8 @@ class _DesktopEditorWorkspace extends StatelessWidget {
                           maxPreviewHeight: 360,
                           maxPreviewWidth: previewWidth,
                         ),
+                        const SizedBox(height: 10),
+                        const AdSlotWidget(placement: 'USER_DASHBOARD_LEFT'),
                       ],
                     ),
                   ),

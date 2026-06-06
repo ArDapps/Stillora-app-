@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../design/stillora_colors.dart';
 import '../design/stillora_spacing.dart';
+import 'ad_widget.dart';
 import 'stillora_mark.dart';
 
 /// Route that hosts the main tabbed home. Kept here so the shell can navigate
@@ -134,6 +135,8 @@ class _DesktopSidebar extends StatelessWidget {
               onTap: () => onSelect(i),
             ),
           const Spacer(),
+          const AdSlotWidget(placement: 'USER_DASHBOARD_LEFT'),
+          const SizedBox(height: StilloraSpacing.sm),
           DecoratedBox(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(StilloraRadius.full),

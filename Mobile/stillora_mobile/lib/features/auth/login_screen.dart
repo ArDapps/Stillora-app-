@@ -35,6 +35,15 @@ class LoginScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (context.canPop())
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: IconButton(
+                    onPressed: () => context.pop(),
+                    icon: const Icon(Icons.arrow_back_rounded),
+                    tooltip: 'Back',
+                  ),
+                ),
               const Spacer(),
               const Center(child: StilloraMark(size: 74)),
               const SizedBox(height: 18),

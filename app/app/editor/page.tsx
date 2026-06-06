@@ -1,6 +1,7 @@
 "use client";
 
 import { AppNavbar } from "@/app/components/app-navbar";
+import { AdSlot } from "@/app/components/ad-slot";
 import { Film, Layers, Sparkles, Timer } from "lucide-react";
 import { AudioPanel } from "./components/audio-panel";
 import { PreviewPanel } from "./components/preview-panel";
@@ -53,6 +54,9 @@ export default function Editor() {
               </div>
               <div className="order-4 lg:order-none">
                 <SettingsExportPanel model={model} />
+              </div>
+              <div className="order-5 lg:order-none">
+                <AdSlot placement="USER_DASHBOARD_LEFT" />
               </div>
             </aside>
             <section className="editor-scroll-column order-2 lg:min-h-0 lg:overflow-y-auto">
