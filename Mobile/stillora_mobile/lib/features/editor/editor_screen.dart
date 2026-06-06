@@ -16,7 +16,11 @@ import '../../core/design/stillora_surface.dart';
 import '../../core/platform/platform_info.dart';
 import '../auth/login_screen.dart';
 import '../export/export_progress_screen.dart';
+import 'add_audio_screen.dart';
+import 'choose_preset_screen.dart';
 import 'editor_state.dart';
+import 'pre_export_preview_screen.dart';
+import 'upload_media_screen.dart';
 import 'video_preset.dart';
 
 const _standardAudioExtensions = ['mp3', 'm4a', 'aac', 'wav'];
@@ -69,7 +73,7 @@ class EditorView extends ConsumerWidget {
       return;
     }
 
-    context.push(ExportProgressScreen.routePath);
+    context.push(PreExportPreviewScreen.routePath);
   }
 
   @override
@@ -139,28 +143,226 @@ class _MobileEditorFlow extends StatelessWidget {
         const SizedBox(height: StilloraSpacing.lg),
         const _ProgressRail(),
         const SizedBox(height: StilloraSpacing.lg),
-        _SourceMediaCard(editor: editor, controller: controller),
+        // Main preview card – tap empty state to upload
+        _MobilePreviewPanel(editor: editor, controller: controller),
         const SizedBox(height: StilloraSpacing.sm),
-        _SoundscapeCard(
-          editor: editor,
-          onPickAudio: onPickAudio,
-          onRemoveAudio: controller.removeAudio,
+        // Step rows: audio and preset
+        _StepRow(
+          icon: Icons.music_note_rounded,
+          label: editor.audioPath == null
+              ? 'Add Soundtrack'
+              : _audioName(editor.audioPath!),
+          subtitle: editor.audioPath == null ? 'Optional' : 'Tap to change',
+          onTap: () => context.push(AddAudioScreen.routePath),
+        ),
+        const SizedBox(height: StilloraSpacing.xs),
+        _StepRow(
+          icon: Icons.aspect_ratio_rounded,
+          label: 'Choose Preset',
+          subtitle:
+              '${editor.preset.label} · ${editor.preset.ratioLabel}',
+          onTap: () => context.push(ChoosePresetScreen.routePath),
         ),
         const SizedBox(height: StilloraSpacing.sm),
-        _PresetCard(editor: editor, controller: controller),
-        const SizedBox(height: StilloraSpacing.sm),
         _PrivacyCard(isSignedIn: session != null),
-        const SizedBox(height: StilloraSpacing.sm),
-        _PreviewCard(editor: editor),
         const SizedBox(height: StilloraSpacing.sm),
         StilloraPrimaryButton(
           onPressed: editor.canExport ? onConvert : null,
           icon: session == null
               ? Icons.lock_rounded
               : Icons.auto_fix_high_rounded,
-          label: session == null ? 'Register to Convert' : 'Convert to MP4',
+          label: session == null ? 'Register to Convert' : 'Create MP4',
         ),
       ],
+    );
+  }
+
+  static String _audioName(String path) {
+    final slash = path.lastIndexOf(RegExp(r'[/\\]'));
+    final name = slash == -1 ? path : path.substring(slash + 1);
+    final dot = name.lastIndexOf('.');
+    return dot == -1 ? name : name.substring(0, dot);
+  }
+}
+
+/// Compact step row used on the main mobile screen for audio + preset.
+class _StepRow extends StatelessWidget {
+  const _StepRow({
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return StilloraGlassCard(
+      onTap: onTap,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        children: [
+          Icon(icon, size: 22, color: StilloraColors.primary),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: StilloraColors.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Icon(
+            Icons.chevron_right_rounded,
+            color: StilloraColors.onSurfaceVariant,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The main preview panel on the mobile screen.
+/// Shows selected media in correct output aspect-ratio.
+/// Tapping the empty state navigates to UploadMediaScreen.
+/// When media is selected, shows thumbnail strip with add/replace buttons.
+class _MobilePreviewPanel extends StatelessWidget {
+  const _MobilePreviewPanel({
+    required this.editor,
+    required this.controller,
+  });
+
+  final EditorState editor;
+  final EditorController controller;
+
+  double get _aspectRatio {
+    final p = editor.preset;
+    return (p.width > 0 && p.height > 0) ? p.width / p.height : 9 / 16;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StilloraGlowCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.smart_display_rounded,
+                color: StilloraColors.primary,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'MP4 Preview',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    Text(
+                      '${editor.preset.ratioLabel} · ${editor.totalDurationSeconds}s'
+                      ' · ${editor.resizeMode == ResizeMode.fit ? "Fit" : "Fill"}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: StilloraColors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              TextButton(
+                onPressed: () =>
+                    context.push(ChoosePresetScreen.routePath),
+                child: const Text('Change'),
+              ),
+            ],
+          ),
+          const SizedBox(height: StilloraSpacing.sm),
+          GestureDetector(
+            onTap: editor.hasMedia
+                ? null
+                : () => context.push(UploadMediaScreen.routePath),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxHeight: 320,
+                  maxWidth: 400,
+                ),
+                child: AspectRatio(
+                  aspectRatio: _aspectRatio,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: StilloraColors.surfaceContainerLowest,
+                      borderRadius:
+                          BorderRadius.circular(StilloraRadius.full),
+                      border: Border.all(
+                        color: StilloraColors.primary.withValues(alpha: 0.5),
+                      ),
+                    ),
+                    child: ClipRRect(
+                      borderRadius:
+                          BorderRadius.circular(StilloraRadius.full),
+                      child: _PreviewMedia(
+                        media: editor.selectedMedia,
+                        resizeMode: editor.resizeMode,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          if (editor.hasMedia) ...[
+            const SizedBox(height: StilloraSpacing.sm),
+            _MediaTimeline(
+              editor: editor,
+              controller: controller,
+            ),
+            const SizedBox(height: StilloraSpacing.xs),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () =>
+                        context.push(UploadMediaScreen.routePath),
+                    icon: const Icon(Icons.add_rounded),
+                    label: const Text('Add more'),
+                  ),
+                ),
+                const SizedBox(width: StilloraSpacing.xs),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: controller.pickMedia,
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: const Text('Replace'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

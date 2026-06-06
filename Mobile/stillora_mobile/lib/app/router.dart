@@ -2,7 +2,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/auth/login_screen.dart';
+import '../features/editor/add_audio_screen.dart';
+import '../features/editor/choose_preset_screen.dart';
 import '../features/editor/editor_screen.dart';
+import '../features/editor/pre_export_preview_screen.dart';
+import '../features/editor/upload_media_screen.dart';
 import '../features/export/export_progress_screen.dart';
 import '../features/gallery/gallery_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
@@ -44,6 +48,22 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: PreviewScreen.routePath,
         builder: (context, state) => const PreviewScreen(),
+      ),
+      GoRoute(
+        path: UploadMediaScreen.routePath,
+        builder: (context, state) => const UploadMediaScreen(),
+      ),
+      GoRoute(
+        path: ChoosePresetScreen.routePath,
+        builder: (context, state) => const ChoosePresetScreen(),
+      ),
+      GoRoute(
+        path: AddAudioScreen.routePath,
+        builder: (context, state) => const AddAudioScreen(),
+      ),
+      GoRoute(
+        path: PreExportPreviewScreen.routePath,
+        builder: (context, state) => const PreExportPreviewScreen(),
       ),
       GoRoute(
         path: GalleryScreen.routePath,
