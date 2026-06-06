@@ -108,7 +108,7 @@ const features = [
   { icon: UploadCloud, title: "Drag-and-drop upload", description: "Drop JPEG, PNG, WebP, MP4, or MOV files and preview them instantly.", tag: "Upload", color: "text-violet-400", bg: "bg-violet-500/10 border-violet-500/20" },
   { icon: Maximize2, title: "Smart Fit and Fill", description: "Fit shows the full frame. Fill crops neatly for each social format.", tag: "Framing", color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20" },
   { icon: Music, title: "Audio track support", description: "Attach MP3, WAV, M4A, AAC, or OGG audio and trim it to the video.", tag: "Audio", color: "text-pink-400", bg: "bg-pink-500/10 border-pink-500/20" },
-  { icon: Timer, title: "10s and 30s durations", description: "Use clean timing presets made for social posts, reels, and shorts.", tag: "Duration", color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
+  { icon: Timer, title: "10s to 60s durations", description: "Use clean 10-second timing presets made for social posts, reels, and shorts.", tag: "Duration", color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
   { icon: Zap, title: "Fast FFmpeg encoding", description: "Render H.264, AAC, 30 FPS MP4s server-side with native FFmpeg.", tag: "FFmpeg", color: "text-green-400", bg: "bg-green-500/10 border-green-500/20" },
   { icon: Globe, title: "Web, mobile and desktop", description: "Use the web editor now, mobile app now, and desktop once it ships.", tag: "Platform", color: "text-cyan-400", bg: "bg-cyan-500/10 border-cyan-500/20" },
   { icon: Palette, title: "Background customization", description: "Use black, white, custom color, or blurred image backgrounds.", tag: "Canvas", color: "text-rose-400", bg: "bg-rose-500/10 border-rose-500/20" },

@@ -205,7 +205,6 @@ export function useEditorModel(): EditorModel {
       ...metadata,
       duration: assetDuration,
     });
-    if (assetDuration) setDuration(getAudioFitDuration(assetDuration));
     void uploadSelectedFile(isVideo ? "/api/uploads/video" : "/api/uploads/image", file, setImageUpload);
   }
 
@@ -222,7 +221,6 @@ export function useEditorModel(): EditorModel {
     setAudioAsset({ file, url, duration: audioDuration });
     if (audioDuration) {
       if (isImageTimeline) fitTimelineToDuration(getAudioFitDuration(audioDuration));
-      else setDuration(getAudioFitDuration(audioDuration));
       resetExportState();
     }
     void uploadSelectedFile("/api/uploads/audio", file, setAudioUpload);
@@ -243,9 +241,7 @@ export function useEditorModel(): EditorModel {
     setAudioAsset(null);
     setAudioUpload(emptyUploadState);
     setIsAudioPlaying(false);
-    if (!FIXED_DURATION_SECONDS.includes(duration as 10 | 30)) {
-      setDuration(imageAsset?.kind === "video" && imageAsset.duration ? getAudioFitDuration(imageAsset.duration) : DEFAULT_DURATION_SECONDS);
-    }
+    if (!FIXED_DURATION_SECONDS.some((option) => option === duration)) setDuration(DEFAULT_DURATION_SECONDS);
     resetExportState();
   }
 

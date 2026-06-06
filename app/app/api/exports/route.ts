@@ -6,6 +6,7 @@ import ffmpegPath from "ffmpeg-static";
 
 import {
   AUDIO_MIME_TYPES,
+  FIXED_DURATION_SECONDS,
   FitMode,
   MAX_VIDEO_DURATION_SECONDS,
   MAX_UPLOAD_BYTES,
@@ -68,6 +69,7 @@ export async function POST(request: Request) {
     }
 
     const duration = Number(body.duration);
+    const isSlideshow = Boolean(body.slides?.length);
 
     if (
       !Number.isFinite(duration) ||
@@ -76,6 +78,13 @@ export async function POST(request: Request) {
     ) {
       return Response.json(
         { error: `Duration must be between 1 and ${MAX_VIDEO_DURATION_SECONDS} seconds.` },
+        { status: 400 },
+      );
+    }
+
+    if (!isSlideshow && !FIXED_DURATION_SECONDS.some((option) => option === duration)) {
+      return Response.json(
+        { error: `Duration must be one of ${FIXED_DURATION_SECONDS.join(", ")} seconds.` },
         { status: 400 },
       );
     }
@@ -107,7 +116,7 @@ export async function POST(request: Request) {
     const width = evenDimension(preset.width ?? body.imageWidth);
     const height = evenDimension(preset.height ?? body.imageHeight);
 
-    if (body.slides?.length) {
+    if (isSlideshow && body.slides?.length) {
       const slides = body.slides.map((slide) => ({
         ...slide,
         duration: normalizeSlideDuration(slide.duration),

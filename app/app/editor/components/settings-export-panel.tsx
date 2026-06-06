@@ -120,7 +120,7 @@ function DurationPanel({ model }: { model: EditorModel }) {
           ) : null}
         </div>
       ) : (
-        <div className="mt-3 grid grid-cols-2 gap-2">
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
           {FIXED_DURATION_SECONDS.map((option) => (
             <DurationButton
               isSelected={state.duration === option}
@@ -132,28 +132,6 @@ function DurationPanel({ model }: { model: EditorModel }) {
               }}
             />
           ))}
-          {state.audioAsset?.duration ? (
-            <DurationButton
-              isSelected={state.duration === getAudioFitDuration(state.audioAsset.duration)}
-              label={`Fit audio - ${formatDuration(getAudioFitDuration(state.audioAsset.duration))}`}
-              onClick={() => {
-                actions.setDuration(getAudioFitDuration(state.audioAsset?.duration ?? 0));
-                clearExport(model);
-              }}
-              wide
-            />
-          ) : null}
-          {state.imageAsset?.kind === "video" && state.imageAsset.duration ? (
-            <DurationButton
-              isSelected={state.duration === getAudioFitDuration(state.imageAsset.duration)}
-              label={`Fit video - ${formatDuration(getAudioFitDuration(state.imageAsset.duration))}`}
-              onClick={() => {
-                actions.setDuration(getAudioFitDuration(state.imageAsset?.duration ?? 0));
-                clearExport(model);
-              }}
-              wide
-            />
-          ) : null}
         </div>
       )}
     </section>

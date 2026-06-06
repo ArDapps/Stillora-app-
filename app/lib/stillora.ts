@@ -88,7 +88,7 @@ export const MAX_IMAGE_BYTES = MAX_UPLOAD_BYTES;
 export const MAX_SOURCE_VIDEO_BYTES = 200 * 1024 * 1024;
 export const MAX_AUDIO_BYTES = MAX_UPLOAD_BYTES;
 export const DEFAULT_DURATION_SECONDS = 10;
-export const FIXED_DURATION_SECONDS = [10, 30] as const;
+export const FIXED_DURATION_SECONDS = [10, 20, 30, 40, 50, 60] as const;
 export const MAX_VIDEO_DURATION_SECONDS = 300;
 
 export const IMAGE_MIME_TYPES = new Set([

@@ -22,18 +22,20 @@ export function PreviewPanel({ model }: { model: EditorModel }) {
       </div>
       <div className="grid flex-1 place-items-center overflow-hidden p-5">
         <SocialTargetPills />
-        <div
-          className="editor-preview-frame relative grid max-h-[min(72vh,680px)] max-w-full place-items-center overflow-hidden rounded-[18px] border border-cyan-300/60 shadow-[0_0_34px_rgb(14_165_233_/_0.22),0_28px_50px_rgb(0_0_0_/_0.38)]"
-          style={{ aspectRatio: state.previewAspectRatio, width: `min(100%, ${state.previewFrameWidth}px)` }}
-        >
-          <PreviewMedia model={model} />
-          <div className="absolute bottom-0 left-0 right-0 bg-[var(--color-overlay)] px-4 py-3 text-[var(--color-primary-text)] backdrop-blur">
-            <div className="mb-2 flex items-center justify-between text-xs">
-              <span>0:00</span>
-              <span>{formatDuration(state.duration)}</span>
-            </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-[var(--color-overlay-track)]">
-              <div className="h-full w-1/3 rounded-full bg-[var(--color-overlay-fill)]" />
+        <div className="editor-preview-glow-shell relative grid max-w-full place-items-center">
+          <div
+            className="editor-preview-frame relative grid max-h-[min(72vh,680px)] max-w-full place-items-center overflow-hidden rounded-[18px] border border-cyan-300/70"
+            style={{ aspectRatio: state.previewAspectRatio, width: `min(100%, ${state.previewFrameWidth}px)` }}
+          >
+            <PreviewMedia model={model} />
+            <div className="absolute bottom-0 left-0 right-0 bg-[var(--color-overlay)] px-4 py-3 text-[var(--color-primary-text)] backdrop-blur">
+              <div className="mb-2 flex items-center justify-between text-xs">
+                <span>0:00</span>
+                <span>{formatDuration(state.duration)}</span>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-[var(--color-overlay-track)]">
+                <div className="h-full w-1/3 rounded-full bg-[var(--color-overlay-fill)]" />
+              </div>
             </div>
           </div>
         </div>
