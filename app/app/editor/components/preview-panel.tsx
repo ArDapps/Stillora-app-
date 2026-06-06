@@ -24,7 +24,7 @@ export function PreviewPanel({ model }: { model: EditorModel }) {
         <SocialTargetPills />
         <div className="editor-preview-glow-shell relative grid max-w-full place-items-center">
           <div
-            className="editor-preview-frame relative grid max-h-[min(72vh,680px)] max-w-full place-items-center overflow-hidden rounded-[18px] border border-cyan-300/70"
+            className="editor-preview-frame relative grid max-h-[min(72vh,680px)] max-w-full place-items-center overflow-hidden rounded-[18px] border border-cyan-300/70 shadow-[0_0_0_1px_rgb(255_255_255_/_0.08),0_0_44px_rgb(34_211_238_/_0.34),0_0_90px_rgb(217_70_239_/_0.2),0_30px_70px_rgb(0_0_0_/_0.46)]"
             style={{ aspectRatio: state.previewAspectRatio, width: `min(100%, ${state.previewFrameWidth}px)` }}
           >
             <PreviewMedia model={model} />
