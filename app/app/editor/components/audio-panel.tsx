@@ -18,14 +18,20 @@ export function AudioPanel({ model }: { model: EditorModel }) {
       </div>
       <button
         className="editor-control flex min-h-28 w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-4 text-center transition hover:border-cyan-300 hover:bg-cyan-400/10 focus:outline-none focus:ring-2 focus:ring-cyan-300"
-        onClick={() => refs.audioInputRef.current?.click()}
+        onClick={() => {
+          if (actions.requireAuth()) refs.audioInputRef.current?.click();
+        }}
         onDragOver={(event) => event.preventDefault()}
         onDrop={actions.onAudioDrop}
         type="button"
       >
         <UploadCloud size={24} className="text-cyan-200" />
         <span className="editor-title text-sm font-semibold">
-          {state.audioAsset ? "Replace audio" : "Add optional audio"}
+          {!state.isAuthenticated && !state.authLoading
+            ? "Sign in to add audio"
+            : state.audioAsset
+              ? "Replace audio"
+              : "Add optional audio"}
         </span>
         <span className="editor-subtle text-xs">MP3, WAV, M4A, AAC, or OGG</span>
       </button>

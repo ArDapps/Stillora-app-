@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:equatable/equatable.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
@@ -26,6 +27,8 @@ const _videoExtensions = {
   '3gp',
   'm2ts',
 };
+const _imageExtensions = {'jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'};
+const _desktopMediaExtensions = [..._imageExtensions, ..._videoExtensions];
 
 MediaKind mediaKindForPath(String path) {
   final dot = path.lastIndexOf('.');
@@ -59,7 +62,7 @@ class MediaItem extends Equatable {
   final int durationSeconds;
 
   String get name {
-    final slash = path.lastIndexOf('/');
+    final slash = path.lastIndexOf(RegExp(r'[/\\]'));
     return slash == -1 ? path : path.substring(slash + 1);
   }
 
@@ -194,26 +197,24 @@ class EditorController extends Notifier<EditorState> {
 
   /// Lets the user pick multiple images, videos, or a mix of both.
   Future<void> pickMedia() async {
-    final picker = ImagePicker();
-    final files = await picker.pickMultipleMedia();
-    if (files.isEmpty) {
+    final paths = await _pickMediaPaths();
+    if (paths.isEmpty) {
       return;
     }
     // Spread the baseline duration evenly so the initial timeline keeps the
     // familiar total (e.g. 10s split across the chosen clips).
-    final durations = _distributeEvenly(files.length, state.durationSeconds);
+    final durations = _distributeEvenly(paths.length, state.durationSeconds);
     final items = [
-      for (var i = 0; i < files.length; i++)
-        MediaItem.fromPath(files[i].path, durationSeconds: durations[i]),
+      for (var i = 0; i < paths.length; i++)
+        MediaItem.fromPath(paths[i], durationSeconds: durations[i]),
     ];
     state = state.copyWith(media: items, selectedIndex: 0);
   }
 
   /// Appends more media to the current selection.
   Future<void> addMedia() async {
-    final picker = ImagePicker();
-    final files = await picker.pickMultipleMedia();
-    if (files.isEmpty) {
+    final paths = await _pickMediaPaths();
+    if (paths.isEmpty) {
       return;
     }
     final existing = {for (final item in state.media) item.path};
@@ -221,14 +222,32 @@ class EditorController extends Notifier<EditorState> {
     // predictably; the user can fine-tune each one afterwards.
     final defaultClip = _defaultClipSeconds(state.media);
     final additions = [
-      for (final file in files)
-        if (!existing.contains(file.path))
-          MediaItem.fromPath(file.path, durationSeconds: defaultClip),
+      for (final path in paths)
+        if (!existing.contains(path))
+          MediaItem.fromPath(path, durationSeconds: defaultClip),
     ];
     if (additions.isEmpty) {
       return;
     }
     state = state.copyWith(media: [...state.media, ...additions]);
+  }
+
+  Future<List<String>> _pickMediaPaths() async {
+    if (Platform.isMacOS || Platform.isLinux || Platform.isWindows) {
+      final result = await FilePicker.platform.pickFiles(
+        allowMultiple: true,
+        type: FileType.custom,
+        allowedExtensions: _desktopMediaExtensions,
+      );
+      return [
+        for (final file in result?.files ?? const <PlatformFile>[])
+          if (file.path != null) file.path!,
+      ];
+    }
+
+    final picker = ImagePicker();
+    final files = await picker.pickMultipleMedia();
+    return [for (final file in files) file.path];
   }
 
   /// Sets the duration of a single clip without touching the others.

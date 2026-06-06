@@ -23,11 +23,13 @@ export type SourceAsset = {
 
 export type ImageSlide = {
   id: string;
+  kind: SourceMediaKind;
   file: File;
   url: string;
   width: number;
   height: number;
   duration: number;
+  sourceDuration: number | null;
   upload: UploadState;
 };
 
@@ -75,9 +77,12 @@ export type EditorState = {
   previewAspectRatio: number;
   previewFrameWidth: number;
   outputDimensions: string;
+  isAuthenticated: boolean;
+  authLoading: boolean;
 };
 
 export type EditorActions = {
+  requireAuth: () => boolean;
   handleMediaFiles: (files: FileList | File[] | null | undefined) => Promise<void>;
   handleAdditionalImageFiles: (files: FileList | File[] | null | undefined) => Promise<void>;
   handleAudioFile: (file: File | undefined) => Promise<void>;

@@ -2,7 +2,6 @@ import { ChangeEvent } from "react";
 import { FileImage, FileVideo, ImagePlus, Images, Trash2, UploadCloud } from "lucide-react";
 import {
   getFileExtension,
-  IMAGE_ACCEPT,
   MEDIA_ACCEPT,
   formatBytes,
 } from "@/lib/stillora";
@@ -23,17 +22,25 @@ export function SourceMediaPanel({ model }: { model: EditorModel }) {
 
       <button
         className="editor-control flex min-h-40 w-full flex-col items-center justify-center gap-3 rounded-lg border border-dashed px-4 text-center transition hover:border-fuchsia-400 hover:bg-fuchsia-500/10 focus:outline-none focus:ring-2 focus:ring-fuchsia-400"
-        onClick={() => refs.imageInputRef.current?.click()}
+        onClick={() => {
+          if (actions.requireAuth()) refs.imageInputRef.current?.click();
+        }}
         onDragOver={(event) => event.preventDefault()}
         onDrop={actions.onImageDrop}
         type="button"
       >
         <UploadCloud size={30} className="text-fuchsia-300" />
         <span className="editor-title text-sm font-semibold">
-          {state.imageAsset ? "Replace media" : "Drop image, images, or video"}
+          {!state.isAuthenticated && !state.authLoading
+            ? "Sign in to upload"
+            : state.imageAsset
+              ? "Replace media"
+              : "Drop images and videos"}
         </span>
         <span className="editor-subtle text-xs">
-          Select multiple images for a slideshow. Use one video at a time.
+          {!state.isAuthenticated && !state.authLoading
+            ? "Sign in with Google to add media."
+            : "Select multiple files to build a timeline. Mix images and videos freely."}
         </span>
       </button>
 
@@ -51,7 +58,7 @@ export function SourceMediaPanel({ model }: { model: EditorModel }) {
       <input
         // eslint-disable-next-line react-hooks/refs
         ref={refs.addImagesInputRef}
-        accept={IMAGE_ACCEPT}
+        accept={MEDIA_ACCEPT}
         className="sr-only"
         multiple
         onChange={(event: ChangeEvent<HTMLInputElement>) => {
@@ -63,14 +70,16 @@ export function SourceMediaPanel({ model }: { model: EditorModel }) {
 
       {state.imageError ? <p className="mt-3 text-sm text-[var(--color-danger)]">{state.imageError}</p> : null}
       {state.imageAsset ? <SelectedMedia model={model} /> : null}
-      {state.imageAsset?.kind === "image" ? (
+      {state.imageAsset ? (
         <button
           className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md border border-[var(--color-border)] px-3 text-sm font-semibold text-[var(--color-foreground)] transition hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-soft)]"
-          onClick={() => refs.addImagesInputRef.current?.click()}
+          onClick={() => {
+            if (actions.requireAuth()) refs.addImagesInputRef.current?.click();
+          }}
           type="button"
         >
           <ImagePlus size={16} />
-          <span>{state.isImageTimeline ? "Add more images" : "Add images to slideshow"}</span>
+          <span>{state.isImageTimeline ? "Add more media" : "Add media to timeline"}</span>
         </button>
       ) : null}
       {state.isImageTimeline ? <ImageTimeline model={model} /> : null}
@@ -119,7 +128,7 @@ function ImageTimeline({ model }: { model: EditorModel }) {
   return (
     <div className="mt-4 space-y-2">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm font-semibold">Image order</p>
+        <p className="text-sm font-semibold">Timeline order</p>
         <p className="text-xs text-[var(--color-muted-strong)]">{formatDuration(state.timelineDuration)}</p>
       </div>
       {state.imageSlides.map((slide, index) => (
@@ -136,8 +145,17 @@ function ImageTimeline({ model }: { model: EditorModel }) {
             onClick={() => actions.setSelectedSlideId(slide.id)}
             type="button"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img alt={`Slide ${index + 1}`} className="size-10 rounded-md object-cover" src={slide.url} />
+            <span className="relative size-10 shrink-0 overflow-hidden rounded-md bg-[var(--color-card)]">
+              {slide.kind === "video" ? (
+                <>
+                  <video className="size-10 object-cover" muted playsInline preload="metadata" src={slide.url} />
+                  <FileVideo size={12} className="absolute bottom-0.5 right-0.5 text-white drop-shadow" />
+                </>
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img alt={`Clip ${index + 1}`} className="size-10 object-cover" src={slide.url} />
+              )}
+            </span>
             <div className="min-w-0 flex-1">
               <p className="truncate text-xs font-semibold">
                 {index + 1}. {slide.file.name}
@@ -147,7 +165,7 @@ function ImageTimeline({ model }: { model: EditorModel }) {
           </button>
           <div className="mt-2 grid grid-cols-[1fr_auto] items-center gap-2">
             <label className="text-xs font-medium text-[var(--color-muted-strong)]">
-              Seconds on screen
+              {slide.kind === "video" ? "Clip seconds (trims / loops)" : "Seconds on screen"}
               <input
                 className="editor-control-soft mt-1 h-9 w-full rounded-md border px-2 text-sm text-[var(--color-foreground)] focus:outline-none focus:ring-2 focus:ring-fuchsia-400"
                 min="0.25"
@@ -169,7 +187,7 @@ function ImageTimeline({ model }: { model: EditorModel }) {
         </div>
       ))}
       <p className="text-xs text-[var(--color-muted-strong)]">
-        Smooth fade transitions are added between images during export.
+        Smooth fade transitions are added between clips during export. Video clips play muted - add an audio track for sound.
       </p>
     </div>
   );

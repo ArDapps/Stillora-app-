@@ -142,66 +142,6 @@ export function getFileExtension(filename: string) {
   return extension ? extension.toUpperCase() : "Unknown";
 }
 
-export function createUploadStoragePath({
-  id,
-  filename,
-  mimeType,
-  folder,
-  day = new Date().toISOString().slice(0, 10),
-}: {
-  id: string;
-  filename: string;
-  mimeType: string;
-  folder: "images" | "videos" | "audio";
-  day?: string;
-}) {
-  const extension = getSafeExtension(filename, mimeType);
-
-  return {
-    storedName: `${id}.${extension}`,
-    relativePath: `uploads/${folder}/${day}/${id}.${extension}`,
-  };
-}
-
-export function getSafeExtension(filename: string, mimeType: string) {
-  const extension = filename.toLowerCase().split(".").pop()?.replace(/[^a-z0-9]/g, "");
-
-  if (extension) {
-    return extension;
-  }
-
-  switch (mimeType) {
-    case "image/jpeg":
-      return "jpg";
-    case "image/png":
-      return "png";
-    case "image/webp":
-      return "webp";
-    case "audio/mpeg":
-    case "audio/mp3":
-      return "mp3";
-    case "audio/wav":
-    case "audio/x-wav":
-      return "wav";
-    case "audio/mp4":
-      return "m4a";
-    case "audio/aac":
-      return "aac";
-    case "audio/ogg":
-      return "ogg";
-    case "video/mp4":
-      return "mp4";
-    case "video/quicktime":
-      return "mov";
-    case "video/webm":
-      return "webm";
-    case "video/x-m4v":
-      return "m4v";
-    default:
-      return "bin";
-  }
-}
-
 export function getPreviewAspectRatio(
   preset: OutputPreset,
   imageDimensions: { width: number; height: number } | null,

@@ -12,6 +12,7 @@ import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_glow.dart';
 import '../../core/design/stillora_spacing.dart';
 import '../../core/design/stillora_surface.dart';
+import '../../core/platform/platform_info.dart';
 import '../auth/login_screen.dart';
 import '../export/export_progress_screen.dart';
 import 'editor_state.dart';
@@ -75,6 +76,7 @@ class EditorView extends ConsumerWidget {
     final editor = ref.watch(editorControllerProvider);
     final session = ref.watch(authControllerProvider).asData?.value;
     final controller = ref.read(editorControllerProvider.notifier);
+    final isDesktop = useDesktopLayout(context);
 
     return DecoratedBox(
       decoration: const BoxDecoration(
@@ -87,44 +89,205 @@ class EditorView extends ConsumerWidget {
       ),
       child: SafeArea(
         top: false,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(
-            StilloraSpacing.mobileMargin,
-            StilloraSpacing.sm,
-            StilloraSpacing.mobileMargin,
-            StilloraSpacing.lg,
-          ),
-          children: [
-            const _StudioHeader(),
-            const SizedBox(height: StilloraSpacing.lg),
-            const _ProgressRail(),
-            const SizedBox(height: StilloraSpacing.lg),
-            _SourceMediaCard(editor: editor, controller: controller),
-            const SizedBox(height: StilloraSpacing.sm),
-            _SoundscapeCard(
-              editor: editor,
-              onPickAudio: () => _pickAudio(ref),
-              onRemoveAudio: controller.removeAudio,
-            ),
-            const SizedBox(height: StilloraSpacing.sm),
-            _PresetCard(editor: editor, controller: controller),
-            const SizedBox(height: StilloraSpacing.sm),
-            _PrivacyCard(isSignedIn: session != null),
-            const SizedBox(height: StilloraSpacing.sm),
-            _PreviewCard(editor: editor),
-            const SizedBox(height: StilloraSpacing.sm),
-            StilloraPrimaryButton(
-              onPressed: editor.canExport
-                  ? () => _convert(context, ref, editor)
-                  : null,
-              icon: session == null
-                  ? Icons.lock_rounded
-                  : Icons.auto_fix_high_rounded,
-              label: session == null ? 'Register to Convert' : 'Convert to MP4',
-            ),
-          ],
-        ),
+        child: isDesktop
+            ? _DesktopEditorWorkspace(
+                editor: editor,
+                session: session,
+                controller: controller,
+                onPickAudio: () => _pickAudio(ref),
+                onConvert: () => _convert(context, ref, editor),
+              )
+            : _MobileEditorFlow(
+                editor: editor,
+                session: session,
+                controller: controller,
+                onPickAudio: () => _pickAudio(ref),
+                onConvert: () => _convert(context, ref, editor),
+              ),
       ),
+    );
+  }
+}
+
+class _MobileEditorFlow extends StatelessWidget {
+  const _MobileEditorFlow({
+    required this.editor,
+    required this.session,
+    required this.controller,
+    required this.onPickAudio,
+    required this.onConvert,
+  });
+
+  final EditorState editor;
+  final Object? session;
+  final EditorController controller;
+  final VoidCallback onPickAudio;
+  final VoidCallback onConvert;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(
+        StilloraSpacing.mobileMargin,
+        StilloraSpacing.sm,
+        StilloraSpacing.mobileMargin,
+        StilloraSpacing.lg,
+      ),
+      children: [
+        const _StudioHeader(),
+        const SizedBox(height: StilloraSpacing.lg),
+        const _ProgressRail(),
+        const SizedBox(height: StilloraSpacing.lg),
+        _SourceMediaCard(editor: editor, controller: controller),
+        const SizedBox(height: StilloraSpacing.sm),
+        _SoundscapeCard(
+          editor: editor,
+          onPickAudio: onPickAudio,
+          onRemoveAudio: controller.removeAudio,
+        ),
+        const SizedBox(height: StilloraSpacing.sm),
+        _PresetCard(editor: editor, controller: controller),
+        const SizedBox(height: StilloraSpacing.sm),
+        _PrivacyCard(isSignedIn: session != null),
+        const SizedBox(height: StilloraSpacing.sm),
+        _PreviewCard(editor: editor),
+        const SizedBox(height: StilloraSpacing.sm),
+        StilloraPrimaryButton(
+          onPressed: editor.canExport ? onConvert : null,
+          icon: session == null
+              ? Icons.lock_rounded
+              : Icons.auto_fix_high_rounded,
+          label: session == null ? 'Register to Convert' : 'Convert to MP4',
+        ),
+      ],
+    );
+  }
+}
+
+class _DesktopEditorWorkspace extends StatelessWidget {
+  const _DesktopEditorWorkspace({
+    required this.editor,
+    required this.session,
+    required this.controller,
+    required this.onPickAudio,
+    required this.onConvert,
+  });
+
+  final EditorState editor;
+  final Object? session;
+  final EditorController controller;
+  final VoidCallback onPickAudio;
+  final VoidCallback onConvert;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final previewWidth = constraints.maxWidth >= 1220 ? 460.0 : 400.0;
+
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(
+            StilloraSpacing.md,
+            0,
+            StilloraSpacing.md,
+            StilloraSpacing.md,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.only(bottom: StilloraSpacing.lg),
+                  children: [
+                    const _DesktopStudioHeader(),
+                    const SizedBox(height: StilloraSpacing.md),
+                    _SourceMediaCard(editor: editor, controller: controller),
+                    const SizedBox(height: StilloraSpacing.sm),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: _SoundscapeCard(
+                            editor: editor,
+                            onPickAudio: onPickAudio,
+                            onRemoveAudio: controller.removeAudio,
+                          ),
+                        ),
+                        const SizedBox(width: StilloraSpacing.sm),
+                        Expanded(
+                          child: _PrivacyCard(isSignedIn: session != null),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: StilloraSpacing.sm),
+                    _PresetCard(editor: editor, controller: controller),
+                  ],
+                ),
+              ),
+              const SizedBox(width: StilloraSpacing.md),
+              SizedBox(
+                width: previewWidth,
+                child: ListView(
+                  padding: const EdgeInsets.only(bottom: StilloraSpacing.lg),
+                  children: [
+                    _DesktopExportPanel(
+                      editor: editor,
+                      isSignedIn: session != null,
+                      onConvert: onConvert,
+                    ),
+                    const SizedBox(height: StilloraSpacing.sm),
+                    _PreviewCard(
+                      editor: editor,
+                      maxPreviewHeight: 440,
+                      maxPreviewWidth: previewWidth,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _DesktopStudioHeader extends StatelessWidget {
+  const _DesktopStudioHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ShaderMask(
+                shaderCallback: (bounds) =>
+                    stilloraBrandGradient.createShader(bounds),
+                child: Text(
+                  'Stillora Desktop Studio',
+                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              const SizedBox(height: StilloraSpacing.xs),
+              Text(
+                'Build a local MP4 timeline with desktop file picking and a wider control surface.',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: StilloraColors.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: StilloraSpacing.md),
+        const _ProgressRail(),
+      ],
     );
   }
 }
@@ -252,9 +415,15 @@ class _ProgressLine extends StatelessWidget {
 }
 
 class _PreviewCard extends StatelessWidget {
-  const _PreviewCard({required this.editor});
+  const _PreviewCard({
+    required this.editor,
+    this.maxPreviewHeight = 320,
+    this.maxPreviewWidth = 420,
+  });
 
   final EditorState editor;
+  final double maxPreviewHeight;
+  final double maxPreviewWidth;
 
   double get _aspectRatio {
     final preset = editor.preset;
@@ -303,7 +472,10 @@ class _PreviewCard extends StatelessWidget {
           const SizedBox(height: StilloraSpacing.sm),
           Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 320, maxWidth: 420),
+              constraints: BoxConstraints(
+                maxHeight: maxPreviewHeight,
+                maxWidth: maxPreviewWidth,
+              ),
               child: AspectRatio(
                 aspectRatio: _aspectRatio,
                 child: DecoratedBox(
@@ -326,6 +498,152 @@ class _PreviewCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _DesktopExportPanel extends StatelessWidget {
+  const _DesktopExportPanel({
+    required this.editor,
+    required this.isSignedIn,
+    required this.onConvert,
+  });
+
+  final EditorState editor;
+  final bool isSignedIn;
+  final VoidCallback onConvert;
+
+  @override
+  Widget build(BuildContext context) {
+    return StilloraGlowCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  gradient: stilloraBrandGradient,
+                  borderRadius: BorderRadius.circular(StilloraRadius.full),
+                ),
+                child: const Icon(
+                  Icons.movie_creation_rounded,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: StilloraSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      editor.canExport ? 'Ready to export' : 'Set up export',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    Text(
+                      editor.canExport
+                          ? 'Review the desktop preview before converting.'
+                          : 'Choose media to unlock conversion.',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: StilloraColors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: StilloraSpacing.sm),
+          _DesktopExportStat(
+            icon: Icons.perm_media_rounded,
+            label: 'Assets',
+            value: editor.media.isEmpty
+                ? 'None selected'
+                : '${editor.media.length} item${editor.media.length == 1 ? '' : 's'}',
+          ),
+          _DesktopExportStat(
+            icon: Icons.aspect_ratio_rounded,
+            label: 'Preset',
+            value: '${editor.preset.label} · ${editor.preset.ratioLabel}',
+          ),
+          _DesktopExportStat(
+            icon: Icons.timer_rounded,
+            label: 'Duration',
+            value: _formatDuration(editor.totalDurationSeconds),
+          ),
+          _DesktopExportStat(
+            icon: isSignedIn ? Icons.verified_user_rounded : Icons.lock_rounded,
+            label: 'Account',
+            value: isSignedIn ? 'Signed in' : 'Sign in on export',
+          ),
+          const SizedBox(height: StilloraSpacing.sm),
+          StilloraPrimaryButton(
+            onPressed: editor.canExport ? onConvert : null,
+            icon: isSignedIn ? Icons.auto_fix_high_rounded : Icons.lock_rounded,
+            label: isSignedIn ? 'Convert to MP4' : 'Register to Convert',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DesktopExportStat extends StatelessWidget {
+  const _DesktopExportStat({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: StilloraSpacing.xs),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: StilloraColors.surfaceContainerLow.withValues(alpha: 0.82),
+          borderRadius: BorderRadius.circular(StilloraRadius.full),
+          border: Border.all(color: StilloraColors.glassStroke),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: StilloraSpacing.sm,
+            vertical: StilloraSpacing.xs,
+          ),
+          child: Row(
+            children: [
+              Icon(icon, size: 18, color: StilloraColors.primary),
+              const SizedBox(width: StilloraSpacing.xs),
+              Expanded(
+                child: Text(
+                  label,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: StilloraColors.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              const SizedBox(width: StilloraSpacing.xs),
+              Flexible(
+                child: Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.right,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -680,7 +998,9 @@ class _ClipDurationSheetState extends State<_ClipDurationSheet> {
               ),
               Expanded(
                 child: Slider(
-                  value: _seconds.clamp(minDurationSeconds, _sliderMax).toDouble(),
+                  value: _seconds
+                      .clamp(minDurationSeconds, _sliderMax)
+                      .toDouble(),
                   min: minDurationSeconds.toDouble(),
                   max: _sliderMax.toDouble(),
                   divisions: _sliderMax - minDurationSeconds,
@@ -698,9 +1018,9 @@ class _ClipDurationSheetState extends State<_ClipDurationSheet> {
           Center(
             child: Text(
               '${_seconds}s',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
             ),
           ),
           const SizedBox(height: StilloraSpacing.sm),

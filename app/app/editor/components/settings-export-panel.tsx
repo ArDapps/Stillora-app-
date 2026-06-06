@@ -11,7 +11,7 @@ import { PresetIcon, stepBadgeClass } from "./shared";
 
 export function SettingsExportPanel({ model }: { model: EditorModel }) {
   return (
-    <aside className="order-3 space-y-4 lg:col-start-1 lg:row-start-2">
+    <aside className="editor-animate-in space-y-4">
       <PresetPanel model={model} />
       <ImageModePanel model={model} />
       <DurationPanel model={model} />
@@ -120,18 +120,32 @@ function DurationPanel({ model }: { model: EditorModel }) {
           ) : null}
         </div>
       ) : (
-        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {FIXED_DURATION_SECONDS.map((option) => (
-            <DurationButton
-              isSelected={state.duration === option}
-              key={option}
-              label={`${option} seconds`}
+        <div className="mt-3 space-y-2">
+          {state.audioAsset?.duration ? (
+            <button
+              className="editor-control-soft w-full rounded-md border px-3 py-2 text-sm font-semibold transition hover:border-cyan-300"
               onClick={() => {
-                actions.setDuration(option);
+                actions.setDuration(getAudioFitDuration(state.audioAsset?.duration ?? 0));
                 clearExport(model);
               }}
-            />
-          ))}
+              type="button"
+            >
+              Fit to audio - {formatDuration(getAudioFitDuration(state.audioAsset.duration))}
+            </button>
+          ) : null}
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {FIXED_DURATION_SECONDS.map((option) => (
+              <DurationButton
+                isSelected={state.duration === option}
+                key={option}
+                label={`${option} seconds`}
+                onClick={() => {
+                  actions.setDuration(option);
+                  clearExport(model);
+                }}
+              />
+            ))}
+          </div>
         </div>
       )}
     </section>

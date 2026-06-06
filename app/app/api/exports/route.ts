@@ -6,7 +6,6 @@ import ffmpegPath from "ffmpeg-static";
 
 import {
   AUDIO_MIME_TYPES,
-  FIXED_DURATION_SECONDS,
   FitMode,
   MAX_VIDEO_DURATION_SECONDS,
   MAX_UPLOAD_BYTES,
@@ -23,6 +22,7 @@ export const dynamic = "force-dynamic";
 type ExportRequest = {
   sourceKind?: SourceMediaKind;
   slides?: Array<{
+    kind?: SourceMediaKind;
     duration: number;
     width: number;
     height: number;
@@ -82,13 +82,6 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!isSlideshow && !FIXED_DURATION_SECONDS.some((option) => option === duration)) {
-      return Response.json(
-        { error: `Duration must be one of ${FIXED_DURATION_SECONDS.join(", ")} seconds.` },
-        { status: 400 },
-      );
-    }
-
     const sourceKind = body.sourceKind ?? "image";
 
     if (!["image", "video"].includes(sourceKind)) {
@@ -119,6 +112,7 @@ export async function POST(request: Request) {
     if (isSlideshow && body.slides?.length) {
       const slides = body.slides.map((slide) => ({
         ...slide,
+        kind: slide.kind === "video" ? ("video" as const) : ("image" as const),
         duration: normalizeSlideDuration(slide.duration),
       }));
       const materializedSlides = await Promise.all(
@@ -276,7 +270,7 @@ function buildSlideshowArgs({
   outputPath,
   transition,
 }: {
-  slides: Array<{ absolutePath: string; duration: number }>;
+  slides: Array<{ absolutePath: string; duration: number; kind: "image" | "video" }>;
   audioPath: string | null;
   width: number;
   height: number;
@@ -290,16 +284,12 @@ function buildSlideshowArgs({
   slides.forEach((slide, index) => {
     const inputDuration =
       index < slides.length - 1 ? slide.duration + transitionDuration : slide.duration;
-    args.push(
-      "-loop",
-      "1",
-      "-framerate",
-      "30",
-      "-t",
-      String(inputDuration),
-      "-i",
-      slide.absolutePath,
-    );
+    if (slide.kind === "video") {
+      // Loop short clips and trim long ones so each segment fills its timeline slot.
+      args.push("-stream_loop", "-1", "-t", String(inputDuration), "-i", slide.absolutePath);
+    } else {
+      args.push("-loop", "1", "-framerate", "30", "-t", String(inputDuration), "-i", slide.absolutePath);
+    }
   });
 
   if (audioPath) {
@@ -307,10 +297,11 @@ function buildSlideshowArgs({
   }
 
   const scaleFilter = buildVideoFilter(width, height, fitMode);
+  // Normalize fps, sample aspect, format and timestamps so image and video segments can be joined and crossfaded.
   const preparedSlides = slides
     .map(
       (_slide, index) =>
-        `[${index}:v]${scaleFilter},setsar=1,format=yuv420p[v${index}]`,
+        `[${index}:v]${scaleFilter},setsar=1,fps=30,format=yuv420p,setpts=PTS-STARTPTS[v${index}]`,
     )
     .join(";");
   let filterComplex = preparedSlides;

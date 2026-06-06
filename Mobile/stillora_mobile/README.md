@@ -2,6 +2,10 @@
 
 Flutter mobile app for Stillora: turn one local image into an MP4 video for social platforms.
 
+The app also includes Flutter desktop runners for macOS, Windows, and Linux.
+Desktop builds use a wider Stillora workspace UI and export locally through
+`ffmpeg` when it is installed and available on `PATH`.
+
 ## Status
 
 This scaffold implements the MVP app shell, feature-first structure, onboarding, Google-only auth client wiring, editor state, local export metadata, settings/profile/gallery surfaces, and the typed `stillora_video_engine` plugin boundary.
@@ -81,6 +85,28 @@ flutter run --dart-define=STILLORA_API_BASE_URL=http://localhost:3000
 flutter pub get
 flutter analyze
 flutter test
+```
+
+Desktop builds:
+
+```bash
+flutter build macos
+flutter build windows
+flutter build linux
+```
+
+Run the desktop app on the current host OS:
+
+```bash
+flutter run -d macos
+flutter run -d windows
+flutter run -d linux
+```
+
+Windows, Linux, and macOS desktop export requires:
+
+```bash
+ffmpeg -version
 ```
 
 Plugin tests:

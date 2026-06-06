@@ -7,7 +7,7 @@ export function PreviewPanel({ model }: { model: EditorModel }) {
   const { state } = model;
 
   return (
-    <section className="editor-preview-panel order-2 flex min-h-[360px] flex-col rounded-lg border border-[var(--editor-card-border)] shadow-[inset_0_0_34px_rgb(14_165_233_/_0.08)] sm:min-h-[460px] lg:sticky lg:top-5 lg:col-start-2 lg:row-span-2 lg:min-h-[520px]">
+    <section className="editor-preview-panel editor-animate-in relative flex min-h-[520px] flex-col rounded-lg border border-[var(--editor-card-border)] lg:h-full lg:min-h-0">
       <div className="flex items-center justify-between border-b border-[var(--editor-card-border)] px-4 py-3">
         <div>
           <p className="editor-title text-sm font-semibold">MP4 Preview</p>
@@ -20,11 +20,11 @@ export function PreviewPanel({ model }: { model: EditorModel }) {
           Timeline ready
         </div>
       </div>
-      <div className="grid flex-1 place-items-center overflow-hidden p-5">
+      <div className="grid min-h-0 flex-1 place-items-center overflow-hidden p-4 sm:p-5">
         <SocialTargetPills />
         <div className="editor-preview-glow-shell relative grid max-w-full place-items-center">
           <div
-            className="editor-preview-frame relative grid max-h-[min(72vh,680px)] max-w-full place-items-center overflow-hidden rounded-[18px] border border-cyan-300/70 shadow-[0_0_0_1px_rgb(255_255_255_/_0.08),0_0_44px_rgb(34_211_238_/_0.34),0_0_90px_rgb(217_70_239_/_0.2),0_30px_70px_rgb(0_0_0_/_0.46)]"
+            className="editor-preview-frame relative grid max-h-[min(58dvh,620px)] max-w-full place-items-center overflow-hidden rounded-[18px] border border-cyan-300/70 shadow-[0_0_0_1px_rgb(255_255_255_/_0.08),0_0_44px_rgb(34_211_238_/_0.34),0_0_90px_rgb(217_70_239_/_0.2),0_30px_70px_rgb(0_0_0_/_0.46)]"
             style={{ aspectRatio: state.previewAspectRatio, width: `min(100%, ${state.previewFrameWidth}px)` }}
           >
             <PreviewMedia model={model} />
@@ -49,6 +49,9 @@ function PreviewMedia({ model }: { model: EditorModel }) {
   const className = `h-full w-full ${state.fitMode === "fit" ? "object-contain" : "object-cover"}`;
 
   if (state.selectedSlide) {
+    if (state.selectedSlide.kind === "video") {
+      return <video className={className} controls muted playsInline src={state.selectedSlide.url} />;
+    }
     // eslint-disable-next-line @next/next/no-img-element
     return <img alt="Selected timeline slide preview" className={className} src={state.selectedSlide.url} />;
   }

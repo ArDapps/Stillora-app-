@@ -4,11 +4,16 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:stillora_video_engine/stillora_video_engine.dart' as engine;
 
+import '../../core/platform/platform_info.dart';
 import '../editor/editor_state.dart';
 import '../gallery/gallery_controller.dart';
 import '../gallery/local_export_record.dart';
+import 'desktop_ffmpeg_video_engine.dart';
 
 final videoEngineProvider = Provider<engine.StilloraVideoEngine>((ref) {
+  if (isDesktopPlatform) {
+    return DesktopFfmpegVideoEngine();
+  }
   return engine.PlatformStilloraVideoEngine();
 });
 

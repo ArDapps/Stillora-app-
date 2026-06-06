@@ -31,10 +31,6 @@ export function validateUpload(
   }
 }
 
-export async function readExport() {
-  return null;
-}
-
 export class UploadError extends Error {
   status: number;
 

@@ -8,7 +8,6 @@ import {
   FIXED_DURATION_SECONDS,
   FitMode,
   getPreviewAspectRatio,
-  IMAGE_MIME_TYPES,
   MAX_AUDIO_BYTES,
   MAX_IMAGE_BYTES,
   MAX_SOURCE_VIDEO_BYTES,
@@ -31,7 +30,7 @@ const emptyUploadState: UploadState = { status: "idle", upload: null, error: "" 
 const EXPORT_RESULT_TTL_MS = 20 * 60 * 1000;
 
 export function useEditorModel(): EditorModel {
-  const { user } = useSession();
+  const { user, loading: authLoading } = useSession();
   const imageInputRef = useRef<HTMLInputElement>(null);
   const addImagesInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
@@ -111,7 +110,14 @@ export function useEditorModel(): EditorModel {
     setExportError("");
   }
 
+  function requireAuth() {
+    if (user) return true;
+    if (!authLoading) startGoogleSignIn("/editor");
+    return false;
+  }
+
   async function handleMediaFiles(files: FileList | File[] | null | undefined) {
+    if (!requireAuth()) return;
     const selectedFiles = Array.from(files ?? []);
     if (selectedFiles.length === 0) return;
     if (selectedFiles.length > 1) return handleImageTimelineFiles(selectedFiles);
@@ -119,10 +125,11 @@ export function useEditorModel(): EditorModel {
   }
 
   async function handleAdditionalImageFiles(files: FileList | File[] | null | undefined) {
+    if (!requireAuth()) return;
     const selectedFiles = Array.from(files ?? []);
     if (selectedFiles.length === 0) return;
     const nextFiles = [
-      ...(isImageTimeline ? imageSlides.map((slide) => slide.file) : imageAsset?.kind === "image" ? [imageAsset.file] : []),
+      ...(isImageTimeline ? imageSlides.map((slide) => slide.file) : imageAsset ? [imageAsset.file] : []),
       ...selectedFiles,
     ];
     return nextFiles.length === selectedFiles.length && selectedFiles.length === 1
@@ -134,36 +141,49 @@ export function useEditorModel(): EditorModel {
     resetExportState();
     setImageError("");
     setImageUpload(emptyUploadState);
-    if (files.some((file) => !file.type.startsWith("image/"))) {
-      setImageError("Multiple-file timelines support images only. Use one video at a time.");
+    if (files.some((file) => !SOURCE_MEDIA_MIME_TYPES.has(file.type))) {
+      setImageError("Timelines support JPG, PNG, WebP images and MP4, MOV, M4V, WebM videos.");
       return;
     }
     if (files.reduce((sum, file) => sum + file.size, 0) > MAX_UPLOAD_BYTES) {
-      setImageError("Total image timeline media must be 200 MB or smaller.");
+      setImageError("Total timeline media must be 200 MB or smaller.");
       return;
     }
     const slides: ImageSlide[] = [];
     for (const file of files) {
-      if (!IMAGE_MIME_TYPES.has(file.type) || file.size > MAX_IMAGE_BYTES) {
-        setImageError("Use JPG, PNG, or WebP images up to 200 MB each.");
+      const isVideo = VIDEO_MIME_TYPES.has(file.type);
+      if (file.size > (isVideo ? MAX_SOURCE_VIDEO_BYTES : MAX_IMAGE_BYTES)) {
+        setImageError("Each file must be 200 MB or smaller.");
         slides.forEach((slide) => URL.revokeObjectURL(slide.url));
         return;
       }
       const url = URL.createObjectURL(file);
-      const metadata = await readImageDimensions(url);
+      const metadata = isVideo ? await readVideoMetadata(url) : await readImageDimensions(url);
       if (!metadata) {
         URL.revokeObjectURL(url);
         slides.forEach((slide) => URL.revokeObjectURL(slide.url));
-        setImageError("One of these images could not be read. Try another file.");
+        setImageError("One of these files could not be read. Try another file.");
         return;
       }
-      slides.push({ id: crypto.randomUUID(), file, url, ...metadata, duration: 1, upload: emptyUploadState });
+      const sourceDuration =
+        isVideo && "duration" in metadata && typeof metadata.duration === "number" ? metadata.duration : null;
+      slides.push({
+        id: crypto.randomUUID(),
+        kind: isVideo ? "video" : "image",
+        file,
+        url,
+        width: metadata.width,
+        height: metadata.height,
+        duration: sourceDuration ? Number(sourceDuration.toFixed(2)) : 1,
+        sourceDuration,
+        upload: emptyUploadState,
+      });
     }
     if (isImageTimeline) revokeSlideUrls();
     else revokeSourceUrls();
     setImageSlides(slides);
     setSelectedSlideId(slides[0]?.id ?? "");
-    setImageAsset({ kind: "image", file: slides[0].file, url: slides[0].url, width: slides[0].width, height: slides[0].height, duration: null });
+    setImageAsset({ kind: slides[0].kind, file: slides[0].file, url: slides[0].url, width: slides[0].width, height: slides[0].height, duration: slides[0].sourceDuration });
     setDuration(slides.reduce((sum, slide) => sum + slide.duration, 0));
     slides.forEach((slide) => void uploadSlideImage(slide.id, slide.file));
   }
@@ -209,6 +229,7 @@ export function useEditorModel(): EditorModel {
   }
 
   async function handleAudioFile(file: File | undefined) {
+    if (!requireAuth()) return;
     setAudioError("");
     setAudioUpload(emptyUploadState);
     setIsAudioPlaying(false);
@@ -263,7 +284,7 @@ export function useEditorModel(): EditorModel {
     setExportError("");
     try {
       const formData = new FormData();
-      formData.append("metadata", JSON.stringify({ sourceKind: imageAsset?.kind ?? "image", slides: isImageTimeline ? imageSlides.map(({ duration, width, height }) => ({ duration, width, height })) : undefined, transition: isImageTimeline ? "fade" : undefined, presetId, fitMode, duration, imageWidth: imageAsset?.width ?? selectedSlide?.width ?? 1080, imageHeight: imageAsset?.height ?? selectedSlide?.height ?? 1920 }));
+      formData.append("metadata", JSON.stringify({ sourceKind: imageAsset?.kind ?? "image", slides: isImageTimeline ? imageSlides.map(({ kind, duration, width, height }) => ({ kind, duration, width, height })) : undefined, transition: isImageTimeline ? "fade" : undefined, presetId, fitMode, duration, imageWidth: imageAsset?.width ?? selectedSlide?.width ?? 1080, imageHeight: imageAsset?.height ?? selectedSlide?.height ?? 1920 }));
       if (isImageTimeline) imageSlides.forEach((slide, index) => formData.append(`slide-${index}`, slide.file));
       else if (imageAsset) formData.append("source", imageAsset.file);
       if (audioAsset) formData.append("audio", audioAsset.file);
@@ -336,7 +357,7 @@ export function useEditorModel(): EditorModel {
       } else {
         const nextSelected = nextSlides.find((slide) => slide.id === selectedSlideId) ?? nextSlides[0];
         setSelectedSlideId(nextSelected.id);
-        setImageAsset({ kind: "image", file: nextSelected.file, url: nextSelected.url, width: nextSelected.width, height: nextSelected.height, duration: null });
+        setImageAsset({ kind: nextSelected.kind, file: nextSelected.file, url: nextSelected.url, width: nextSelected.width, height: nextSelected.height, duration: nextSelected.sourceDuration });
         setDuration(nextSlides.reduce((sum, slide) => sum + slide.duration, 0));
       }
       resetExportState();
@@ -347,7 +368,8 @@ export function useEditorModel(): EditorModel {
   async function uploadSlideImage(slideId: string, file: File) {
     setImageSlides((slides) => slides.map((slide) => (slide.id === slideId ? { ...slide, upload: { status: "uploading", upload: null, error: "" } } : slide)));
     try {
-      const upload = await uploadFile("/api/uploads/image", file);
+      const endpoint = VIDEO_MIME_TYPES.has(file.type) ? "/api/uploads/video" : "/api/uploads/image";
+      const upload = await uploadFile(endpoint, file);
       setImageSlides((slides) => slides.map((slide) => (slide.id === slideId ? { ...slide, upload: { status: "saved", upload, error: "" } } : slide)));
     } catch (error) {
       setImageSlides((slides) => slides.map((slide) => (slide.id === slideId ? { ...slide, upload: { status: "failed", upload: null, error: error instanceof Error ? error.message : "Upload failed." } } : slide)));
@@ -372,8 +394,8 @@ export function useEditorModel(): EditorModel {
   return {
     refs: { imageInputRef, addImagesInputRef, audioInputRef, audioRef },
     user,
-    state: { imageAsset, imageSlides, selectedSlideId, selectedSlide, audioAsset, presetId, selectedPreset, fitMode, duration, imageError, audioError, imageUpload, audioUpload, isAudioPlaying, exportStatus, exportProgress, exportResult, exportError, isImageTimeline, timelineDuration, sourceUploadReady, previewAspectRatio, previewFrameWidth, outputDimensions },
-    actions: { handleMediaFiles, handleAdditionalImageFiles, handleAudioFile, removeImage, removeAudio, onImageDrop, onAudioDrop, startExport, resetExportState, handleExportDownload, updateSlideDuration, fitTimelineToDuration, removeSlide, uploadSlideImage, toggleAudio, handleAudioEnded, setSelectedSlideId, setPresetId, setFitMode, setDuration, setExportStatus, setExportProgress, setExportResult, setExportError },
+    state: { imageAsset, imageSlides, selectedSlideId, selectedSlide, audioAsset, presetId, selectedPreset, fitMode, duration, imageError, audioError, imageUpload, audioUpload, isAudioPlaying, exportStatus, exportProgress, exportResult, exportError, isImageTimeline, timelineDuration, sourceUploadReady, previewAspectRatio, previewFrameWidth, outputDimensions, isAuthenticated: Boolean(user), authLoading },
+    actions: { handleMediaFiles, handleAdditionalImageFiles, handleAudioFile, removeImage, removeAudio, onImageDrop, onAudioDrop, startExport, resetExportState, handleExportDownload, updateSlideDuration, fitTimelineToDuration, removeSlide, uploadSlideImage, toggleAudio, handleAudioEnded, setSelectedSlideId, setPresetId, setFitMode, setDuration, setExportStatus, setExportProgress, setExportResult, setExportError, requireAuth },
   };
 }
 
