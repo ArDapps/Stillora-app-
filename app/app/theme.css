@@ -40,16 +40,9 @@
   --shadow-card: 0 24px 70px rgb(0 0 0 / 32%);
   --shadow-primary: 0 0 0 1px rgb(210 187 255 / 18%), 0 16px 36px rgb(139 92 246 / 20%);
   --shadow-success: 0 0 0 1px rgb(255 224 131 / 16%), inset 0 0 18px rgb(255 224 131 / 12%);
-  /* Landing/brand accents — derived from the editor palette (purple → fuchsia → cyan). */
   --brand-gradient: linear-gradient(135deg, #22d3ee 0%, #8b5cf6 45%, #f472b6 100%);
   --brand-mark: linear-gradient(145deg, #2dd4ff, #8b5cf6 55%, #ec4899);
   --brand-mark-glow: rgb(124 58 237 / 42%);
-  --landing-hero-glow:
-    linear-gradient(135deg, rgb(34 211 238 / 14%), transparent 36%),
-    linear-gradient(315deg, rgb(244 114 182 / 14%), transparent 38%),
-    linear-gradient(180deg, rgb(139 92 246 / 16%), transparent 58%);
-  --landing-cta-glow: linear-gradient(135deg, rgb(34 211 238 / 14%), transparent 42%), linear-gradient(315deg, rgb(244 114 182 / 16%), transparent 48%);
-  --landing-mock-bg: linear-gradient(145deg, #27115f 0%, #062235 52%, #0b1020 100%);
   --editor-page-bg:
     radial-gradient(circle at top left, rgb(124 58 237 / 34%), transparent 34%),
     radial-gradient(circle at bottom right, rgb(14 165 233 / 26%), transparent 38%),
@@ -112,16 +105,9 @@
   --shadow-card: 0 24px 70px rgb(31 41 55 / 12%);
   --shadow-primary: 0 0 0 1px rgb(124 58 237 / 18%), 0 16px 34px rgb(124 58 237 / 16%);
   --shadow-success: 0 0 0 1px rgb(184 134 11 / 18%), inset 0 0 18px rgb(184 134 11 / 8%);
-  /* Landing/brand accents — softer in light theme, same editor-derived hues. */
   --brand-gradient: linear-gradient(135deg, #0891b2 0%, #7c3aed 48%, #db2777 100%);
   --brand-mark: linear-gradient(145deg, #2dd4ff, #8b5cf6 55%, #ec4899);
   --brand-mark-glow: rgb(124 58 237 / 28%);
-  --landing-hero-glow:
-    linear-gradient(135deg, rgb(14 165 233 / 14%), transparent 40%),
-    linear-gradient(315deg, rgb(219 39 119 / 10%), transparent 42%),
-    linear-gradient(180deg, rgb(124 58 237 / 10%), transparent 62%);
-  --landing-cta-glow: linear-gradient(135deg, rgb(14 165 233 / 12%), transparent 42%), linear-gradient(315deg, rgb(219 39 119 / 12%), transparent 48%);
-  --landing-mock-bg: linear-gradient(160deg, #1b1144 0%, #060e20 55%, #131b2e 100%);
   --editor-page-bg:
     radial-gradient(circle at top left, rgb(124 58 237 / 16%), transparent 34%),
     radial-gradient(circle at bottom right, rgb(14 165 233 / 14%), transparent 38%),

@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/auth/auth_controller.dart';
@@ -289,7 +290,7 @@ class _PreviewCard extends StatelessWidget {
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     Text(
-                      '${editor.preset.ratioLabel} · ${editor.durationSeconds}s · $fitLabel',
+                      '${editor.preset.ratioLabel} · ${editor.totalDurationSeconds}s · $fitLabel',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: StilloraColors.onSurfaceVariant,
                       ),
@@ -455,20 +456,17 @@ class _SourceMediaCard extends StatelessWidget {
 
   String _mediaSummary(EditorState editor) {
     final totalCount = editor.media.length;
-    final totalDuration = _formatDuration(editor.durationSeconds);
-    final segmentDuration = totalCount == 0
-        ? '0s'
-        : _formatSegmentDuration(editor.durationSeconds / totalCount);
+    final totalDuration = _formatDuration(editor.totalDurationSeconds);
     if (editor.exportsMixedTimeline) {
-      return '$totalCount assets · final $totalDuration · about $segmentDuration each. Drag to reorder.';
+      return '$totalCount assets · $totalDuration total. Tap a clip’s time to trim it, drag to reorder.';
     }
     if (editor.exportsImageSlideshow && totalCount > 1) {
-      return '$totalCount images · final $totalDuration · about $segmentDuration each. Drag to reorder.';
+      return '$totalCount images · $totalDuration total. Tap a clip’s time to trim it, drag to reorder.';
     }
     if (editor.exportsVideoSource) {
-      return 'Selected video exports as a $totalDuration MP4.';
+      return 'Selected video exports as a $totalDuration MP4. Tap the clip time to change its length.';
     }
-    return 'Selected $totalCount item${totalCount == 1 ? '' : 's'} · final $totalDuration.';
+    return 'Selected $totalCount item${totalCount == 1 ? '' : 's'} · $totalDuration total.';
   }
 }
 
@@ -538,10 +536,6 @@ class _MediaTimeline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final segmentDuration = editor.media.isEmpty
-        ? '0s'
-        : _formatSegmentDuration(editor.durationSeconds / editor.media.length);
-
     return SizedBox(
       height: 124,
       child: ReorderableListView.builder(
@@ -571,14 +565,151 @@ class _MediaTimeline extends StatelessWidget {
               child: _MediaThumb(
                 index: index,
                 item: item,
-                durationLabel: segmentDuration,
+                durationLabel: _formatDuration(item.durationSeconds),
                 selected: index == editor.selectedIndex,
                 onTap: () => controller.selectMedia(index),
                 onRemove: () => controller.removeMediaAt(index),
+                onEditDuration: () => _editClipDuration(context, index, item),
               ),
             ),
           );
         },
+      ),
+    );
+  }
+
+  Future<void> _editClipDuration(
+    BuildContext context,
+    int index,
+    MediaItem item,
+  ) async {
+    controller.selectMedia(index);
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: StilloraColors.surfaceContainerLow,
+      showDragHandle: true,
+      builder: (sheetContext) => _ClipDurationSheet(
+        clipNumber: index + 1,
+        isVideo: item.kind == MediaKind.video,
+        initialSeconds: item.durationSeconds,
+        onChanged: (seconds) => controller.setClipDuration(index, seconds),
+      ),
+    );
+  }
+}
+
+/// Bottom sheet that edits a single clip's duration. Every change is applied
+/// live so the timeline and preview update behind the sheet.
+class _ClipDurationSheet extends StatefulWidget {
+  const _ClipDurationSheet({
+    required this.clipNumber,
+    required this.isVideo,
+    required this.initialSeconds,
+    required this.onChanged,
+  });
+
+  final int clipNumber;
+  final bool isVideo;
+  final int initialSeconds;
+  final ValueChanged<int> onChanged;
+
+  @override
+  State<_ClipDurationSheet> createState() => _ClipDurationSheetState();
+}
+
+class _ClipDurationSheetState extends State<_ClipDurationSheet> {
+  late int _seconds = widget.initialSeconds;
+
+  // A 60s ceiling keeps a single clip's slider usable; the typed field still
+  // accepts longer values up to the engine limit.
+  static const _sliderMax = 60;
+  static const _quickPicks = [1, 2, 3, 5, 10, 15, 30];
+
+  void _set(int seconds) {
+    final clamped = normalizeDurationSeconds(seconds);
+    setState(() => _seconds = clamped);
+    widget.onChanged(clamped);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        StilloraSpacing.md,
+        0,
+        StilloraSpacing.md,
+        StilloraSpacing.md + bottomInset,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            '${widget.isVideo ? 'Video' : 'Photo'} ${widget.clipNumber} duration',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: StilloraSpacing.xs),
+          Text(
+            'Set how long this clip plays in the final video.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: StilloraColors.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: StilloraSpacing.sm),
+          Wrap(
+            spacing: StilloraSpacing.xs,
+            runSpacing: StilloraSpacing.xs,
+            children: [
+              for (final pick in _quickPicks)
+                _DurationChip(
+                  label: '${pick}s',
+                  selected: _seconds == pick,
+                  onSelected: () => _set(pick),
+                ),
+            ],
+          ),
+          const SizedBox(height: StilloraSpacing.sm),
+          Row(
+            children: [
+              IconButton.filledTonal(
+                tooltip: 'Shorter',
+                onPressed: () => _set(_seconds - 1),
+                icon: const Icon(Icons.remove_rounded),
+              ),
+              Expanded(
+                child: Slider(
+                  value: _seconds.clamp(minDurationSeconds, _sliderMax).toDouble(),
+                  min: minDurationSeconds.toDouble(),
+                  max: _sliderMax.toDouble(),
+                  divisions: _sliderMax - minDurationSeconds,
+                  label: '${_seconds}s',
+                  onChanged: (value) => _set(value.round()),
+                ),
+              ),
+              IconButton.filledTonal(
+                tooltip: 'Longer',
+                onPressed: () => _set(_seconds + 1),
+                icon: const Icon(Icons.add_rounded),
+              ),
+            ],
+          ),
+          Center(
+            child: Text(
+              '${_seconds}s',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          const SizedBox(height: StilloraSpacing.sm),
+          StilloraPrimaryButton(
+            onPressed: () => Navigator.of(context).pop(),
+            icon: Icons.check_rounded,
+            label: 'Done',
+          ),
+        ],
       ),
     );
   }
@@ -621,6 +752,7 @@ class _MediaThumb extends StatelessWidget {
     required this.selected,
     required this.onTap,
     required this.onRemove,
+    required this.onEditDuration,
   });
 
   final int index;
@@ -629,6 +761,7 @@ class _MediaThumb extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
   final VoidCallback onRemove;
+  final VoidCallback onEditDuration;
 
   @override
   Widget build(BuildContext context) {
@@ -744,39 +877,54 @@ class _MediaThumb extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 4),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-          decoration: BoxDecoration(
-            gradient: selected ? stilloraBrandGradient : null,
-            color: selected
-                ? null
-                : StilloraColors.surfaceContainerLowest.withValues(alpha: 0.8),
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onEditDuration,
             borderRadius: BorderRadius.circular(StilloraRadius.full),
-            border: Border.all(
-              color: selected
-                  ? Colors.white.withValues(alpha: 0.24)
-                  : StilloraColors.glassStroke,
-            ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.timer_outlined, size: 13, color: durationForeground),
-              const SizedBox(width: 3),
-              Flexible(
-                child: Text(
-                  durationLabel,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: durationForeground,
-                    fontWeight: FontWeight.w800,
-                  ),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+              decoration: BoxDecoration(
+                gradient: selected ? stilloraBrandGradient : null,
+                color: selected
+                    ? null
+                    : StilloraColors.surfaceContainerLowest.withValues(
+                        alpha: 0.8,
+                      ),
+                borderRadius: BorderRadius.circular(StilloraRadius.full),
+                border: Border.all(
+                  color: selected
+                      ? Colors.white.withValues(alpha: 0.24)
+                      : StilloraColors.glassStroke,
                 ),
               ),
-            ],
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.timer_outlined,
+                    size: 13,
+                    color: durationForeground,
+                  ),
+                  const SizedBox(width: 3),
+                  Flexible(
+                    child: Text(
+                      durationLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: durationForeground,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  Icon(Icons.edit_rounded, size: 11, color: durationForeground),
+                ],
+              ),
+            ),
           ),
         ),
       ],
@@ -919,8 +1067,9 @@ class _PresetCard extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      Icons.movie_filter_rounded,
+                    FaIcon(
+                      preset.icon,
+                      size: 22,
                       color: selected
                           ? StilloraColors.primary
                           : StilloraColors.onSurfaceVariant,
@@ -969,7 +1118,19 @@ class _PresetCard extends StatelessWidget {
                 controller.setResizeMode(value.first),
           ),
           const SizedBox(height: StilloraSpacing.sm),
-          Text('Duration', style: Theme.of(context).textTheme.labelMedium),
+          Text(
+            editor.media.length > 1 ? 'Total duration' : 'Duration',
+            style: Theme.of(context).textTheme.labelMedium,
+          ),
+          if (editor.media.length > 1) ...[
+            const SizedBox(height: 2),
+            Text(
+              'Splits evenly across all clips. Tap a clip above to set its own time.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: StilloraColors.onSurfaceVariant,
+              ),
+            ),
+          ],
           const SizedBox(height: StilloraSpacing.xs),
           Wrap(
             spacing: StilloraSpacing.xs,
@@ -977,12 +1138,12 @@ class _PresetCard extends StatelessWidget {
             children: [
               _DurationChip(
                 label: '10s',
-                selected: editor.durationSeconds == 10,
+                selected: editor.totalDurationSeconds == 10,
                 onSelected: () => controller.setDuration(10),
               ),
               _DurationChip(
                 label: '30s',
-                selected: editor.durationSeconds == 30,
+                selected: editor.totalDurationSeconds == 30,
                 onSelected: () => controller.setDuration(30),
               ),
               if (editor.audioDurationSeconds != null)
@@ -990,7 +1151,8 @@ class _PresetCard extends StatelessWidget {
                   label:
                       'Use audio ${_formatDuration(editor.audioDurationSeconds!)}',
                   selected:
-                      editor.durationSeconds == editor.audioDurationSeconds,
+                      editor.totalDurationSeconds ==
+                      editor.audioDurationSeconds,
                   onSelected: () =>
                       controller.setDuration(editor.audioDurationSeconds!),
                 ),
@@ -998,11 +1160,13 @@ class _PresetCard extends StatelessWidget {
           ),
           const SizedBox(height: StilloraSpacing.xs),
           Slider(
-            value: editor.durationSeconds.toDouble(),
+            value: editor.totalDurationSeconds
+                .clamp(minDurationSeconds, maxDurationSeconds)
+                .toDouble(),
             min: minDurationSeconds.toDouble(),
             max: maxDurationSeconds.toDouble(),
             divisions: maxDurationSeconds - minDurationSeconds,
-            label: _formatDuration(editor.durationSeconds),
+            label: _formatDuration(editor.totalDurationSeconds),
             onChanged: (value) => controller.setDuration(value.round()),
           ),
           Row(
@@ -1010,14 +1174,14 @@ class _PresetCard extends StatelessWidget {
               IconButton.filledTonal(
                 tooltip: 'Shorter',
                 onPressed: () =>
-                    controller.setDuration(editor.durationSeconds - 1),
+                    controller.setDuration(editor.totalDurationSeconds - 1),
                 icon: const Icon(Icons.remove_rounded),
               ),
               const SizedBox(width: StilloraSpacing.xs),
               Expanded(
                 child: TextFormField(
-                  key: ValueKey('duration-${editor.durationSeconds}'),
-                  initialValue: editor.durationSeconds.toString(),
+                  key: ValueKey('duration-${editor.totalDurationSeconds}'),
+                  initialValue: editor.totalDurationSeconds.toString(),
                   textAlign: TextAlign.center,
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -1041,7 +1205,7 @@ class _PresetCard extends StatelessWidget {
               IconButton.filledTonal(
                 tooltip: 'Longer',
                 onPressed: () =>
-                    controller.setDuration(editor.durationSeconds + 1),
+                    controller.setDuration(editor.totalDurationSeconds + 1),
                 icon: const Icon(Icons.add_rounded),
               ),
             ],
@@ -1136,23 +1300,6 @@ String _formatDuration(int seconds) {
   if (minutes == 0) {
     return '${seconds}s';
   }
-  return '$minutes:${remainder.toString().padLeft(2, '0')}';
-}
-
-String _formatSegmentDuration(double seconds) {
-  if (seconds <= 0) {
-    return '0s';
-  }
-  if (seconds < 60) {
-    final rounded = (seconds * 10).round() / 10;
-    if (rounded == rounded.truncateToDouble()) {
-      return '${rounded.toInt()}s';
-    }
-    return '${rounded.toStringAsFixed(1)}s';
-  }
-  final roundedSeconds = seconds.round();
-  final minutes = roundedSeconds ~/ 60;
-  final remainder = roundedSeconds % 60;
   return '$minutes:${remainder.toString().padLeft(2, '0')}';
 }
 

@@ -37,21 +37,42 @@ MediaKind mediaKindForPath(String path) {
 }
 
 class MediaItem extends Equatable {
-  const MediaItem({required this.path, required this.kind});
+  const MediaItem({
+    required this.path,
+    required this.kind,
+    this.durationSeconds = defaultDurationSeconds,
+  });
 
-  factory MediaItem.fromPath(String path) =>
-      MediaItem(path: path, kind: mediaKindForPath(path));
+  factory MediaItem.fromPath(
+    String path, {
+    int durationSeconds = defaultDurationSeconds,
+  }) => MediaItem(
+    path: path,
+    kind: mediaKindForPath(path),
+    durationSeconds: normalizeDurationSeconds(durationSeconds),
+  );
 
   final String path;
   final MediaKind kind;
+
+  /// How many seconds this clip occupies in the exported timeline.
+  final int durationSeconds;
 
   String get name {
     final slash = path.lastIndexOf('/');
     return slash == -1 ? path : path.substring(slash + 1);
   }
 
+  MediaItem copyWith({int? durationSeconds}) => MediaItem(
+    path: path,
+    kind: kind,
+    durationSeconds: normalizeDurationSeconds(
+      durationSeconds ?? this.durationSeconds,
+    ),
+  );
+
   @override
-  List<Object?> get props => [path, kind];
+  List<Object?> get props => [path, kind, durationSeconds];
 }
 
 class EditorState extends Equatable {
@@ -103,6 +124,18 @@ class EditorState extends Equatable {
   bool get hasMedia => media.isNotEmpty;
 
   bool get canExport => media.isNotEmpty;
+
+  /// Per-clip durations in timeline order. Parallel to [mediaPaths].
+  List<int> get clipDurations => [
+    for (final item in media) item.durationSeconds,
+  ];
+
+  /// Total length of the exported video. With media this is the sum of every
+  /// clip's duration; with no media it falls back to the baseline
+  /// [durationSeconds] used by the duration controls.
+  int get totalDurationSeconds => media.isEmpty
+      ? durationSeconds
+      : media.fold(0, (sum, item) => sum + item.durationSeconds);
 
   EditorState copyWith({
     List<MediaItem>? media,
@@ -166,7 +199,13 @@ class EditorController extends Notifier<EditorState> {
     if (files.isEmpty) {
       return;
     }
-    final items = [for (final file in files) MediaItem.fromPath(file.path)];
+    // Spread the baseline duration evenly so the initial timeline keeps the
+    // familiar total (e.g. 10s split across the chosen clips).
+    final durations = _distributeEvenly(files.length, state.durationSeconds);
+    final items = [
+      for (var i = 0; i < files.length; i++)
+        MediaItem.fromPath(files[i].path, durationSeconds: durations[i]),
+    ];
     state = state.copyWith(media: items, selectedIndex: 0);
   }
 
@@ -178,14 +217,56 @@ class EditorController extends Notifier<EditorState> {
       return;
     }
     final existing = {for (final item in state.media) item.path};
+    // New clips adopt the current average clip length so the timeline grows
+    // predictably; the user can fine-tune each one afterwards.
+    final defaultClip = _defaultClipSeconds(state.media);
     final additions = [
       for (final file in files)
-        if (!existing.contains(file.path)) MediaItem.fromPath(file.path),
+        if (!existing.contains(file.path))
+          MediaItem.fromPath(file.path, durationSeconds: defaultClip),
     ];
     if (additions.isEmpty) {
       return;
     }
     state = state.copyWith(media: [...state.media, ...additions]);
+  }
+
+  /// Sets the duration of a single clip without touching the others.
+  void setClipDuration(int index, int seconds) {
+    if (index < 0 || index >= state.media.length) {
+      return;
+    }
+    final next = [...state.media];
+    next[index] = next[index].copyWith(
+      durationSeconds: normalizeDurationSeconds(seconds),
+    );
+    state = state.copyWith(media: next);
+  }
+
+  int _defaultClipSeconds(List<MediaItem> media) {
+    if (media.isEmpty) {
+      return state.durationSeconds;
+    }
+    final total = media.fold(0, (sum, item) => sum + item.durationSeconds);
+    return normalizeDurationSeconds((total / media.length).round());
+  }
+
+  /// Splits [total] seconds across [count] clips as evenly as possible, handing
+  /// the remainder to the earliest clips so the parts sum back to [total].
+  List<int> _distributeEvenly(int count, int total) {
+    if (count <= 0) {
+      return const [];
+    }
+    final clamped = normalizeDurationSeconds(total);
+    final base = clamped ~/ count;
+    final remainder = clamped - base * count;
+    return [
+      for (var i = 0; i < count; i++)
+        (base + (i < remainder ? 1 : 0)).clamp(
+          minDurationSeconds,
+          maxDurationSeconds,
+        ),
+    ];
   }
 
   void selectMedia(int index) {
@@ -235,7 +316,15 @@ class EditorController extends Notifier<EditorState> {
     if (state.audioPath != path || duration == null) {
       return;
     }
+    final durations = _distributeEvenly(state.media.length, duration);
+    final next = state.media.isEmpty
+        ? state.media
+        : [
+            for (var i = 0; i < state.media.length; i++)
+              state.media[i].copyWith(durationSeconds: durations[i]),
+          ];
     state = state.copyWith(
+      media: next,
       audioDurationSeconds: duration,
       durationSeconds: duration,
     );
@@ -245,9 +334,21 @@ class EditorController extends Notifier<EditorState> {
 
   void setPreset(VideoPreset preset) => state = state.copyWith(preset: preset);
 
-  void setDuration(int seconds) => state = state.copyWith(
-    durationSeconds: normalizeDurationSeconds(seconds),
-  );
+  /// Sets the overall target duration and re-splits it evenly across every
+  /// clip. Use [setClipDuration] to bias an individual clip afterwards.
+  void setDuration(int seconds) {
+    final normalized = normalizeDurationSeconds(seconds);
+    if (state.media.isEmpty) {
+      state = state.copyWith(durationSeconds: normalized);
+      return;
+    }
+    final durations = _distributeEvenly(state.media.length, normalized);
+    final next = [
+      for (var i = 0; i < state.media.length; i++)
+        state.media[i].copyWith(durationSeconds: durations[i]),
+    ];
+    state = state.copyWith(media: next, durationSeconds: normalized);
+  }
 
   void setResizeMode(ResizeMode resizeMode) {
     state = state.copyWith(resizeMode: resizeMode);

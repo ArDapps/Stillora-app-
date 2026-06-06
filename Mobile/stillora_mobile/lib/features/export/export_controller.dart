@@ -40,8 +40,9 @@ class ExportController extends AsyncNotifier<engine.ExportResult?> {
         imagePath: editor.imagePath!,
         mediaPaths: editor.mediaPaths,
         imagePaths: editor.imagePaths,
+        clipDurations: editor.clipDurations,
         audioPath: editor.audioPath,
-        durationSeconds: editor.durationSeconds,
+        durationSeconds: editor.totalDurationSeconds,
         width: editor.preset.width == 0 ? 1080 : editor.preset.width,
         height: editor.preset.height == 0 ? 1080 : editor.preset.height,
         resizeMode: editor.resizeMode == ResizeMode.fit

@@ -33,6 +33,7 @@ abstract class StilloraVideoEnginePlatform extends PlatformInterface {
     required String imagePath,
     List<String> mediaPaths = const [],
     List<String> imagePaths = const [],
+    List<int> clipDurations = const [],
     String? audioPath,
     required int durationSeconds,
     required int width,

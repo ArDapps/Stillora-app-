@@ -5,6 +5,7 @@ import '../features/auth/login_screen.dart';
 import '../features/editor/editor_screen.dart';
 import '../features/export/export_progress_screen.dart';
 import '../features/gallery/gallery_screen.dart';
+import '../features/onboarding/onboarding_screen.dart';
 import '../features/preview/preview_screen.dart';
 import '../features/profile/profile_screen.dart';
 import '../features/settings/settings_screen.dart';
@@ -23,6 +24,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: LoginScreen.routePath,
         builder: (context, state) =>
             LoginScreen(nextPath: state.uri.queryParameters['next']),
+      ),
+      GoRoute(
+        path: OnboardingScreen.routePath,
+        builder: (context, state) => const OnboardingScreen(),
       ),
       GoRoute(
         path: AppTabsScreen.routePath,

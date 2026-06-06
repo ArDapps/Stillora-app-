@@ -18,8 +18,16 @@ class AppPreferences {
   static const _defaultDurationKey = 'stillora.editor.defaultDuration';
   static const _defaultPresetKey = 'stillora.editor.defaultPreset';
   static const _defaultResizeModeKey = 'stillora.editor.defaultResizeMode';
+  static const _hasSeenOnboardingKey = 'stillora.onboarding.seen';
 
   final SharedPreferences _preferences;
+
+  bool get hasSeenOnboarding =>
+      _preferences.getBool(_hasSeenOnboardingKey) ?? false;
+
+  Future<void> setHasSeenOnboarding(bool value) {
+    return _preferences.setBool(_hasSeenOnboardingKey, value);
+  }
 
   int get defaultDurationSeconds =>
       _preferences.getInt(_defaultDurationKey) ?? 10;

@@ -119,6 +119,18 @@ ThemeData buildStilloraTheme(Brightness brightness) {
       iconColor: StilloraColors.primary,
       contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
     ),
+    sliderTheme: SliderThemeData(
+      activeTrackColor: StilloraColors.primaryContainer,
+      inactiveTrackColor: StilloraColors.surfaceContainerHigh,
+      thumbColor: Colors.white,
+      overlayColor: StilloraColors.primaryGlow,
+      valueIndicatorColor: StilloraColors.primaryContainer,
+      valueIndicatorTextStyle: const TextStyle(
+        color: StilloraColors.onPrimaryContainer,
+        fontWeight: FontWeight.w700,
+      ),
+      trackHeight: 5,
+    ),
     chipTheme: const ChipThemeData(
       backgroundColor: StilloraColors.surfaceContainerHigh,
       selectedColor: StilloraColors.primaryContainer,

@@ -77,8 +77,8 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
     let imagePath = args["imagePath"] as? String ?? ""
     let mediaPaths = (args["mediaPaths"] as? [String]) ?? []
     let imagePaths = (args["imagePaths"] as? [String]) ?? []
+    let clipDurations = (args["clipDurations"] as? [Int]) ?? []
     let audioPath = args["audioPath"] as? String
-    let duration = min(max(1, args["durationSeconds"] as? Int ?? 10), 300)
     let width = evenDimension(args["width"] as? Int ?? 1080)
     let height = evenDimension(args["height"] as? Int ?? 1920)
     let fill = (args["resizeMode"] as? String ?? "fit") == "fill"
@@ -90,18 +90,27 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
         ? (imagePaths.isEmpty ? [imagePath] : imagePaths)
         : mediaPaths
 
+      // Per-clip durations are sent parallel to `mediaPaths`. When they line up
+      // with the chosen timeline, the exported length is their sum; otherwise we
+      // fall back to the single `durationSeconds` total split evenly.
+      let aligned = clipDurations.count == timelinePaths.count
+        && clipDurations.allSatisfy { $0 > 0 }
+      let totalDuration =
+        aligned ? clipDurations.reduce(0, +) : max(1, args["durationSeconds"] as? Int ?? 10)
+      let clipSeconds = aligned ? clipDurations : nil
+
       if timelinePaths.count == 1, let path = timelinePaths.first, isVideoFile(path) {
         try exportFromVideo(
           sourceURL: URL(fileURLWithPath: path), audioPath: audioPath, width: width,
-          height: height, duration: duration, fill: fill, outputURL: outputURL)
+          height: height, duration: totalDuration, fill: fill, outputURL: outputURL)
       } else if timelinePaths.contains(where: { isVideoFile($0) }) {
         try exportFromTimeline(
-          mediaPaths: timelinePaths, audioPath: audioPath, width: width, height: height,
-          duration: duration, fill: fill, outputURL: outputURL)
+          mediaPaths: timelinePaths, clipSeconds: clipSeconds, audioPath: audioPath, width: width,
+          height: height, duration: totalDuration, fill: fill, outputURL: outputURL)
       } else {
         try exportFromImage(
-          imagePaths: timelinePaths, audioPath: audioPath, width: width, height: height,
-          duration: duration, fill: fill, outputURL: outputURL)
+          imagePaths: timelinePaths, clipSeconds: clipSeconds, audioPath: audioPath, width: width,
+          height: height, duration: totalDuration, fill: fill, outputURL: outputURL)
       }
 
       emit(stage: "done", percentage: 1.0, message: "Saved")
@@ -109,7 +118,7 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
         "outputPath": outputURL.path,
         "width": width,
         "height": height,
-        "durationSeconds": duration,
+        "durationSeconds": totalDuration,
       ])
     } catch EngineError.cancelled {
       result(
@@ -124,32 +133,17 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
   // MARK: - Mixed timeline source
 
   private func exportFromTimeline(
-    mediaPaths: [String], audioPath: String?, width: Int, height: Int, duration: Int, fill: Bool,
-    outputURL: URL
+    mediaPaths: [String], clipSeconds: [Int]?, audioPath: String?, width: Int, height: Int,
+    duration: Int, fill: Bool, outputURL: URL
   ) throws {
     emit(stage: "preparingImage", percentage: 0.05, message: "Preparing media")
-    let sources = makeTimelineSources(mediaPaths)
-    guard !sources.isEmpty else { throw EngineError.missingSource }
-
-    let needsAudio = (audioPath != nil) && FileManager.default.fileExists(atPath: audioPath!)
-    let videoURL = needsAudio ? try makeTempURL() : outputURL
-
-    try writeTimeline(
-      sources: sources, width: width, height: height, duration: duration, fill: fill, to: videoURL)
-
-    if needsAudio {
-      emit(stage: "mergingAudio", percentage: 0.85, message: "Merging audio")
-      try mux(
-        videoURL: videoURL, audioURL: URL(fileURLWithPath: audioPath!), duration: duration,
-        to: outputURL)
-      try? FileManager.default.removeItem(at: videoURL)
-    }
-    emit(stage: "savingVideo", percentage: 0.95, message: "Saving")
-  }
-
-  private func makeTimelineSources(_ paths: [String]) -> [TimelineSource] {
+    // Build sources and their per-clip second counts together so that skipping
+    // an unreadable item also drops its slice of the timeline.
     var sources: [TimelineSource] = []
-    for path in paths {
+    var seconds: [Int] = []
+    let aligned = (clipSeconds != nil) && clipSeconds!.count == mediaPaths.count
+    for (index, path) in mediaPaths.enumerated() {
+      let clip = aligned ? max(1, clipSeconds![index]) : 0
       if isVideoFile(path) {
         let asset = loadedAsset(URL(fileURLWithPath: path))
         guard asset.tracks(withMediaType: .video).first != nil else { continue }
@@ -158,15 +152,48 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
         generator.requestedTimeToleranceBefore = .zero
         generator.requestedTimeToleranceAfter = .zero
         sources.append(.video(generator, asset.duration))
+        seconds.append(clip)
       } else if let rawImage = UIImage(contentsOfFile: path) {
         sources.append(.image(normalizedImage(rawImage)))
+        seconds.append(clip)
       }
     }
-    return sources
+    guard !sources.isEmpty else { throw EngineError.missingSource }
+
+    let fps = 30
+    let clipFrames =
+      aligned ? seconds.map { max(1, $0 * fps) }
+      : evenFrames(count: sources.count, totalSeconds: duration, fps: fps)
+    let totalSeconds = aligned ? max(1, seconds.reduce(0, +)) : duration
+
+    let needsAudio = (audioPath != nil) && FileManager.default.fileExists(atPath: audioPath!)
+    let videoURL = needsAudio ? try makeTempURL() : outputURL
+
+    try writeTimeline(
+      sources: sources, clipFrames: clipFrames, width: width, height: height, fill: fill,
+      to: videoURL)
+
+    if needsAudio {
+      emit(stage: "mergingAudio", percentage: 0.85, message: "Merging audio")
+      try mux(
+        videoURL: videoURL, audioURL: URL(fileURLWithPath: audioPath!), duration: totalSeconds,
+        to: outputURL)
+      try? FileManager.default.removeItem(at: videoURL)
+    }
+    emit(stage: "savingVideo", percentage: 0.95, message: "Saving")
+  }
+
+  /// Splits `totalSeconds` of frames across `count` clips as evenly as possible.
+  private func evenFrames(count: Int, totalSeconds: Int, fps: Int) -> [Int] {
+    guard count > 0 else { return [] }
+    let totalFrames = max(count, totalSeconds * fps)
+    let base = totalFrames / count
+    let remainder = totalFrames - base * count
+    return (0..<count).map { base + ($0 < remainder ? 1 : 0) }
   }
 
   private func writeTimeline(
-    sources: [TimelineSource], width: Int, height: Int, duration: Int, fill: Bool, to url: URL
+    sources: [TimelineSource], clipFrames: [Int], width: Int, height: Int, fill: Bool, to url: URL
   ) throws {
     try? FileManager.default.removeItem(at: url)
     let writer = try AVAssetWriter(outputURL: url, fileType: .mp4)
@@ -191,9 +218,10 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
     writer.startSession(atSourceTime: .zero)
 
     let fps: Int32 = 30
-    let totalFrames = max(1, duration * Int(fps))
-    let count = sources.count
+    let totalFrames = max(1, clipFrames.reduce(0, +))
     var frame = 0
+    var sourceIndex = 0
+    var segmentStart = 0
 
     while frame < totalFrames {
       if isCancelled {
@@ -202,10 +230,14 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
         throw EngineError.cancelled
       }
       if input.isReadyForMoreMediaData {
-        let sourceIndex = min(count - 1, frame * count / totalFrames)
-        let segmentStart = sourceIndex * totalFrames / count
-        let segmentEnd = (sourceIndex + 1) * totalFrames / count
-        let segmentFrames = max(1, segmentEnd - segmentStart)
+        // Advance to the clip that owns this frame (frames climb monotonically).
+        while sourceIndex < clipFrames.count - 1
+          && frame >= segmentStart + clipFrames[sourceIndex]
+        {
+          segmentStart += clipFrames[sourceIndex]
+          sourceIndex += 1
+        }
+        let segmentFrames = max(1, clipFrames[sourceIndex])
         let localFrame = frame - segmentStart
         guard
           let buffer = try timelinePixelBuffer(
@@ -259,44 +291,54 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
   // MARK: - Image source
 
   private func exportFromImage(
-    imagePaths: [String], audioPath: String?, width: Int, height: Int, duration: Int, fill: Bool,
-    outputURL: URL
+    imagePaths: [String], clipSeconds: [Int]?, audioPath: String?, width: Int, height: Int,
+    duration: Int, fill: Bool, outputURL: URL
   ) throws {
     emit(stage: "preparingImage", percentage: 0.05, message: "Preparing image")
 
     // Render every selected image into a pixel buffer. Unreadable images are
-    // skipped so one bad file does not abort the whole slideshow.
+    // skipped so one bad file does not abort the whole slideshow — and their
+    // per-clip seconds are dropped alongside them to stay in sync.
     var buffers: [CVPixelBuffer] = []
-    for path in imagePaths {
+    var seconds: [Int] = []
+    let aligned = (clipSeconds != nil) && clipSeconds!.count == imagePaths.count
+    for (index, path) in imagePaths.enumerated() {
       guard let rawImage = UIImage(contentsOfFile: path) else { continue }
       let image = normalizedImage(rawImage)
       guard let buffer = pixelBuffer(from: image, width: width, height: height, fill: fill)
       else { continue }
       buffers.append(buffer)
+      seconds.append(aligned ? max(1, clipSeconds![index]) : 0)
     }
     guard !buffers.isEmpty else { throw EngineError.missingSource }
+
+    let fps = 30
+    let clipFrames =
+      aligned ? seconds.map { max(1, $0 * fps) }
+      : evenFrames(count: buffers.count, totalSeconds: duration, fps: fps)
+    let totalSeconds = aligned ? max(1, seconds.reduce(0, +)) : duration
 
     // When there is audio we render to a silent intermediate, then mux.
     let needsAudio = (audioPath != nil) && FileManager.default.fileExists(atPath: audioPath!)
     let videoURL = needsAudio ? try makeTempURL() : outputURL
 
     try writeSlideshow(
-      buffers: buffers, width: width, height: height, duration: duration, to: videoURL)
+      buffers: buffers, clipFrames: clipFrames, width: width, height: height, to: videoURL)
 
     if needsAudio {
       emit(stage: "mergingAudio", percentage: 0.85, message: "Merging audio")
       try mux(
-        videoURL: videoURL, audioURL: URL(fileURLWithPath: audioPath!), duration: duration,
+        videoURL: videoURL, audioURL: URL(fileURLWithPath: audioPath!), duration: totalSeconds,
         to: outputURL)
       try? FileManager.default.removeItem(at: videoURL)
     }
     emit(stage: "savingVideo", percentage: 0.95, message: "Saving")
   }
 
-  /// Writes a still video that cycles through `buffers`, giving each image an
-  /// equal share of the total duration. A single buffer produces a static clip.
+  /// Writes a still video that cycles through `buffers`, giving each image the
+  /// frame budget in `clipFrames`. A single buffer produces a static clip.
   private func writeSlideshow(
-    buffers: [CVPixelBuffer], width: Int, height: Int, duration: Int, to url: URL
+    buffers: [CVPixelBuffer], clipFrames: [Int], width: Int, height: Int, to url: URL
   ) throws {
     try? FileManager.default.removeItem(at: url)
     let writer = try AVAssetWriter(outputURL: url, fileType: .mp4)
@@ -321,9 +363,10 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
     writer.startSession(atSourceTime: .zero)
 
     let fps: Int32 = 30
-    let totalFrames = max(1, Int(duration) * Int(fps))
-    let count = buffers.count
+    let totalFrames = max(1, clipFrames.reduce(0, +))
     var frame = 0
+    var bufferIndex = 0
+    var segmentStart = 0
 
     while frame < totalFrames {
       if isCancelled {
@@ -332,7 +375,12 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
         throw EngineError.cancelled
       }
       if input.isReadyForMoreMediaData {
-        let bufferIndex = min(count - 1, frame * count / totalFrames)
+        while bufferIndex < clipFrames.count - 1
+          && frame >= segmentStart + clipFrames[bufferIndex]
+        {
+          segmentStart += clipFrames[bufferIndex]
+          bufferIndex += 1
+        }
         let time = CMTime(value: CMTimeValue(frame), timescale: fps)
         if !adaptor.append(buffers[bufferIndex], withPresentationTime: time) {
           throw writer.error ?? EngineError.write

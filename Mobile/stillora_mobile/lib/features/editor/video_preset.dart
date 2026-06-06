@@ -1,4 +1,6 @@
 import 'package:equatable/equatable.dart';
+import 'package:flutter/widgets.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class VideoPreset extends Equatable {
   const VideoPreset({
@@ -7,6 +9,7 @@ class VideoPreset extends Equatable {
     required this.width,
     required this.height,
     required this.ratioLabel,
+    required this.icon,
     this.usesOriginalSize = false,
   });
 
@@ -15,6 +18,9 @@ class VideoPreset extends Equatable {
   final int width;
   final int height;
   final String ratioLabel;
+
+  /// Platform/format glyph shown on the preset card.
+  final IconData icon;
   final bool usesOriginalSize;
 
   @override
@@ -35,6 +41,7 @@ const videoPresets = [
     width: 1080,
     height: 1920,
     ratioLabel: '9:16',
+    icon: FontAwesomeIcons.instagram,
   ),
   VideoPreset(
     id: 'tiktok',
@@ -42,6 +49,7 @@ const videoPresets = [
     width: 1080,
     height: 1920,
     ratioLabel: '9:16',
+    icon: FontAwesomeIcons.tiktok,
   ),
   VideoPreset(
     id: 'stories',
@@ -49,6 +57,7 @@ const videoPresets = [
     width: 1080,
     height: 1920,
     ratioLabel: '9:16',
+    icon: FontAwesomeIcons.facebook,
   ),
   VideoPreset(
     id: 'shorts',
@@ -56,6 +65,7 @@ const videoPresets = [
     width: 1080,
     height: 1920,
     ratioLabel: '9:16',
+    icon: FontAwesomeIcons.youtube,
   ),
   VideoPreset(
     id: 'square',
@@ -63,6 +73,15 @@ const videoPresets = [
     width: 1080,
     height: 1080,
     ratioLabel: '1:1',
+    icon: FontAwesomeIcons.squareInstagram,
+  ),
+  VideoPreset(
+    id: 'portrait',
+    label: 'Portrait Post',
+    width: 1080,
+    height: 1350,
+    ratioLabel: '4:5',
+    icon: FontAwesomeIcons.instagram,
   ),
   VideoPreset(
     id: 'landscape',
@@ -70,6 +89,7 @@ const videoPresets = [
     width: 1920,
     height: 1080,
     ratioLabel: '16:9',
+    icon: FontAwesomeIcons.youtube,
   ),
   VideoPreset(
     id: 'original',
@@ -77,6 +97,7 @@ const videoPresets = [
     width: 0,
     height: 0,
     ratioLabel: 'Original',
+    icon: FontAwesomeIcons.image,
     usesOriginalSize: true,
   ),
 ];
@@ -87,6 +108,7 @@ const defaultVideoPreset = VideoPreset(
   width: 1080,
   height: 1920,
   ratioLabel: '9:16',
+  icon: FontAwesomeIcons.instagram,
 );
 
 VideoPreset presetById(String id) {
