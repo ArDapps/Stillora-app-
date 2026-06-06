@@ -8,6 +8,8 @@ import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_glow.dart';
 import '../../core/design/stillora_spacing.dart';
 import '../../core/design/stillora_surface.dart';
+import '../../core/platform/platform_info.dart';
+import '../../core/widgets/desktop_shell.dart';
 import '../auth/login_screen.dart';
 import '../editor/editor_state.dart';
 import '../preview/preview_screen.dart';
@@ -49,6 +51,7 @@ class _ExportProgressScreenState extends ConsumerState<ExportProgressScreen> {
   Widget build(BuildContext context) {
     final export = ref.watch(exportControllerProvider);
     final isRunning = export.isLoading;
+    final isDesktop = useDesktopLayout(context);
 
     ref.listen(exportControllerProvider, (_, next) {
       if (next.asData?.value != null) {
@@ -56,54 +59,45 @@ class _ExportProgressScreenState extends ConsumerState<ExportProgressScreen> {
       }
     });
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Generating')),
-      body: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xff0c0718), Color(0xff060611), Color(0xff030309)],
-            stops: [0.0, 0.5, 1.0],
-          ),
-        ),
-        child: SafeArea(
-          top: false,
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(
-              StilloraSpacing.mobileMargin,
-              StilloraSpacing.sm,
-              StilloraSpacing.mobileMargin,
-              StilloraSpacing.lg,
-            ),
-            children: [
-              const _CompanyAdBanner(),
-              const SizedBox(height: StilloraSpacing.sm),
-              _ExportStatusCard(export: export, message: _messageFor(export)),
-              const SizedBox(height: StilloraSpacing.sm),
-              OutlinedButton.icon(
-                onPressed: () async {
-                  if (isRunning) {
-                    await ref.read(exportControllerProvider.notifier).cancel();
-                  }
-                  if (!context.mounted) {
-                    return;
-                  }
-                  if (context.canPop()) {
-                    context.pop();
-                  } else {
-                    context.go(AppTabsScreen.routePath);
-                  }
-                },
-                icon: Icon(
-                  isRunning ? Icons.cancel_rounded : Icons.arrow_back_rounded,
-                ),
-                label: Text(isRunning ? 'Cancel export' : 'Back to editor'),
-              ),
-            ],
-          ),
+    Future<void> leaveExport() async {
+      if (isRunning) {
+        await ref.read(exportControllerProvider.notifier).cancel();
+      }
+      if (!context.mounted) {
+        return;
+      }
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go(AppTabsScreen.routePath);
+      }
+    }
+
+    final body = DecoratedBox(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xff0c0718), Color(0xff060611), Color(0xff030309)],
+          stops: [0.0, 0.5, 1.0],
         ),
       ),
+      child: _ExportProgressContent(
+        export: export,
+        message: _messageFor(export),
+        isRunning: isRunning,
+        compact: isDesktop,
+        onLeave: leaveExport,
+      ),
+    );
+
+    if (isDesktop) {
+      return DesktopShell(title: 'Export', child: body);
+    }
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Generating')),
+      body: body,
     );
   }
 
@@ -119,8 +113,63 @@ class _ExportProgressScreenState extends ConsumerState<ExportProgressScreen> {
   }
 }
 
+class _ExportProgressContent extends StatelessWidget {
+  const _ExportProgressContent({
+    required this.export,
+    required this.message,
+    required this.isRunning,
+    required this.compact,
+    required this.onLeave,
+  });
+
+  final AsyncValue<Object?> export;
+  final String message;
+  final bool isRunning;
+  final bool compact;
+  final Future<void> Function() onLeave;
+
+  @override
+  Widget build(BuildContext context) {
+    final content = ListView(
+      padding: EdgeInsets.fromLTRB(
+        compact ? 16 : StilloraSpacing.mobileMargin,
+        compact ? 12 : StilloraSpacing.sm,
+        compact ? 16 : StilloraSpacing.mobileMargin,
+        compact ? 16 : StilloraSpacing.lg,
+      ),
+      children: [
+        _CompanyAdBanner(compact: compact),
+        SizedBox(height: compact ? 10 : StilloraSpacing.sm),
+        _ExportStatusCard(export: export, message: message, compact: compact),
+        SizedBox(height: compact ? 10 : StilloraSpacing.sm),
+        OutlinedButton.icon(
+          onPressed: () => onLeave(),
+          icon: Icon(
+            isRunning ? Icons.cancel_rounded : Icons.arrow_back_rounded,
+          ),
+          label: Text(isRunning ? 'Cancel export' : 'Back to editor'),
+        ),
+      ],
+    );
+
+    return SafeArea(
+      top: false,
+      child: compact
+          ? Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 680),
+                child: content,
+              ),
+            )
+          : content,
+    );
+  }
+}
+
 class _CompanyAdBanner extends StatelessWidget {
-  const _CompanyAdBanner();
+  const _CompanyAdBanner({this.compact = false});
+
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -129,7 +178,7 @@ class _CompanyAdBanner extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(StilloraRadius.full - 1.5),
         child: AspectRatio(
-          aspectRatio: 16 / 7,
+          aspectRatio: compact ? 16 / 4 : 16 / 7,
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -164,11 +213,14 @@ class _CompanyAdBanner extends StatelessWidget {
                     const Spacer(),
                     Text(
                       'TecnoBlocks',
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                          ),
+                      style:
+                          (compact
+                                  ? Theme.of(context).textTheme.titleMedium
+                                  : Theme.of(context).textTheme.headlineSmall)
+                              ?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                              ),
                     ),
                     const SizedBox(height: StilloraSpacing.base),
                     Text(
@@ -243,25 +295,30 @@ class _SponsoredPill extends StatelessWidget {
 }
 
 class _ExportStatusCard extends StatelessWidget {
-  const _ExportStatusCard({required this.export, required this.message});
+  const _ExportStatusCard({
+    required this.export,
+    required this.message,
+    this.compact = false,
+  });
 
   final AsyncValue<Object?> export;
   final String message;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final hasError = export.hasError;
 
     return StilloraGlassCard(
-      padding: const EdgeInsets.all(StilloraSpacing.md),
+      padding: EdgeInsets.all(compact ? 16 : StilloraSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Align(
             alignment: Alignment.centerLeft,
             child: Container(
-              width: 68,
-              height: 68,
+              width: compact ? 44 : 68,
+              height: compact ? 44 : 68,
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 gradient: hasError ? null : stilloraBrandGradient,
@@ -284,26 +341,30 @@ class _ExportStatusCard extends StatelessWidget {
                     ? Icons.error_outline_rounded
                     : Icons.movie_creation_rounded,
                 color: Colors.white,
-                size: 34,
+                size: compact ? 24 : 34,
               ),
             ),
           ),
-          const SizedBox(height: StilloraSpacing.sm),
+          SizedBox(height: compact ? 10 : StilloraSpacing.sm),
           Text(
             hasError ? 'Export not ready yet' : 'Generating video...',
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
+            style:
+                (compact
+                        ? Theme.of(context).textTheme.titleLarge
+                        : Theme.of(context).textTheme.headlineSmall)
+                    ?.copyWith(fontWeight: FontWeight.w900),
           ),
-          const SizedBox(height: StilloraSpacing.xs),
+          SizedBox(height: compact ? 4 : StilloraSpacing.xs),
           Text(
             message,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: StilloraColors.onSurfaceVariant,
-            ),
+            style:
+                (compact
+                        ? Theme.of(context).textTheme.bodySmall
+                        : Theme.of(context).textTheme.bodyMedium)
+                    ?.copyWith(color: StilloraColors.onSurfaceVariant),
           ),
           if (export.isLoading) ...[
-            const SizedBox(height: StilloraSpacing.sm),
+            SizedBox(height: compact ? 10 : StilloraSpacing.sm),
             const LinearProgressIndicator(),
           ],
         ],

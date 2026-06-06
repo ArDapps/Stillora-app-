@@ -4,7 +4,8 @@ Flutter mobile app for Stillora: turn one local image into an MP4 video for soci
 
 The app also includes Flutter desktop runners for macOS, Windows, and Linux.
 Desktop builds use a wider Stillora workspace UI and export locally through
-`ffmpeg` when it is installed and available on `PATH`.
+FFmpeg. The macOS runner bundles an Apple Silicon FFmpeg binary so users do not
+need to install Homebrew or configure `PATH`.
 
 ## Status
 
@@ -65,13 +66,40 @@ abstract interface class StilloraVideoEngine {
 
 ## Auth
 
-The mobile app uses Google Sign-In on device, then posts the Google access token to the existing shared Next.js endpoint:
+The mobile app uses Google Sign-In on device, then posts Google auth tokens to
+the existing shared Next.js endpoint:
 
 ```http
 POST /api/auth/mobile
 ```
 
-The returned Stillora JWT is stored in `flutter_secure_storage`. Media files, local export records, thumbnails, and temporary paths must never be uploaded or sent in analytics.
+The app sends `accessToken` for the current deployed API and `idToken` for the
+newer server-side ID-token verification path. The returned Stillora JWT is
+stored in `flutter_secure_storage`. Media files, local export records,
+thumbnails, and temporary paths must never be uploaded or sent in analytics.
+
+Local storage:
+
+- Login/session token: `flutter_secure_storage` on mobile and desktop.
+- App preferences: `shared_preferences`.
+- Local video library paths and export metadata: Hive box
+  `stillora_library_exports`, with automatic migration from the old
+  `SharedPreferences` key `stillora.exports`.
+
+Google sign-in is implemented for iOS, Android, and macOS. macOS uses the same
+Darwin/iOS-style client setup as the plugin docs; Desktop OAuth credentials are
+for the future custom Linux/Windows flow. The current `google_sign_in` plugin
+is not registered on Linux or Windows desktop, so those targets show a clear
+unsupported message until that desktop OAuth flow is added.
+
+Optional Google client overrides:
+
+```bash
+flutter run \
+  --dart-define=GOOGLE_IOS_CLIENT_ID=... \
+  --dart-define=GOOGLE_MACOS_CLIENT_ID=... \
+  --dart-define=GOOGLE_WEB_CLIENT_ID=...
+```
 
 Set a different API origin at build time with:
 
@@ -103,7 +131,10 @@ flutter run -d windows
 flutter run -d linux
 ```
 
-Windows, Linux, and macOS desktop export requires:
+macOS desktop export uses the bundled `Stillora.app/Contents/Resources/ffmpeg`
+binary first, then falls back to `PATH` for development builds. Windows and
+Linux are wired for bundled FFmpeg paths too; add the matching platform binary
+to the desktop bundle before shipping those installers.
 
 ```bash
 ffmpeg -version

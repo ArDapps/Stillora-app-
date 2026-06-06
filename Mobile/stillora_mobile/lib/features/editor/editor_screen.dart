@@ -183,68 +183,127 @@ class _DesktopEditorWorkspace extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final previewWidth = constraints.maxWidth >= 1220 ? 460.0 : 400.0;
+        final twoPane = constraints.maxWidth >= 820;
+        final previewWidth = constraints.maxWidth >= 1160 ? 360.0 : 328.0;
+        const workspaceMaxWidth = 1120.0;
+        const compact = true;
 
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(
-            StilloraSpacing.md,
-            0,
-            StilloraSpacing.md,
-            StilloraSpacing.md,
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+        if (!twoPane) {
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             children: [
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.only(bottom: StilloraSpacing.lg),
-                  children: [
-                    const _DesktopStudioHeader(),
-                    const SizedBox(height: StilloraSpacing.md),
-                    _SourceMediaCard(editor: editor, controller: controller),
-                    const SizedBox(height: StilloraSpacing.sm),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              const _DesktopStudioHeader(),
+              const SizedBox(height: 12),
+              _SourceMediaCard(
+                editor: editor,
+                controller: controller,
+                compact: compact,
+              ),
+              const SizedBox(height: 10),
+              _SoundscapeCard(
+                editor: editor,
+                onPickAudio: onPickAudio,
+                onRemoveAudio: controller.removeAudio,
+                compact: compact,
+              ),
+              const SizedBox(height: 10),
+              _PrivacyCard(isSignedIn: session != null, compact: compact),
+              const SizedBox(height: 10),
+              _PresetCard(
+                editor: editor,
+                controller: controller,
+                compact: compact,
+              ),
+              const SizedBox(height: 10),
+              _DesktopExportPanel(
+                editor: editor,
+                isSignedIn: session != null,
+                onConvert: onConvert,
+                compact: compact,
+              ),
+              const SizedBox(height: 10),
+              _PreviewCard(
+                editor: editor,
+                maxPreviewHeight: 320,
+                maxPreviewWidth: 360,
+              ),
+            ],
+          );
+        }
+
+        return Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: workspaceMaxWidth),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: ListView(
+                      padding: const EdgeInsets.only(bottom: 16),
                       children: [
-                        Expanded(
-                          child: _SoundscapeCard(
-                            editor: editor,
-                            onPickAudio: onPickAudio,
-                            onRemoveAudio: controller.removeAudio,
-                          ),
+                        const _DesktopStudioHeader(),
+                        const SizedBox(height: 12),
+                        _SourceMediaCard(
+                          editor: editor,
+                          controller: controller,
+                          compact: compact,
                         ),
-                        const SizedBox(width: StilloraSpacing.sm),
-                        Expanded(
-                          child: _PrivacyCard(isSignedIn: session != null),
+                        const SizedBox(height: 10),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: _SoundscapeCard(
+                                editor: editor,
+                                onPickAudio: onPickAudio,
+                                onRemoveAudio: controller.removeAudio,
+                                compact: compact,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _PrivacyCard(
+                                isSignedIn: session != null,
+                                compact: compact,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        _PresetCard(
+                          editor: editor,
+                          controller: controller,
+                          compact: compact,
                         ),
                       ],
                     ),
-                    const SizedBox(height: StilloraSpacing.sm),
-                    _PresetCard(editor: editor, controller: controller),
-                  ],
-                ),
-              ),
-              const SizedBox(width: StilloraSpacing.md),
-              SizedBox(
-                width: previewWidth,
-                child: ListView(
-                  padding: const EdgeInsets.only(bottom: StilloraSpacing.lg),
-                  children: [
-                    _DesktopExportPanel(
-                      editor: editor,
-                      isSignedIn: session != null,
-                      onConvert: onConvert,
+                  ),
+                  const SizedBox(width: 16),
+                  SizedBox(
+                    width: previewWidth,
+                    child: ListView(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      children: [
+                        _DesktopExportPanel(
+                          editor: editor,
+                          isSignedIn: session != null,
+                          onConvert: onConvert,
+                          compact: compact,
+                        ),
+                        const SizedBox(height: 10),
+                        _PreviewCard(
+                          editor: editor,
+                          maxPreviewHeight: 360,
+                          maxPreviewWidth: previewWidth,
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: StilloraSpacing.sm),
-                    _PreviewCard(
-                      editor: editor,
-                      maxPreviewHeight: 440,
-                      maxPreviewWidth: previewWidth,
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         );
       },
@@ -269,24 +328,25 @@ class _DesktopStudioHeader extends StatelessWidget {
                     stilloraBrandGradient.createShader(bounds),
                 child: Text(
                   'Stillora Desktop Studio',
-                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     color: Colors.white,
+                    fontSize: 22,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
               ),
-              const SizedBox(height: StilloraSpacing.xs),
+              const SizedBox(height: 4),
               Text(
                 'Build a local MP4 timeline with desktop file picking and a wider control surface.',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: StilloraColors.onSurfaceVariant,
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(width: StilloraSpacing.md),
-        const _ProgressRail(),
+        const SizedBox(width: 16),
+        const _ProgressRail(compact: true),
       ],
     );
   }
@@ -325,18 +385,35 @@ class _StudioHeader extends StatelessWidget {
 }
 
 class _ProgressRail extends StatelessWidget {
-  const _ProgressRail();
+  const _ProgressRail({this.compact = false});
+
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
+    return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _ProgressStep(index: '1', label: 'Upload', color: Color(0xffd946ef)),
-        _ProgressLine(),
-        _ProgressStep(index: '2', label: 'Audio', color: Color(0xff8b5cf6)),
-        _ProgressLine(),
-        _ProgressStep(index: '3', label: 'Export', color: Color(0xff22d3ee)),
+        _ProgressStep(
+          index: '1',
+          label: 'Upload',
+          color: const Color(0xffd946ef),
+          compact: compact,
+        ),
+        _ProgressLine(compact: compact),
+        _ProgressStep(
+          index: '2',
+          label: 'Audio',
+          color: const Color(0xff8b5cf6),
+          compact: compact,
+        ),
+        _ProgressLine(compact: compact),
+        _ProgressStep(
+          index: '3',
+          label: 'Export',
+          color: const Color(0xff22d3ee),
+          compact: compact,
+        ),
       ],
     );
   }
@@ -347,21 +424,24 @@ class _ProgressStep extends StatelessWidget {
     required this.index,
     required this.label,
     required this.color,
+    this.compact = false,
   });
 
   final String index;
   final String label;
   final Color color;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
+    final size = compact ? 28.0 : 40.0;
     return Column(
       children: [
         StilloraPulse(
           builder: (context, t) {
             return Container(
-              width: 40,
-              height: 40,
+              width: size,
+              height: size,
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: color,
@@ -379,32 +459,41 @@ class _ProgressStep extends StatelessWidget {
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w800,
+                  fontSize: 12,
                 ),
               ),
             );
           },
         ),
-        const SizedBox(height: StilloraSpacing.xs),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-            color: StilloraColors.onSurfaceVariant,
+        if (!compact) ...[
+          const SizedBox(height: StilloraSpacing.xs),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: StilloraColors.onSurfaceVariant,
+            ),
           ),
-        ),
+        ],
       ],
     );
   }
 }
 
 class _ProgressLine extends StatelessWidget {
-  const _ProgressLine();
+  const _ProgressLine({this.compact = false});
+
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 42,
+      width: compact ? 26 : 42,
       height: 2,
-      margin: const EdgeInsets.only(bottom: 24, left: 8, right: 8),
+      margin: EdgeInsets.only(
+        bottom: compact ? 0 : 24,
+        left: compact ? 6 : 8,
+        right: compact ? 6 : 8,
+      ),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [Color(0x99d946ef), Color(0x9922d3ee)],
@@ -508,23 +597,26 @@ class _DesktopExportPanel extends StatelessWidget {
     required this.editor,
     required this.isSignedIn,
     required this.onConvert,
+    this.compact = false,
   });
 
   final EditorState editor;
   final bool isSignedIn;
   final VoidCallback onConvert;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return StilloraGlowCard(
+      padding: EdgeInsets.all(compact ? 12 : StilloraSpacing.sm),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
               Container(
-                width: 44,
-                height: 44,
+                width: compact ? 36 : 44,
+                height: compact ? 36 : 44,
                 decoration: BoxDecoration(
                   gradient: stilloraBrandGradient,
                   borderRadius: BorderRadius.circular(StilloraRadius.full),
@@ -541,15 +633,21 @@ class _DesktopExportPanel extends StatelessWidget {
                   children: [
                     Text(
                       editor.canExport ? 'Ready to export' : 'Set up export',
-                      style: Theme.of(context).textTheme.titleMedium,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
                     Text(
                       editor.canExport
                           ? 'Review the desktop preview before converting.'
                           : 'Choose media to unlock conversion.',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: StilloraColors.onSurfaceVariant,
-                      ),
+                      style:
+                          (compact
+                                  ? Theme.of(context).textTheme.bodySmall
+                                  : Theme.of(context).textTheme.bodyMedium)
+                              ?.copyWith(
+                                color: StilloraColors.onSurfaceVariant,
+                              ),
                     ),
                   ],
                 ),
@@ -563,23 +661,27 @@ class _DesktopExportPanel extends StatelessWidget {
             value: editor.media.isEmpty
                 ? 'None selected'
                 : '${editor.media.length} item${editor.media.length == 1 ? '' : 's'}',
+            compact: compact,
           ),
           _DesktopExportStat(
             icon: Icons.aspect_ratio_rounded,
             label: 'Preset',
             value: '${editor.preset.label} · ${editor.preset.ratioLabel}',
+            compact: compact,
           ),
           _DesktopExportStat(
             icon: Icons.timer_rounded,
             label: 'Duration',
             value: _formatDuration(editor.totalDurationSeconds),
+            compact: compact,
           ),
           _DesktopExportStat(
             icon: isSignedIn ? Icons.verified_user_rounded : Icons.lock_rounded,
             label: 'Account',
             value: isSignedIn ? 'Signed in' : 'Sign in on export',
+            compact: compact,
           ),
-          const SizedBox(height: StilloraSpacing.sm),
+          SizedBox(height: compact ? 10 : StilloraSpacing.sm),
           StilloraPrimaryButton(
             onPressed: editor.canExport ? onConvert : null,
             icon: isSignedIn ? Icons.auto_fix_high_rounded : Icons.lock_rounded,
@@ -596,11 +698,13 @@ class _DesktopExportStat extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.value,
+    this.compact = false,
   });
 
   final IconData icon;
   final String label;
   final String value;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -613,14 +717,18 @@ class _DesktopExportStat extends StatelessWidget {
           border: Border.all(color: StilloraColors.glassStroke),
         ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: StilloraSpacing.sm,
-            vertical: StilloraSpacing.xs,
+          padding: EdgeInsets.symmetric(
+            horizontal: compact ? 10 : StilloraSpacing.sm,
+            vertical: compact ? 6 : StilloraSpacing.xs,
           ),
           child: Row(
             children: [
-              Icon(icon, size: 18, color: StilloraColors.primary),
-              const SizedBox(width: StilloraSpacing.xs),
+              Icon(
+                icon,
+                size: compact ? 15 : 18,
+                color: StilloraColors.primary,
+              ),
+              SizedBox(width: compact ? 6 : StilloraSpacing.xs),
               Expanded(
                 child: Text(
                   label,
@@ -721,32 +829,84 @@ class _PreviewMedia extends StatelessWidget {
   }
 }
 
+class _CompactSectionHeader extends StatelessWidget {
+  const _CompactSectionHeader({required this.title, required this.meta});
+
+  final String title;
+  final String meta;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+          ),
+        ),
+        Text(
+          meta,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: StilloraColors.primary,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _SourceMediaCard extends StatelessWidget {
-  const _SourceMediaCard({required this.editor, required this.controller});
+  const _SourceMediaCard({
+    required this.editor,
+    required this.controller,
+    this.compact = false,
+  });
 
   final EditorState editor;
   final EditorController controller;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return StilloraGlassCard(
+      padding: EdgeInsets.all(compact ? 12 : StilloraSpacing.sm),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const StilloraSectionHeader(title: 'Source Media', step: 'Step 1'),
-          const SizedBox(height: StilloraSpacing.sm),
+          compact
+              ? const _CompactSectionHeader(
+                  title: 'Source Media',
+                  meta: 'Step 1',
+                )
+              : const StilloraSectionHeader(
+                  title: 'Source Media',
+                  step: 'Step 1',
+                ),
+          SizedBox(height: compact ? 10 : StilloraSpacing.sm),
           if (!editor.hasMedia)
-            _MediaDropZone(onTap: controller.pickMedia)
+            _MediaDropZone(onTap: controller.pickMedia, compact: compact)
           else ...[
-            _MediaTimeline(editor: editor, controller: controller),
-            const SizedBox(height: StilloraSpacing.sm),
+            _MediaTimeline(
+              editor: editor,
+              controller: controller,
+              compact: compact,
+            ),
+            SizedBox(height: compact ? 8 : StilloraSpacing.sm),
             Text(
               _mediaSummary(editor),
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: StilloraColors.onSurfaceVariant,
               ),
             ),
-            const SizedBox(height: StilloraSpacing.sm),
+            SizedBox(height: compact ? 8 : StilloraSpacing.sm),
             Row(
               children: [
                 Expanded(
@@ -789,73 +949,114 @@ class _SourceMediaCard extends StatelessWidget {
 }
 
 class _MediaDropZone extends StatelessWidget {
-  const _MediaDropZone({required this.onTap});
+  const _MediaDropZone({required this.onTap, this.compact = false});
 
   final VoidCallback onTap;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
+    final content = DecoratedBox(
+      decoration: BoxDecoration(
+        color: StilloraColors.surfaceContainerLowest.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(StilloraRadius.full),
+        border: Border.all(
+          color: StilloraColors.outlineVariant,
+          width: compact ? 1 : 2,
+          strokeAlign: BorderSide.strokeAlignInside,
+        ),
+      ),
+      child: Center(
+        child: Padding(
+          padding: EdgeInsets.all(compact ? 12 : StilloraSpacing.md),
+          child: compact
+              ? Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.perm_media_rounded,
+                      color: StilloraColors.primary,
+                      size: 30,
+                    ),
+                    const SizedBox(width: 10),
+                    Flexible(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Choose photos or videos',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                          Text(
+                            'Drag to reorder after selecting media.',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: StilloraColors.onSurfaceVariant,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                )
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.perm_media_rounded,
+                      color: StilloraColors.primary,
+                      size: 48,
+                    ),
+                    const SizedBox(height: StilloraSpacing.xs),
+                    Text(
+                      'Choose photos or videos',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: StilloraSpacing.xs),
+                    Text(
+                      'Select photos and videos, then drag to reorder.',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: StilloraColors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+        ),
+      ),
+    );
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(StilloraRadius.full),
-      child: AspectRatio(
-        aspectRatio: 1.6,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: StilloraColors.surfaceContainerLowest.withValues(
-              alpha: 0.35,
-            ),
-            borderRadius: BorderRadius.circular(StilloraRadius.full),
-            border: Border.all(
-              color: StilloraColors.outlineVariant,
-              width: 2,
-              strokeAlign: BorderSide.strokeAlignInside,
-            ),
-          ),
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(StilloraSpacing.md),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.perm_media_rounded,
-                    color: StilloraColors.primary,
-                    size: 48,
-                  ),
-                  const SizedBox(height: StilloraSpacing.xs),
-                  Text(
-                    'Choose photos or videos',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: StilloraSpacing.xs),
-                  Text(
-                    'Select photos and videos, then drag to reorder.',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: StilloraColors.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+      child: compact
+          ? SizedBox(height: 116, child: content)
+          : AspectRatio(aspectRatio: 1.6, child: content),
     );
   }
 }
 
 class _MediaTimeline extends StatelessWidget {
-  const _MediaTimeline({required this.editor, required this.controller});
+  const _MediaTimeline({
+    required this.editor,
+    required this.controller,
+    this.compact = false,
+  });
 
   final EditorState editor;
   final EditorController controller;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 124,
+      height: compact ? 96 : 124,
       child: ReorderableListView.builder(
         scrollDirection: Axis.horizontal,
         buildDefaultDragHandles: false,
@@ -879,7 +1080,7 @@ class _MediaTimeline extends StatelessWidget {
             key: ValueKey(item.path),
             padding: const EdgeInsets.only(right: StilloraSpacing.xs),
             child: SizedBox(
-              width: 96,
+              width: compact ? 76 : 96,
               child: _MediaThumb(
                 index: index,
                 item: item,
@@ -1257,11 +1458,13 @@ class _SoundscapeCard extends StatelessWidget {
     required this.editor,
     required this.onPickAudio,
     required this.onRemoveAudio,
+    this.compact = false,
   });
 
   final EditorState editor;
   final VoidCallback onPickAudio;
   final VoidCallback onRemoveAudio;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -1276,15 +1479,21 @@ class _SoundscapeCard extends StatelessWidget {
     }
 
     return StilloraGlassCard(
+      padding: EdgeInsets.all(compact ? 12 : StilloraSpacing.sm),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const StilloraSectionHeader(
-            title: 'Soundscape',
-            step: 'Optional',
-            subtitle: 'Add a soundtrack — this step is optional.',
-          ),
-          const SizedBox(height: StilloraSpacing.sm),
+          compact
+              ? const _CompactSectionHeader(
+                  title: 'Soundscape',
+                  meta: 'Optional',
+                )
+              : const StilloraSectionHeader(
+                  title: 'Soundscape',
+                  step: 'Optional',
+                  subtitle: 'Add a soundtrack — this step is optional.',
+                ),
+          SizedBox(height: compact ? 10 : StilloraSpacing.sm),
           DecoratedBox(
             decoration: BoxDecoration(
               color: StilloraColors.surfaceContainerLow,
@@ -1292,12 +1501,12 @@ class _SoundscapeCard extends StatelessWidget {
               border: Border.all(color: StilloraColors.outlineVariant),
             ),
             child: Padding(
-              padding: const EdgeInsets.all(StilloraSpacing.sm),
+              padding: EdgeInsets.all(compact ? 10 : StilloraSpacing.sm),
               child: Row(
                 children: [
                   Container(
-                    width: 48,
-                    height: 48,
+                    width: compact ? 38 : 48,
+                    height: compact ? 38 : 48,
                     decoration: BoxDecoration(
                       color: StilloraColors.primaryContainer,
                       borderRadius: BorderRadius.circular(StilloraRadius.xl),
@@ -1316,7 +1525,11 @@ class _SoundscapeCard extends StatelessWidget {
                           editor.audioPath == null
                               ? 'Optional Audio'
                               : 'Audio Attached',
-                          style: Theme.of(context).textTheme.titleMedium,
+                          style:
+                              (compact
+                                      ? Theme.of(context).textTheme.labelLarge
+                                      : Theme.of(context).textTheme.titleMedium)
+                                  ?.copyWith(fontWeight: FontWeight.w800),
                         ),
                         Text(
                           audioDetail,
@@ -1354,70 +1567,121 @@ class _SoundscapeCard extends StatelessWidget {
 }
 
 class _PresetCard extends StatelessWidget {
-  const _PresetCard({required this.editor, required this.controller});
+  const _PresetCard({
+    required this.editor,
+    required this.controller,
+    this.compact = false,
+  });
 
   final EditorState editor;
   final EditorController controller;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return StilloraGlassCard(
+      padding: EdgeInsets.all(compact ? 12 : StilloraSpacing.sm),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const StilloraSectionHeader(title: 'Presets', step: 'Step 3'),
-          const SizedBox(height: StilloraSpacing.sm),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              mainAxisSpacing: StilloraSpacing.xs,
-              crossAxisSpacing: StilloraSpacing.xs,
-              childAspectRatio: 1.45,
-            ),
-            itemCount: videoPresets.length,
-            itemBuilder: (context, index) {
-              final preset = videoPresets[index];
-              final selected = editor.preset == preset;
-              return StilloraGlassCard(
-                selected: selected,
-                onTap: () => controller.setPreset(preset),
-                padding: const EdgeInsets.all(StilloraSpacing.xs),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    FaIcon(
-                      preset.icon,
-                      size: 22,
-                      color: selected
-                          ? StilloraColors.primary
-                          : StilloraColors.onSurfaceVariant,
-                    ),
-                    const SizedBox(height: StilloraSpacing.xs),
-                    Text(
-                      preset.label,
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: selected
-                            ? StilloraColors.primary
-                            : StilloraColors.onSurfaceVariant,
-                      ),
-                    ),
-                    Text(
-                      preset.ratioLabel,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: StilloraColors.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
+          compact
+              ? const _CompactSectionHeader(title: 'Presets', meta: 'Step 3')
+              : const StilloraSectionHeader(title: 'Presets', step: 'Step 3'),
+          SizedBox(height: compact ? 10 : StilloraSpacing.sm),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final columns = compact && constraints.maxWidth >= 560 ? 4 : 2;
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: columns,
+                  mainAxisSpacing: StilloraSpacing.xs,
+                  crossAxisSpacing: StilloraSpacing.xs,
+                  childAspectRatio: compact ? 2.65 : 1.45,
                 ),
+                itemCount: videoPresets.length,
+                itemBuilder: (context, index) {
+                  final preset = videoPresets[index];
+                  final selected = editor.preset == preset;
+                  return StilloraGlassCard(
+                    selected: selected,
+                    onTap: () => controller.setPreset(preset),
+                    padding: EdgeInsets.all(compact ? 8 : StilloraSpacing.xs),
+                    child: compact
+                        ? Row(
+                            children: [
+                              FaIcon(
+                                preset.icon,
+                                size: 15,
+                                color: selected
+                                    ? StilloraColors.primary
+                                    : StilloraColors.onSurfaceVariant,
+                              ),
+                              const SizedBox(width: 7),
+                              Expanded(
+                                child: Text(
+                                  preset.label,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.labelSmall
+                                      ?.copyWith(
+                                        color: selected
+                                            ? StilloraColors.primary
+                                            : StilloraColors.onSurfaceVariant,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                ),
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                preset.ratioLabel,
+                                style: Theme.of(context).textTheme.labelSmall
+                                    ?.copyWith(
+                                      color: StilloraColors.onSurfaceVariant,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                              ),
+                            ],
+                          )
+                        : Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              FaIcon(
+                                preset.icon,
+                                size: 22,
+                                color: selected
+                                    ? StilloraColors.primary
+                                    : StilloraColors.onSurfaceVariant,
+                              ),
+                              const SizedBox(height: StilloraSpacing.xs),
+                              Text(
+                                preset.label,
+                                textAlign: TextAlign.center,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.labelMedium
+                                    ?.copyWith(
+                                      color: selected
+                                          ? StilloraColors.primary
+                                          : StilloraColors.onSurfaceVariant,
+                                    ),
+                              ),
+                              Text(
+                                preset.ratioLabel,
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(
+                                      color: StilloraColors.onSurfaceVariant,
+                                    ),
+                              ),
+                            ],
+                          ),
+                  );
+                },
               );
             },
           ),
-          const SizedBox(height: StilloraSpacing.sm),
+          SizedBox(height: compact ? 10 : StilloraSpacing.sm),
           Text('Resize', style: Theme.of(context).textTheme.labelMedium),
           const SizedBox(height: StilloraSpacing.xs),
           SegmentedButton<ResizeMode>(
@@ -1437,7 +1701,7 @@ class _PresetCard extends StatelessWidget {
             onSelectionChanged: (value) =>
                 controller.setResizeMode(value.first),
           ),
-          const SizedBox(height: StilloraSpacing.sm),
+          SizedBox(height: compact ? 10 : StilloraSpacing.sm),
           Text(
             editor.media.length > 1 ? 'Total duration' : 'Duration',
             style: Theme.of(context).textTheme.labelMedium,
@@ -1460,11 +1724,13 @@ class _PresetCard extends StatelessWidget {
                 label: '10s',
                 selected: editor.totalDurationSeconds == 10,
                 onSelected: () => controller.setDuration(10),
+                compact: compact,
               ),
               _DurationChip(
                 label: '30s',
                 selected: editor.totalDurationSeconds == 30,
                 onSelected: () => controller.setDuration(30),
+                compact: compact,
               ),
               if (editor.audioDurationSeconds != null)
                 _DurationChip(
@@ -1475,6 +1741,7 @@ class _PresetCard extends StatelessWidget {
                       editor.audioDurationSeconds,
                   onSelected: () =>
                       controller.setDuration(editor.audioDurationSeconds!),
+                  compact: compact,
                 ),
             ],
           ),
@@ -1541,19 +1808,25 @@ class _DurationChip extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.onSelected,
+    this.compact = false,
   });
 
   final String label;
   final bool selected;
   final VoidCallback onSelected;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final radius = BorderRadius.circular(StilloraRadius.full);
-    final textStyle = Theme.of(context).textTheme.labelLarge?.copyWith(
-      color: selected ? Colors.white : StilloraColors.onSurfaceVariant,
-      fontWeight: FontWeight.w800,
-    );
+    final textStyle =
+        (compact
+                ? Theme.of(context).textTheme.labelMedium
+                : Theme.of(context).textTheme.labelLarge)
+            ?.copyWith(
+              color: selected ? Colors.white : StilloraColors.onSurfaceVariant,
+              fontWeight: FontWeight.w800,
+            );
 
     return Material(
       color: Colors.transparent,
@@ -1581,18 +1854,21 @@ class _DurationChip extends StatelessWidget {
                 : null,
           ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            padding: EdgeInsets.symmetric(
+              horizontal: compact ? 10 : 14,
+              vertical: compact ? 7 : 9,
+            ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 140),
                   child: selected
-                      ? const Icon(
+                      ? Icon(
                           Icons.check_circle_rounded,
-                          key: ValueKey('selected'),
+                          key: const ValueKey('selected'),
                           color: Colors.white,
-                          size: 18,
+                          size: compact ? 15 : 18,
                         )
                       : Icon(
                           Icons.radio_button_unchecked_rounded,
@@ -1600,10 +1876,10 @@ class _DurationChip extends StatelessWidget {
                           color: StilloraColors.onSurfaceVariant.withValues(
                             alpha: 0.78,
                           ),
-                          size: 18,
+                          size: compact ? 15 : 18,
                         ),
                 ),
-                const SizedBox(width: 7),
+                SizedBox(width: compact ? 5 : 7),
                 Text(label, style: textStyle),
               ],
             ),
@@ -1624,26 +1900,31 @@ String _formatDuration(int seconds) {
 }
 
 class _PrivacyCard extends StatelessWidget {
-  const _PrivacyCard({required this.isSignedIn});
+  const _PrivacyCard({required this.isSignedIn, this.compact = false});
 
   final bool isSignedIn;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return StilloraGlassCard(
+      padding: EdgeInsets.all(compact ? 12 : StilloraSpacing.sm),
       child: Row(
         children: [
           Icon(
             isSignedIn ? Icons.verified_user_rounded : Icons.lock_rounded,
             color: StilloraColors.secondary,
+            size: compact ? 20 : 24,
           ),
-          const SizedBox(width: StilloraSpacing.sm),
+          SizedBox(width: compact ? 10 : StilloraSpacing.sm),
           Expanded(
             child: Text(
               isSignedIn
                   ? 'Ready to convert. Media files stay on your phone.'
                   : 'Explore freely. Register only when you convert.',
-              style: Theme.of(context).textTheme.bodyMedium,
+              style: (compact
+                  ? Theme.of(context).textTheme.bodySmall
+                  : Theme.of(context).textTheme.bodyMedium),
             ),
           ),
         ],

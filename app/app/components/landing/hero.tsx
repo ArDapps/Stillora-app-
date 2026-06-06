@@ -82,7 +82,7 @@ export function Hero() {
         {[
           ["Free", "Always, no paywall"],
           ["3-in-1", "Images, video, audio"],
-          ["5 formats", "Platform presets"],
+          ["6 formats", "Platform presets"],
           ["Web + App", "Desktop coming soon"],
         ].map(([value, label]) => (
           <div key={label} className="rounded-lg border border-border/60 bg-card/60 p-4 text-center backdrop-blur-sm">

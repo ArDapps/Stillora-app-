@@ -18,7 +18,12 @@ const OAUTH_TX_MAX_AGE = 60 * 10; // 10 minutes
 
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
+const GOOGLE_TOKENINFO_URL = "https://oauth2.googleapis.com/tokeninfo";
 const GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo";
+const FALLBACK_GOOGLE_CLIENT_IDS = [
+  "718272031198-jcl994t1b9ucib32k08hb3rc5v29ngur.apps.googleusercontent.com",
+  "718272031198-kr3vqn6j3cchpo0vqp7usajm3734ignb.apps.googleusercontent.com",
+];
 
 function getSessionKey() {
   const secret = process.env.AUTH_SECRET;
@@ -37,6 +42,23 @@ function getGoogleCredentials() {
     );
   }
   return { clientId, clientSecret };
+}
+
+function getAllowedGoogleClientIds() {
+  return new Set(
+    [
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_WEB_CLIENT_ID,
+      process.env.GOOGLE_IOS_CLIENT_ID,
+      process.env.GOOGLE_MACOS_CLIENT_ID,
+      process.env.GOOGLE_ANDROID_CLIENT_ID,
+      process.env.GOOGLE_NATIVE_CLIENT_IDS,
+      ...FALLBACK_GOOGLE_CLIENT_IDS,
+    ]
+      .flatMap((value) => value?.split(",") ?? [])
+      .map((value) => value.trim())
+      .filter(Boolean),
+  );
 }
 
 // --- Session (stateless JWT in an httpOnly cookie) ---
@@ -178,6 +200,52 @@ export async function fetchGoogleUser(accessToken: string): Promise<SessionUser>
     name?: string;
     picture?: string;
   };
+
+  return {
+    sub: profile.sub,
+    email: profile.email ?? "",
+    name: profile.name ?? profile.email ?? "Stillora user",
+    picture: profile.picture ?? "",
+  };
+}
+
+export async function fetchGoogleUserFromIdToken(
+  idToken: string,
+): Promise<SessionUser> {
+  const response = await fetch(
+    `${GOOGLE_TOKENINFO_URL}?id_token=${encodeURIComponent(idToken)}`,
+    {
+      cache: "no-store",
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to verify Google ID token (${response.status}).`);
+  }
+
+  const profile = (await response.json()) as {
+    aud?: string;
+    iss?: string;
+    sub?: string;
+    email?: string;
+    name?: string;
+    picture?: string;
+  };
+
+  const validIssuer =
+    profile.iss === "accounts.google.com" ||
+    profile.iss === "https://accounts.google.com";
+  if (!validIssuer) {
+    throw new Error("Google ID token issuer is not valid.");
+  }
+
+  if (!profile.aud || !getAllowedGoogleClientIds().has(profile.aud)) {
+    throw new Error("Google ID token audience is not allowed.");
+  }
+
+  if (!profile.sub) {
+    throw new Error("Google ID token subject is missing.");
+  }
 
   return {
     sub: profile.sub,

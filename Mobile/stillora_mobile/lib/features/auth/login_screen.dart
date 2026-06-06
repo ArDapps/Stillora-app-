@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/auth/auth_controller.dart';
+import '../../core/auth/auth_repository.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/widgets/stillora_mark.dart';
 import '../tabs/app_tabs_screen.dart';
@@ -17,6 +18,7 @@ class LoginScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final auth = ref.watch(authControllerProvider);
+    final errorMessage = _errorMessage(auth.error);
 
     ref.listen(authControllerProvider, (_, next) {
       if (next.asData?.value != null) {
@@ -75,7 +77,7 @@ class LoginScreen extends ConsumerWidget {
               if (auth.hasError) ...[
                 const SizedBox(height: 12),
                 Text(
-                  'Google sign-in failed. Please try again.',
+                  errorMessage,
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
@@ -94,5 +96,12 @@ class LoginScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  String _errorMessage(Object? error) {
+    if (error is AuthFailure) {
+      return error.message;
+    }
+    return 'Google sign-in failed. Please try again.';
   }
 }

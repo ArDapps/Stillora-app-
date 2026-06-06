@@ -8,9 +8,9 @@ import 'package:video_player/video_player.dart';
 
 import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_spacing.dart';
+import '../../core/widgets/desktop_shell.dart';
 import '../../core/widgets/stillora_video_player_panel.dart';
 import '../export/export_controller.dart';
-import '../tabs/app_tabs_screen.dart';
 
 class PreviewScreen extends ConsumerStatefulWidget {
   const PreviewScreen({super.key});
@@ -79,7 +79,7 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
 
   void _openTab(int index) {
     ref.read(homeTabProvider.notifier).state = index;
-    context.go(AppTabsScreen.routePath);
+    context.go(kHomeRoute);
   }
 
   @override

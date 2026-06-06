@@ -1,10 +1,13 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'local_export_record.dart';
+import 'local_export_store.dart';
+
+final localExportStoreProvider = FutureProvider<LocalExportStore>((ref) {
+  return HiveLocalExportStore.open();
+});
 
 final galleryControllerProvider =
     AsyncNotifierProvider<GalleryController, List<LocalExportRecord>>(
@@ -12,31 +15,22 @@ final galleryControllerProvider =
     );
 
 class GalleryController extends AsyncNotifier<List<LocalExportRecord>> {
-  static const _storageKey = 'stillora.exports';
-
   @override
   Future<List<LocalExportRecord>> build() => _load();
 
   Future<List<LocalExportRecord>> _load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getStringList(_storageKey) ?? const [];
+    final store = await ref.read(localExportStoreProvider.future);
+    final storedRecords = await store.load();
     final records = <LocalExportRecord>[];
     var prunedMissingFiles = false;
-    for (final entry in raw) {
-      try {
-        final record = LocalExportRecord.fromJson(
-          jsonDecode(entry) as Map<String, dynamic>,
-        );
-        // The library stores local paths only. If the file was removed outside
-        // Stillora, drop that stale record and write the cleaned list back.
-        if (File(record.outputPath).existsSync()) {
-          records.add(record);
-        } else {
-          prunedMissingFiles = true;
-        }
-      } catch (_) {
+
+    for (final record in storedRecords) {
+      // The library stores local paths only. If the file was removed outside
+      // Stillora, drop that stale record and write the cleaned list back.
+      if (File(record.outputPath).existsSync()) {
+        records.add(record);
+      } else {
         prunedMissingFiles = true;
-        // Skip malformed entries.
       }
     }
     records.sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -47,10 +41,8 @@ class GalleryController extends AsyncNotifier<List<LocalExportRecord>> {
   }
 
   Future<void> _persist(List<LocalExportRecord> records) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_storageKey, [
-      for (final record in records) jsonEncode(record.toJson()),
-    ]);
+    final store = await ref.read(localExportStoreProvider.future);
+    await store.saveAll(records);
   }
 
   Future<void> addRecord(LocalExportRecord record) async {
