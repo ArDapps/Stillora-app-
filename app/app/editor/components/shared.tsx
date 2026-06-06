@@ -44,9 +44,9 @@ const socialTargets: Array<{ label: string; icon: LucideIcon }> = [
   { label: "Square", icon: Square },
 ];
 
-export function SocialTargetPills() {
+export function SocialTargetPills({ className }: { className?: string }) {
   return (
-    <div className="mb-4 flex flex-wrap items-center justify-center gap-2">
+    <div className={`flex flex-wrap items-center justify-center gap-2 ${className ?? ""}`}>
       {socialTargets.map(({ label, icon: Icon }) => (
         <span
           className="editor-control-soft inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold"

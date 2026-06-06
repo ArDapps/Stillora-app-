@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 
@@ -319,6 +320,12 @@ class _DesktopStudioHeader extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+        SvgPicture.asset(
+          'assets/logo/stillora-icon.svg',
+          width: 36,
+          height: 36,
+        ),
+        const SizedBox(width: 10),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -327,17 +334,17 @@ class _DesktopStudioHeader extends StatelessWidget {
                 shaderCallback: (bounds) =>
                     stilloraBrandGradient.createShader(bounds),
                 child: Text(
-                  'Stillora Desktop Studio',
+                  'Stillora',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     color: Colors.white,
                     fontSize: 22,
                     fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
                   ),
                 ),
               ),
-              const SizedBox(height: 4),
               Text(
-                'Build a local MP4 timeline with desktop file picking and a wider control surface.',
+                'Desktop Studio · Build your MP4 with full file access.',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: StilloraColors.onSurfaceVariant,
                 ),
@@ -359,17 +366,29 @@ class _StudioHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        ShaderMask(
-          shaderCallback: (bounds) =>
-              stilloraBrandGradient.createShader(bounds),
-          child: Text(
-            'Stillora',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.displayMedium?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            SvgPicture.asset(
+              'assets/logo/stillora-icon.svg',
+              width: 44,
+              height: 44,
             ),
-          ),
+            const SizedBox(width: 10),
+            ShaderMask(
+              shaderCallback: (bounds) =>
+                  stilloraBrandGradient.createShader(bounds),
+              child: Text(
+                'Stillora',
+                style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: StilloraSpacing.xs),
         Text(

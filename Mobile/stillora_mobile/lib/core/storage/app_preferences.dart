@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -49,4 +51,25 @@ class AppPreferences {
   Future<void> setDefaultResizeMode(String value) {
     return _preferences.setString(_defaultResizeModeKey, value);
   }
+
+  // ── Editor session (last open work, survives app restarts) ─────────────────
+
+  static const _sessionKey = 'stillora.editor.session.v1';
+
+  /// Returns the raw JSON map saved by [saveEditorSession], or null if nothing
+  /// has been saved yet.
+  Map<String, dynamic>? get savedEditorSession {
+    final raw = _preferences.getString(_sessionKey);
+    if (raw == null) return null;
+    try {
+      return (jsonDecode(raw) as Map).cast<String, dynamic>();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> saveEditorSession(Map<String, dynamic> data) =>
+      _preferences.setString(_sessionKey, jsonEncode(data));
+
+  Future<void> clearEditorSession() => _preferences.remove(_sessionKey);
 }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:equatable/equatable.dart';
@@ -6,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../core/storage/app_preferences.dart';
 import 'video_preset.dart';
 
 enum ResizeMode { fit, fill }
@@ -193,7 +195,64 @@ final editorControllerProvider =
 
 class EditorController extends Notifier<EditorState> {
   @override
-  EditorState build() => const EditorState();
+  EditorState build() {
+    final prefs = ref.read(appPreferencesProvider);
+    return _restoreSession(prefs) ?? const EditorState();
+  }
+
+  /// Restores the last saved session. Returns null if nothing was saved or
+  /// if the saved data is unreadable. Media items whose files no longer exist
+  /// on disk are silently dropped (handles cleaned-up mobile temp paths).
+  EditorState? _restoreSession(AppPreferences prefs) {
+    final data = prefs.savedEditorSession;
+    if (data == null) return null;
+    try {
+      final rawMedia =
+          (data['media'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+      final media = [
+        for (final item in rawMedia)
+          if (File(item['path'] as String).existsSync())
+            MediaItem.fromPath(
+              item['path'] as String,
+              durationSeconds:
+                  (item['d'] as int?) ?? defaultDurationSeconds,
+            ),
+      ];
+      final audioPath = data['audioPath'] as String?;
+      final validAudio =
+          audioPath != null && File(audioPath).existsSync() ? audioPath : null;
+      return EditorState(
+        media: media,
+        selectedIndex: 0,
+        audioPath: validAudio,
+        audioDurationSeconds:
+            validAudio != null ? data['audioDurationSeconds'] as int? : null,
+        preset: presetById(data['presetId'] as String? ?? 'reels'),
+        durationSeconds: normalizeDurationSeconds(
+          (data['durationSeconds'] as int?) ?? defaultDurationSeconds,
+        ),
+        resizeMode: data['resizeMode'] == 'fill' ? ResizeMode.fill : ResizeMode.fit,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Saves the current state to SharedPreferences asynchronously.
+  void _persist() {
+    final prefs = ref.read(appPreferencesProvider);
+    unawaited(prefs.saveEditorSession({
+      'media': [
+        for (final item in state.media)
+          {'path': item.path, 'd': item.durationSeconds},
+      ],
+      'audioPath': state.audioPath,
+      'audioDurationSeconds': state.audioDurationSeconds,
+      'presetId': state.preset.id,
+      'durationSeconds': state.durationSeconds,
+      'resizeMode': state.resizeMode == ResizeMode.fill ? 'fill' : 'fit',
+    }));
+  }
 
   /// Lets the user pick multiple images, videos, or a mix of both.
   Future<void> pickMedia() async {
@@ -209,6 +268,7 @@ class EditorController extends Notifier<EditorState> {
         MediaItem.fromPath(paths[i], durationSeconds: durations[i]),
     ];
     state = state.copyWith(media: items, selectedIndex: 0);
+    _persist();
   }
 
   /// Appends more media to the current selection.
@@ -230,6 +290,7 @@ class EditorController extends Notifier<EditorState> {
       return;
     }
     state = state.copyWith(media: [...state.media, ...additions]);
+    _persist();
   }
 
   Future<List<String>> _pickMediaPaths() async {
@@ -260,6 +321,7 @@ class EditorController extends Notifier<EditorState> {
       durationSeconds: normalizeDurationSeconds(seconds),
     );
     state = state.copyWith(media: next);
+    _persist();
   }
 
   int _defaultClipSeconds(List<MediaItem> media) {
@@ -307,6 +369,7 @@ class EditorController extends Notifier<EditorState> {
       selected -= 1;
     }
     state = state.copyWith(media: next, selectedIndex: selected);
+    _persist();
   }
 
   void reorderMedia(int oldIndex, int newIndex) {
@@ -324,10 +387,13 @@ class EditorController extends Notifier<EditorState> {
     final moved = next.removeAt(oldIndex);
     next.insert(targetIndex, moved);
     state = state.copyWith(media: next, selectedIndex: targetIndex);
+    _persist();
   }
 
-  void clearMedia() =>
-      state = state.copyWith(media: const [], selectedIndex: 0);
+  void clearMedia() {
+    state = state.copyWith(media: const [], selectedIndex: 0);
+    _persist();
+  }
 
   Future<void> setAudioPath(String path) async {
     state = state.copyWith(audioPath: path, audioDurationSeconds: null);
@@ -347,11 +413,18 @@ class EditorController extends Notifier<EditorState> {
       audioDurationSeconds: duration,
       durationSeconds: duration,
     );
+    _persist();
   }
 
-  void removeAudio() => state = state.copyWith(clearAudio: true);
+  void removeAudio() {
+    state = state.copyWith(clearAudio: true);
+    _persist();
+  }
 
-  void setPreset(VideoPreset preset) => state = state.copyWith(preset: preset);
+  void setPreset(VideoPreset preset) {
+    state = state.copyWith(preset: preset);
+    _persist();
+  }
 
   /// Sets the overall target duration and re-splits it evenly across every
   /// clip. Use [setClipDuration] to bias an individual clip afterwards.
@@ -359,6 +432,7 @@ class EditorController extends Notifier<EditorState> {
     final normalized = normalizeDurationSeconds(seconds);
     if (state.media.isEmpty) {
       state = state.copyWith(durationSeconds: normalized);
+      _persist();
       return;
     }
     final durations = _distributeEvenly(state.media.length, normalized);
@@ -367,10 +441,12 @@ class EditorController extends Notifier<EditorState> {
         state.media[i].copyWith(durationSeconds: durations[i]),
     ];
     state = state.copyWith(media: next, durationSeconds: normalized);
+    _persist();
   }
 
   void setResizeMode(ResizeMode resizeMode) {
     state = state.copyWith(resizeMode: resizeMode);
+    _persist();
   }
 
   Future<int?> _readMediaDurationSeconds(String path) async {

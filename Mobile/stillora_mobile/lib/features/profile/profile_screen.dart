@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/auth/auth_controller.dart';
@@ -49,7 +50,7 @@ class ProfileView extends ConsumerWidget {
             const SizedBox(height: 18),
             FilledButton.icon(
               onPressed: () => context.go(LoginScreen.routePath),
-              icon: const Icon(Icons.login_rounded),
+              icon: const FaIcon(FontAwesomeIcons.google, size: 18),
               label: const Text('Continue with Google'),
             ),
             const SizedBox(height: 18),
@@ -64,9 +65,24 @@ class ProfileView extends ConsumerWidget {
       child: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          CircleAvatar(
-            radius: 42,
-            child: Text(session.user.name.characters.first),
+          Center(
+            child: session.user.avatarUrl.isNotEmpty
+                ? ClipOval(
+                    child: Image.network(
+                      session.user.avatarUrl,
+                      width: 84,
+                      height: 84,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => CircleAvatar(
+                        radius: 42,
+                        child: Text(session.user.name.characters.first),
+                      ),
+                    ),
+                  )
+                : CircleAvatar(
+                    radius: 42,
+                    child: Text(session.user.name.characters.first),
+                  ),
           ),
           const SizedBox(height: 14),
           Text(

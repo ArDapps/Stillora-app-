@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+
 import '../../core/auth/auth_controller.dart';
 import '../../core/auth/auth_repository.dart';
 import '../../core/constants/app_constants.dart';
@@ -71,7 +73,7 @@ class LoginScreen extends ConsumerWidget {
                         dimension: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Icon(Icons.login_rounded),
+                    : const FaIcon(FontAwesomeIcons.google, size: 18),
                 label: const Text('Continue with Google'),
               ),
               if (auth.hasError) ...[
