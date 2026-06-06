@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/auth/auth_controller.dart';
 import '../../core/storage/app_preferences.dart';
 import '../../core/widgets/stillora_mark.dart';
+import '../auth/login_screen.dart';
 import '../onboarding/onboarding_screen.dart';
 import '../tabs/app_tabs_screen.dart';
 
@@ -25,10 +26,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   Future<void> _route() async {
-    ref.read(authControllerProvider.future);
-    if (!mounted) {
+    final session = await ref.read(authControllerProvider.future);
+    if (!mounted) return;
+
+    if (session == null) {
+      context.go(LoginScreen.routePath);
       return;
     }
+
     final seenOnboarding = ref.read(appPreferencesProvider).hasSeenOnboarding;
     context.go(
       seenOnboarding ? AppTabsScreen.routePath : OnboardingScreen.routePath,

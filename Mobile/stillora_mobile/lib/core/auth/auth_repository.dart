@@ -128,6 +128,24 @@ class AuthRepository {
     await _googleSignIn.signOut();
   }
 
+  Future<void> deleteAccount() async {
+    final token = await _tokenStorage.readToken();
+    try {
+      await _dio.delete<void>(
+        '/api/auth/delete-account',
+        options: token != null
+            ? Options(headers: {'Authorization': 'Bearer $token'})
+            : null,
+      );
+    } on DioException {
+      // Continue with local cleanup even if the server call fails
+    }
+    await _tokenStorage.clear();
+    if (!Platform.isLinux && !Platform.isWindows) {
+      await _googleSignIn.signOut();
+    }
+  }
+
   String _googleSignInMessage(GoogleSignInException error) {
     if (error.code == GoogleSignInExceptionCode.canceled) {
       return 'Google sign-in was cancelled.';

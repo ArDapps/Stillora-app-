@@ -43,20 +43,23 @@ export function AdSlot({
   if (!campaign) return null;
 
   return (
-    <div className={className}>
+    <div className={`mx-auto w-fit ${className ?? ""}`}>
       <a
         href={`${AD_ORIGIN}/api/campaigns/${campaign.id}/click`}
         target="_blank"
         rel="noopener noreferrer"
-        className="block"
+        className="relative block overflow-hidden rounded-lg opacity-60 transition-opacity hover:opacity-85"
+        style={{ boxShadow: "0 0 14px rgba(139,92,246,0.22)" }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={campaign.imageUrl}
           alt={campaign.title}
-          className="w-full rounded-lg object-cover"
+          className="h-16 w-auto rounded-lg object-cover"
         />
-        <p className="mt-1 text-xs text-muted-foreground">Sponsored</p>
+        <span className="absolute bottom-1 right-1.5 rounded text-[9px] leading-none text-white/50">
+          Sponsored
+        </span>
       </a>
     </div>
   );

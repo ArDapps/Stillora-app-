@@ -111,6 +111,13 @@ export async function getRecentExports(limit = 50): Promise<ExportRecord[]> {
     .slice(0, limit);
 }
 
+export async function deleteUser(sub: string): Promise<void> {
+  const store = await readStore();
+  store.users = store.users.filter((u) => u.sub !== sub);
+  store.exports = store.exports.filter((e) => e.userSub !== sub);
+  await writeStore(store);
+}
+
 export async function getStats(): Promise<{
   totalUsers: number;
   totalExports: number;

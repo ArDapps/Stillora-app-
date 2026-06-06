@@ -1,5 +1,7 @@
-import { ArrowRight, Check, Sparkles } from "lucide-react";
+import { ArrowRight, Check } from "lucide-react";
+import Image from "next/image";
 import { PrimaryCta } from "@/app/components/app-navbar";
+import stilloraIcon from "@/public/logo/stillora-icon.svg";
 import { ctaPerks } from "./data";
 
 export function FinalCta() {
@@ -9,7 +11,13 @@ export function FinalCta() {
         <div className="gradient-border mx-auto max-w-4xl rounded-lg">
           <div className="relative overflow-hidden rounded-lg bg-card/90 p-8 text-center backdrop-blur-xl sm:p-12 md:p-16">
             <div className="animate-float mx-auto mb-6 grid size-16 place-items-center rounded-lg bg-[image:var(--brand-mark)] shadow-2xl shadow-primary/40 sm:mb-8 sm:size-20">
-              <Sparkles className="size-8 text-white sm:size-10" />
+              <Image
+                src={stilloraIcon}
+                alt="Stillora"
+                width={48}
+                height={29}
+                className="size-9 object-contain sm:size-11"
+              />
             </div>
             <h2 className="mb-4 text-3xl font-extrabold text-foreground sm:text-4xl md:text-5xl">
               Start creating for <span className="gradient-text-animated">free today</span>

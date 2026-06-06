@@ -35,11 +35,17 @@ class LoginScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (context.canPop())
+              if (context.canPop() || nextPath != null)
                 Align(
                   alignment: Alignment.centerLeft,
                   child: IconButton(
-                    onPressed: () => context.pop(),
+                    onPressed: () {
+                      if (context.canPop()) {
+                        context.pop();
+                      } else {
+                        context.go(AppTabsScreen.routePath);
+                      }
+                    },
                     icon: const Icon(Icons.arrow_back_rounded),
                     tooltip: 'Back',
                   ),

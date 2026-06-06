@@ -21,7 +21,7 @@ export function LandingHome() {
         <HowItWorks />
         <Formats />
         <Features />
-        <div className="mx-auto max-w-md px-4 py-6">
+        <div className="py-4">
           <AdSlot placement="HOME_BANNER" />
         </div>
         <SocialProof />

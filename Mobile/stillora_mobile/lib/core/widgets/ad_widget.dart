@@ -78,25 +78,46 @@ class _AdSlotWidgetState extends State<AdSlotWidget> {
 
     return GestureDetector(
       onTap: _onTap,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          ClipRRect(
+      child: Opacity(
+        opacity: 0.62,
+        child: Container(
+          height: 64,
+          decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
-            child: Image.network(
-              campaign.imageUrl,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x2e8b5cf6),
+                blurRadius: 14,
+                spreadRadius: 0,
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Image.network(
+                  campaign.imageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                ),
+                Positioned(
+                  bottom: 4,
+                  right: 6,
+                  child: Text(
+                    'Sponsored',
+                    style: const TextStyle(
+                      fontSize: 9,
+                      color: Color(0x99ffffff),
+                      height: 1,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            'Sponsored',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: StilloraColors.onSurfaceVariant,
-                ),
-          ),
-        ],
+        ),
       ),
     );
   }

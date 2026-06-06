@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronRight, LayoutDashboard, LogOut, Users, Activity } from "lucide-react";
+import { ChevronDown, ChevronRight, LayoutDashboard, LogOut, Trash2, Users, Activity } from "lucide-react";
 import type { SessionUser } from "./use-session";
 
 type Props = {
@@ -13,6 +13,8 @@ type Props = {
 export function UserMenu({ user, isAdmin }: Props) {
   const [open, setOpen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -27,6 +29,12 @@ export function UserMenu({ user, isAdmin }: Props) {
 
   async function signOut() {
     await fetch("/api/auth/signout", { method: "POST" });
+    window.location.reload();
+  }
+
+  async function deleteAccount() {
+    setDeleting(true);
+    await fetch("/api/auth/delete-account", { method: "DELETE" });
     window.location.reload();
   }
 
@@ -134,7 +142,7 @@ export function UserMenu({ user, isAdmin }: Props) {
             </div>
           )}
 
-          {/* Sign out */}
+          {/* Sign out + Delete account */}
           <div className="p-1.5">
             <button
               type="button"
@@ -145,6 +153,54 @@ export function UserMenu({ user, isAdmin }: Props) {
               <LogOut size={14} />
               Sign out
             </button>
+            <button
+              type="button"
+              onClick={() => setConfirmDelete(true)}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition hover:opacity-80"
+              style={{ color: "var(--color-muted)" }}
+            >
+              <Trash2 size={14} />
+              Delete account
+            </button>
+          </div>
+        </div>
+      )}
+      {/* Delete account confirmation modal */}
+      {confirmDelete && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.6)" }}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl border p-6 shadow-2xl"
+            style={{ background: "var(--color-card-high)", borderColor: "var(--color-border)" }}
+          >
+            <h2 className="mb-2 text-base font-semibold" style={{ color: "var(--color-foreground)" }}>
+              Delete your account?
+            </h2>
+            <p className="mb-5 text-sm" style={{ color: "var(--color-muted)" }}>
+              This will permanently delete your account and all associated data. This action cannot be undone.
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(false)}
+                disabled={deleting}
+                className="flex-1 rounded-lg border px-4 py-2 text-sm font-medium transition hover:opacity-80 disabled:opacity-50"
+                style={{ borderColor: "var(--color-border)", color: "var(--color-foreground)" }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={deleteAccount}
+                disabled={deleting}
+                className="flex-1 rounded-lg px-4 py-2 text-sm font-medium text-white transition hover:opacity-80 disabled:opacity-50"
+                style={{ background: "var(--color-danger)" }}
+              >
+                {deleting ? "Deleting…" : "Delete account"}
+              </button>
+            </div>
           </div>
         </div>
       )}
