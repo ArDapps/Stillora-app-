@@ -1,9 +1,11 @@
 "use client";
 
-import { Film, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { EDITOR_PATH } from "@/lib/site";
+import stilloraIcon from "@/public/logo/stillora-icon.svg";
 import { AuthControls } from "./auth-controls";
 import { ThemeToggle } from "./theme-toggle";
 
@@ -21,10 +23,15 @@ export const MARKETING_NAV_LINKS: NavLink[] = [
 
 export function Logo() {
   return (
-    <div className="flex items-center gap-2.5">
-      <div className="glow-sm relative grid size-9 flex-shrink-0 place-items-center rounded-lg bg-[image:var(--brand-mark)] shadow-lg">
-        <Film className="size-5 text-white" />
-      </div>
+    <div className="flex items-center gap-2">
+      <Image
+        src={stilloraIcon}
+        alt="Stillora"
+        priority
+        width={56}
+        height={34}
+        className="flex-shrink-0"
+      />
       <span className="font-display text-xl font-bold tracking-tight text-foreground">Stillora</span>
     </div>
   );
