@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
@@ -10,15 +12,12 @@ import '../../core/design/stillora_spacing.dart';
 import '../../core/design/stillora_surface.dart';
 import '../../core/platform/platform_info.dart';
 import '../../core/widgets/desktop_shell.dart';
+import '../../core/widgets/ad_widget.dart';
 import '../auth/login_screen.dart';
 import '../editor/editor_state.dart';
 import '../preview/preview_screen.dart';
 import '../tabs/app_tabs_screen.dart';
 import 'export_controller.dart';
-
-const _staticCompanyBannerImageUrl =
-    'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe'
-    '?auto=format&fit=crop&w=1200&q=80';
 
 class ExportProgressScreen extends ConsumerStatefulWidget {
   const ExportProgressScreen({super.key});
@@ -106,6 +105,9 @@ class _ExportProgressScreenState extends ConsumerState<ExportProgressScreen> {
     if (error is PlatformException) {
       return error.message ?? 'The selected media could not be exported.';
     }
+    if (error is FileSystemException) {
+      return error.message;
+    }
     if (export.hasError) {
       return 'The selected media could not be exported.';
     }
@@ -138,7 +140,9 @@ class _ExportProgressContent extends StatelessWidget {
         compact ? 16 : StilloraSpacing.lg,
       ),
       children: [
-        _CompanyAdBanner(compact: compact),
+        AdSlotWidget(
+          placement: compact ? 'USER_DASHBOARD_LEFT' : 'HOME_BANNER',
+        ),
         SizedBox(height: compact ? 10 : StilloraSpacing.sm),
         _ExportStatusCard(export: export, message: message, compact: compact),
         SizedBox(height: compact ? 10 : StilloraSpacing.sm),
@@ -162,134 +166,6 @@ class _ExportProgressContent extends StatelessWidget {
               ),
             )
           : content,
-    );
-  }
-}
-
-class _CompanyAdBanner extends StatelessWidget {
-  const _CompanyAdBanner({this.compact = false});
-
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    return StilloraGlowCard(
-      padding: EdgeInsets.zero,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(StilloraRadius.full - 1.5),
-        child: AspectRatio(
-          aspectRatio: compact ? 16 / 4 : 16 / 7,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              Image.network(
-                _staticCompanyBannerImageUrl,
-                fit: BoxFit.cover,
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) {
-                    return child;
-                  }
-                  return const _CompanyAdFallback();
-                },
-                errorBuilder: (context, error, stackTrace) {
-                  return const _CompanyAdFallback();
-                },
-              ),
-              const DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Color(0x33000000), Color(0xcc000000)],
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(StilloraSpacing.sm),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const _SponsoredPill(),
-                    const Spacer(),
-                    Text(
-                      'TecnoBlocks',
-                      style:
-                          (compact
-                                  ? Theme.of(context).textTheme.titleMedium
-                                  : Theme.of(context).textTheme.headlineSmall)
-                              ?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w900,
-                              ),
-                    ),
-                    const SizedBox(height: StilloraSpacing.base),
-                    Text(
-                      'Company banner placement',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.86),
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _CompanyAdFallback extends StatelessWidget {
-  const _CompanyAdFallback();
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(gradient: stilloraBrandGradient),
-      child: Align(
-        alignment: Alignment.centerRight,
-        child: Icon(
-          Icons.campaign_rounded,
-          color: Colors.white.withValues(alpha: 0.24),
-          size: 104,
-        ),
-      ),
-    );
-  }
-}
-
-class _SponsoredPill extends StatelessWidget {
-  const _SponsoredPill();
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.42),
-        borderRadius: BorderRadius.circular(StilloraRadius.full),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.campaign_rounded, color: Colors.white, size: 14),
-            const SizedBox(width: 5),
-            Text(
-              'Sponsored',
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

@@ -138,12 +138,7 @@ class DesktopFfmpegVideoEngine implements engine.StilloraVideoEngine {
       ..._bundledFfmpegCandidates(),
       ...Platform.isWindows
           ? const ['ffmpeg.exe', 'ffmpeg']
-          : const [
-              'ffmpeg',
-              '/opt/homebrew/bin/ffmpeg',
-              '/usr/local/bin/ffmpeg',
-              '/usr/bin/ffmpeg',
-            ],
+          : const ['ffmpeg', '/usr/bin/ffmpeg'],
     ];
 
     for (final candidate in candidates) {
@@ -161,20 +156,13 @@ class DesktopFfmpegVideoEngine implements engine.StilloraVideoEngine {
     throw PlatformException(
       code: 'ffmpeg_missing',
       message:
-          'Desktop export requires FFmpeg, but Stillora could not find the bundled FFmpeg tool.',
+          'Windows and Linux desktop export require FFmpeg, but Stillora could not find the bundled FFmpeg tool or a PATH install.',
     );
   }
 
   Iterable<String> _bundledFfmpegCandidates() sync* {
     final executable = File(Platform.resolvedExecutable);
     final executableDir = executable.parent;
-
-    if (Platform.isMacOS) {
-      // Stillora.app/Contents/MacOS/Stillora -> Stillora.app/Contents/Resources/ffmpeg
-      final contentsDir = executableDir.parent;
-      yield _join(_join(contentsDir.path, 'Resources'), 'ffmpeg');
-      return;
-    }
 
     if (Platform.isWindows) {
       yield _join(_join(executableDir.path, 'data'), 'ffmpeg.exe');

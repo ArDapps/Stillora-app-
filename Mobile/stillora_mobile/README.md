@@ -3,18 +3,22 @@
 Flutter mobile app for Stillora: turn one local image into an MP4 video for social platforms.
 
 The app also includes Flutter desktop runners for macOS, Windows, and Linux.
-Desktop builds use a wider Stillora workspace UI and export locally through
-FFmpeg. The macOS runner bundles an Apple Silicon FFmpeg binary so users do not
-need to install Homebrew or configure `PATH`.
+Desktop builds use a wider Stillora workspace UI. macOS exports locally through
+native Swift AVFoundation, while Windows and Linux use the desktop FFmpeg
+engine.
 
 ## Status
 
 This scaffold implements the MVP app shell, feature-first structure, onboarding, Google-only auth client wiring, editor state, local export metadata, settings/profile/gallery surfaces, and the typed `stillora_video_engine` plugin boundary.
 
-Native H.264/AAC export is intentionally still inside the plugin package and must be implemented in:
+Native H.264/AAC export is implemented in the plugin package for:
+
+- `packages/stillora_video_engine/ios`
+- `packages/stillora_video_engine/macos`
+
+Android native export still needs to be implemented in:
 
 - `packages/stillora_video_engine/android`
-- `packages/stillora_video_engine/ios`
 
 The Flutter UI does not call the existing web media upload/export routes.
 
@@ -131,10 +135,11 @@ flutter run -d windows
 flutter run -d linux
 ```
 
-macOS desktop export uses the bundled `Stillora.app/Contents/Resources/ffmpeg`
-binary first, then falls back to `PATH` for development builds. Windows and
-Linux are wired for bundled FFmpeg paths too; add the matching platform binary
-to the desktop bundle before shipping those installers.
+macOS desktop export uses the native Swift AVFoundation engine from
+`packages/stillora_video_engine/macos`, so Mac App Store builds do not need a
+bundled FFmpeg executable. Windows and Linux use the desktop FFmpeg engine; add
+the matching platform binary to those desktop bundles before shipping those
+installers, or make sure `ffmpeg` is available on `PATH` during development.
 
 ```bash
 ffmpeg -version
@@ -151,8 +156,6 @@ flutter test
 ## Native Export TODO
 
 Android should implement export in Kotlin with Jetpack Media3 Transformer, MediaCodec, and MediaMuxer where needed.
-
-iOS should implement export in Swift with AVFoundation and AVAssetWriter.
 
 Required behavior:
 

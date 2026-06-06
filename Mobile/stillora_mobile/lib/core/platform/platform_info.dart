@@ -13,6 +13,16 @@ bool get isDesktopPlatform {
   };
 }
 
+bool get useFfmpegDesktopExport {
+  if (kIsWeb) {
+    return false;
+  }
+  return switch (defaultTargetPlatform) {
+    TargetPlatform.linux || TargetPlatform.windows => true,
+    _ => false,
+  };
+}
+
 bool useDesktopLayout(BuildContext context) {
   return isDesktopPlatform && MediaQuery.sizeOf(context).width >= 900;
 }

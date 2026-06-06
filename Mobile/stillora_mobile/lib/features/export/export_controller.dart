@@ -11,7 +11,7 @@ import '../gallery/local_export_record.dart';
 import 'desktop_ffmpeg_video_engine.dart';
 
 final videoEngineProvider = Provider<engine.StilloraVideoEngine>((ref) {
-  if (isDesktopPlatform) {
+  if (useFfmpegDesktopExport) {
     return DesktopFfmpegVideoEngine();
   }
   return engine.PlatformStilloraVideoEngine();
@@ -33,6 +33,7 @@ class ExportController extends AsyncNotifier<engine.ExportResult?> {
 
     state = const AsyncLoading();
     final videoEngine = ref.read(videoEngineProvider);
+    EditorState? preparedEditor;
 
     // NOTE: export progress is delivered over an EventChannel
     // (`stillora_video_engine/progress`). Subscribing to it activates the
@@ -40,17 +41,25 @@ class ExportController extends AsyncNotifier<engine.ExportResult?> {
     // until the native engine implements it. Re-add the subscription here once
     // the iOS/Android engine is in place.
 
-    state = await AsyncValue.guard(() {
+    state = await AsyncValue.guard(() async {
+      final exportEditor = await ref
+          .read(editorControllerProvider.notifier)
+          .prepareForExport();
+      preparedEditor = exportEditor;
       return videoEngine.exportVideo(
-        imagePath: editor.imagePath!,
-        mediaPaths: editor.mediaPaths,
-        imagePaths: editor.imagePaths,
-        clipDurations: editor.clipDurations,
-        audioPath: editor.audioPath,
-        durationSeconds: editor.totalDurationSeconds,
-        width: editor.preset.width == 0 ? 1080 : editor.preset.width,
-        height: editor.preset.height == 0 ? 1080 : editor.preset.height,
-        resizeMode: editor.resizeMode == ResizeMode.fit
+        imagePath: exportEditor.imagePath!,
+        mediaPaths: exportEditor.mediaPaths,
+        imagePaths: exportEditor.imagePaths,
+        clipDurations: exportEditor.clipDurations,
+        audioPath: exportEditor.audioPath,
+        durationSeconds: exportEditor.totalDurationSeconds,
+        width: exportEditor.preset.width == 0
+            ? 1080
+            : exportEditor.preset.width,
+        height: exportEditor.preset.height == 0
+            ? 1080
+            : exportEditor.preset.height,
+        resizeMode: exportEditor.resizeMode == ResizeMode.fit
             ? engine.ResizeMode.fit
             : engine.ResizeMode.fill,
       );
@@ -58,13 +67,14 @@ class ExportController extends AsyncNotifier<engine.ExportResult?> {
 
     final result = state.value;
     if (result != null) {
+      final exportEditor = preparedEditor ?? editor;
       await ref
           .read(galleryControllerProvider.notifier)
           .addRecord(
             LocalExportRecord(
               id: DateTime.now().microsecondsSinceEpoch.toString(),
               outputPath: result.outputPath,
-              preset: editor.preset.label,
+              preset: exportEditor.preset.label,
               width: result.width,
               height: result.height,
               durationSeconds: result.durationSeconds,

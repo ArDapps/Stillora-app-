@@ -123,6 +123,30 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
     } catch EngineError.cancelled {
       result(
         FlutterError(code: "cancelled", message: "Export was cancelled.", details: nil))
+    } catch EngineError.missingSource {
+      result(
+        FlutterError(
+          code: "missing_source",
+          message: "Stillora could not read the selected media. Please choose the file again.",
+          details: nil))
+    } catch EngineError.render {
+      result(
+        FlutterError(
+          code: "render_failed",
+          message: "Stillora could not render one of the selected media files.",
+          details: nil))
+    } catch EngineError.write {
+      result(
+        FlutterError(
+          code: "write_failed",
+          message: "Stillora could not write the exported video.",
+          details: nil))
+    } catch EngineError.export {
+      result(
+        FlutterError(
+          code: "export_failed",
+          message: "Stillora could not finish the video export.",
+          details: nil))
     } catch {
       result(
         FlutterError(

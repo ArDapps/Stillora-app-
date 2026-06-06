@@ -2,8 +2,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../design/stillora_colors.dart';
-
 const _adApiBase = 'https://md.loopara.app';
 
 typedef _Campaign = ({String id, String title, String imageUrl});
@@ -100,7 +98,8 @@ class _AdSlotWidgetState extends State<AdSlotWidget> {
                 Image.network(
                   campaign.imageUrl,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                  errorBuilder: (context, error, stackTrace) =>
+                      const SizedBox.shrink(),
                 ),
                 Positioned(
                   bottom: 4,

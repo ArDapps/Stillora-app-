@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../core/storage/app_preferences.dart';
+import 'local_editor_media_store.dart';
 import 'video_preset.dart';
 
 enum ResizeMode { fit, fill }
@@ -194,6 +195,8 @@ final editorControllerProvider =
     NotifierProvider<EditorController, EditorState>(EditorController.new);
 
 class EditorController extends Notifier<EditorState> {
+  final _mediaStore = LocalEditorMediaStore();
+
   @override
   EditorState build() {
     final prefs = ref.read(appPreferencesProvider);
@@ -214,24 +217,27 @@ class EditorController extends Notifier<EditorState> {
           if (File(item['path'] as String).existsSync())
             MediaItem.fromPath(
               item['path'] as String,
-              durationSeconds:
-                  (item['d'] as int?) ?? defaultDurationSeconds,
+              durationSeconds: (item['d'] as int?) ?? defaultDurationSeconds,
             ),
       ];
       final audioPath = data['audioPath'] as String?;
-      final validAudio =
-          audioPath != null && File(audioPath).existsSync() ? audioPath : null;
+      final validAudio = audioPath != null && File(audioPath).existsSync()
+          ? audioPath
+          : null;
       return EditorState(
         media: media,
         selectedIndex: 0,
         audioPath: validAudio,
-        audioDurationSeconds:
-            validAudio != null ? data['audioDurationSeconds'] as int? : null,
+        audioDurationSeconds: validAudio != null
+            ? data['audioDurationSeconds'] as int?
+            : null,
         preset: presetById(data['presetId'] as String? ?? 'reels'),
         durationSeconds: normalizeDurationSeconds(
           (data['durationSeconds'] as int?) ?? defaultDurationSeconds,
         ),
-        resizeMode: data['resizeMode'] == 'fill' ? ResizeMode.fill : ResizeMode.fit,
+        resizeMode: data['resizeMode'] == 'fill'
+            ? ResizeMode.fill
+            : ResizeMode.fit,
       );
     } catch (_) {
       return null;
@@ -241,17 +247,19 @@ class EditorController extends Notifier<EditorState> {
   /// Saves the current state to SharedPreferences asynchronously.
   void _persist() {
     final prefs = ref.read(appPreferencesProvider);
-    unawaited(prefs.saveEditorSession({
-      'media': [
-        for (final item in state.media)
-          {'path': item.path, 'd': item.durationSeconds},
-      ],
-      'audioPath': state.audioPath,
-      'audioDurationSeconds': state.audioDurationSeconds,
-      'presetId': state.preset.id,
-      'durationSeconds': state.durationSeconds,
-      'resizeMode': state.resizeMode == ResizeMode.fill ? 'fill' : 'fit',
-    }));
+    unawaited(
+      prefs.saveEditorSession({
+        'media': [
+          for (final item in state.media)
+            {'path': item.path, 'd': item.durationSeconds},
+        ],
+        'audioPath': state.audioPath,
+        'audioDurationSeconds': state.audioDurationSeconds,
+        'presetId': state.preset.id,
+        'durationSeconds': state.durationSeconds,
+        'resizeMode': state.resizeMode == ResizeMode.fill ? 'fill' : 'fit',
+      }),
+    );
   }
 
   /// Lets the user pick multiple images, videos, or a mix of both.
@@ -294,6 +302,11 @@ class EditorController extends Notifier<EditorState> {
   }
 
   Future<List<String>> _pickMediaPaths() async {
+    final paths = await _pickRawMediaPaths();
+    return _mediaStore.materializeMediaPaths(paths);
+  }
+
+  Future<List<String>> _pickRawMediaPaths() async {
     if (Platform.isMacOS || Platform.isLinux || Platform.isWindows) {
       final result = await FilePicker.platform.pickFiles(
         allowMultiple: true,
@@ -396,9 +409,17 @@ class EditorController extends Notifier<EditorState> {
   }
 
   Future<void> setAudioPath(String path) async {
-    state = state.copyWith(audioPath: path, audioDurationSeconds: null);
-    final duration = await _readMediaDurationSeconds(path);
-    if (state.audioPath != path || duration == null) {
+    final localPath = await _mediaStore.materializePath(
+      path,
+      kind: EditorMediaStoreKind.audio,
+    );
+    if (localPath == null) {
+      return;
+    }
+    state = state.copyWith(audioPath: localPath, audioDurationSeconds: null);
+    final duration = await _readMediaDurationSeconds(localPath);
+    if (state.audioPath != localPath || duration == null) {
+      _persist();
       return;
     }
     final durations = _distributeEvenly(state.media.length, duration);
@@ -414,6 +435,29 @@ class EditorController extends Notifier<EditorState> {
       durationSeconds: duration,
     );
     _persist();
+  }
+
+  Future<EditorState> prepareForExport() async {
+    final mediaPaths = await _mediaStore.materializeMediaPaths(
+      state.mediaPaths,
+    );
+    final audioPath = await _mediaStore.materializeAudioPath(state.audioPath);
+    if (mediaPaths.length != state.media.length) {
+      throw const FileSystemException(
+        'Stillora could not read the selected media. Please choose the file again.',
+      );
+    }
+
+    final nextMedia = [
+      for (var i = 0; i < state.media.length; i++)
+        MediaItem.fromPath(
+          mediaPaths[i],
+          durationSeconds: state.media[i].durationSeconds,
+        ),
+    ];
+    state = state.copyWith(media: nextMedia, audioPath: audioPath);
+    _persist();
+    return state;
   }
 
   void removeAudio() {
