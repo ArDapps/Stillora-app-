@@ -1,15 +1,11 @@
 "use client";
 
-import { LogOut } from "lucide-react";
 import { startGoogleSignIn, useSession } from "./use-session";
+import { UserMenu } from "./user-menu";
+import { isAdminEmail } from "@/lib/admin";
 
 export function AuthControls({ callbackUrl = "/editor" }: { callbackUrl?: string }) {
   const { user, loading } = useSession();
-
-  async function signOut() {
-    await fetch("/api/auth/signout", { method: "POST" });
-    window.location.reload();
-  }
 
   if (loading) {
     return <div className="size-9 animate-pulse rounded-full bg-[var(--color-card-high)]" aria-hidden />;
@@ -28,32 +24,7 @@ export function AuthControls({ callbackUrl = "/editor" }: { callbackUrl?: string
     );
   }
 
-  return (
-    <div className="flex items-center gap-2.5">
-      {user.picture ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          alt={user.name}
-          className="size-8 rounded-full border border-[var(--color-border)]"
-          referrerPolicy="no-referrer"
-          src={user.picture}
-        />
-      ) : (
-        <span className="grid size-8 place-items-center rounded-full bg-[var(--color-primary)] text-sm font-semibold text-[var(--color-primary-text)]">
-          {user.name.charAt(0).toUpperCase()}
-        </span>
-      )}
-      <span className="hidden max-w-[120px] truncate text-sm font-medium sm:block">{user.name}</span>
-      <button
-        aria-label="Sign out"
-        className="grid size-9 place-items-center rounded-md border border-[var(--color-border)] text-[var(--color-muted)] transition hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-        onClick={signOut}
-        type="button"
-      >
-        <LogOut size={16} />
-      </button>
-    </div>
-  );
+  return <UserMenu user={user} isAdmin={isAdminEmail(user.email)} />;
 }
 
 function GoogleGlyph() {

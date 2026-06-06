@@ -15,6 +15,7 @@ import {
   SourceMediaKind,
 } from "@/lib/stillora";
 import { getUserFromRequest } from "@/lib/auth";
+import { recordExport } from "@/lib/admin-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -196,6 +197,7 @@ export async function POST(request: Request) {
     }
 
     const video = await readFile(outputPath);
+    void recordExport(user, { presetId: body.presetId, duration });
 
     return new Response(video, {
       status: 201,

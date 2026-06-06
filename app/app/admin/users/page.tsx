@@ -1,0 +1,88 @@
+import { getUsers } from "@/lib/admin-store";
+
+export const dynamic = "force-dynamic";
+
+export default async function AdminUsersPage() {
+  const users = await getUsers();
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold" style={{ color: "var(--color-foreground)" }}>
+          Users
+        </h1>
+        <span className="text-sm" style={{ color: "var(--color-muted)" }}>
+          {users.length} total
+        </span>
+      </div>
+
+      {users.length === 0 ? (
+        <p className="rounded-xl border px-4 py-12 text-center text-sm" style={{ borderColor: "var(--color-border)", color: "var(--color-muted)" }}>
+          No users yet. They appear after their first Google sign-in.
+        </p>
+      ) : (
+        <div className="overflow-x-auto rounded-xl border" style={{ borderColor: "var(--color-border)" }}>
+          <table className="w-full text-sm" style={{ background: "var(--color-card)" }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
+                {["User", "Email", "First seen", "Last active", "Exports"].map((h) => (
+                  <th
+                    key={h}
+                    className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
+                    style={{ color: "var(--color-muted)" }}
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((u) => (
+                <tr key={u.sub} style={{ borderBottom: "1px solid var(--color-border-subtle)" }}>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      {u.picture ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={u.picture} alt="" className="size-8 rounded-full" referrerPolicy="no-referrer" />
+                      ) : (
+                        <span
+                          className="grid size-8 place-items-center rounded-full text-xs font-bold"
+                          style={{ background: "var(--color-primary)", color: "#fff" }}
+                        >
+                          {u.name.charAt(0).toUpperCase()}
+                        </span>
+                      )}
+                      <span className="font-medium" style={{ color: "var(--color-foreground)" }}>{u.name}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3" style={{ color: "var(--color-muted)" }}>{u.email}</td>
+                  <td className="px-4 py-3 whitespace-nowrap" style={{ color: "var(--color-muted)" }}>
+                    {fmt(u.firstSeen)}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap" style={{ color: "var(--color-muted)" }}>
+                    {fmt(u.lastSeen)}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className="rounded-full px-2.5 py-0.5 text-xs font-bold"
+                      style={{ background: "var(--color-secondary-soft)", color: "var(--color-secondary)" }}
+                    >
+                      {u.exportCount}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function fmt(iso: string) {
+  return new Date(iso).toLocaleString("en-US", {
+    month: "short", day: "numeric", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
+}

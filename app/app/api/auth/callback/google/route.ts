@@ -10,6 +10,7 @@ import {
   resolveBaseUrl,
   sessionCookieOptions,
 } from "@/lib/auth";
+import { recordUserLogin } from "@/lib/admin-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,6 +46,7 @@ export async function GET(request: NextRequest) {
     const redirectUri = `${base}/api/auth/callback/google`;
     const tokens = await exchangeGoogleCode(code, redirectUri);
     const user = await fetchGoogleUser(tokens.access_token);
+    void recordUserLogin(user);
     const session = await encodeSession(user);
 
     const response = NextResponse.redirect(new URL(callbackUrl, base));
