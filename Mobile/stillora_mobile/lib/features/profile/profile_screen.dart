@@ -73,7 +73,7 @@ class ProfileView extends ConsumerWidget {
                       width: 84,
                       height: 84,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => CircleAvatar(
+                      errorBuilder: (ctx, err, st) => CircleAvatar(
                         radius: 42,
                         child: Text(session.user.name.characters.first),
                       ),
