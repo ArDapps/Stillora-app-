@@ -1,5 +1,6 @@
-import { Crop, Download, Film, Loader2, MonitorPlay, Sparkles, Timer } from "lucide-react";
+import { Crop, Download, Film, Loader2, MonitorPlay, RotateCcw, Sparkles, Timer } from "lucide-react";
 import {
+  DEFAULT_DURATION_SECONDS,
   FIXED_DURATION_SECONDS,
   FitMode,
   OUTPUT_PRESETS,
@@ -183,6 +184,13 @@ function ExportPanel({ model }: { model: EditorModel }) {
     !state.sourceUploadReady ||
     (Boolean(state.audioAsset) && state.audioUpload.status !== "saved") ||
     state.exportStatus === "exporting";
+  const canReset =
+    Boolean(state.imageAsset) ||
+    state.isImageTimeline ||
+    Boolean(state.audioAsset) ||
+    state.presetId !== "reels" ||
+    state.fitMode !== "fit" ||
+    state.duration !== DEFAULT_DURATION_SECONDS;
 
   return (
     <section className="editor-card rounded-lg border p-4">
@@ -239,6 +247,19 @@ function ExportPanel({ model }: { model: EditorModel }) {
             <div className="h-full rounded-full bg-[var(--color-success)] transition-all" style={{ width: `${state.exportProgress}%` }} />
           </div>
         </div>
+      ) : null}
+      {canReset ? (
+        <button
+          className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md border border-[var(--color-border)] px-3 py-2 text-sm font-semibold text-[var(--color-muted-strong)] transition hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={state.exportStatus === "exporting"}
+          onClick={() => {
+            if (window.confirm("Clear all media, audio, and settings and start over?")) actions.resetEditor();
+          }}
+          type="button"
+        >
+          <RotateCcw size={16} className="shrink-0" />
+          <span>Start over</span>
+        </button>
       ) : null}
     </section>
   );

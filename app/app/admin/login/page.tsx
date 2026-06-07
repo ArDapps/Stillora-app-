@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("");
@@ -40,15 +41,42 @@ export default function AdminLoginPage() {
 
   return (
     <div
-      className="flex min-h-screen items-center justify-center p-4"
-      style={{ background: "var(--color-surface-dim)" }}
+      className="flex min-h-screen flex-col items-center justify-center p-4"
+      style={{ background: "var(--editor-page-bg)" }}
     >
+      <div className="mb-5 w-full max-w-sm">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1.5 text-sm font-medium transition hover:opacity-80"
+          style={{ color: "var(--color-muted)" }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+          Back to site
+        </Link>
+      </div>
+
       <div
         className="w-full max-w-sm rounded-2xl border p-8"
-        style={{ background: "var(--color-card)", borderColor: "var(--color-border)" }}
+        style={{
+          background: "var(--color-card-high)",
+          borderColor: "var(--color-border)",
+          boxShadow: "var(--shadow-card)",
+          backdropFilter: "blur(12px)",
+        }}
       >
-        <h1 className="mb-1 text-xl font-bold" style={{ color: "var(--color-foreground)" }}>
-          Admin access
+        <div
+          className="mb-5 grid size-12 place-items-center rounded-xl"
+          style={{ background: "var(--brand-gradient)" }}
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <rect x="3" y="11" width="18" height="11" rx="2" />
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
+        </div>
+        <h1 className="mb-1 text-2xl font-extrabold tracking-tight" style={{ color: "var(--color-foreground)" }}>
+          Admin <span className="gradient-text">access</span>
         </h1>
         <p className="mb-6 text-sm" style={{ color: "var(--color-muted)" }}>
           Enter your admin email and password.
@@ -102,16 +130,22 @@ export default function AdminLoginPage() {
           </Field>
 
           {error && (
-            <p className="text-sm" style={{ color: "var(--color-danger)" }}>{error}</p>
+            <p
+              className="rounded-lg px-3 py-2 text-sm"
+              style={{ background: "var(--color-danger-soft)", color: "var(--color-danger)" }}
+            >
+              {error}
+            </p>
           )}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg py-2.5 text-sm font-semibold transition disabled:opacity-50"
+            className="w-full rounded-lg py-2.5 text-sm font-bold transition hover:opacity-95 disabled:opacity-50"
             style={{
-              background: "var(--color-primary)",
-              color: "var(--color-primary-text)",
+              background: "var(--brand-gradient)",
+              color: "#ffffff",
+              boxShadow: "var(--shadow-primary)",
             }}
           >
             {loading ? "Signing in…" : "Sign in"}

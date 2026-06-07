@@ -266,6 +266,27 @@ export function useEditorModel(): EditorModel {
     resetExportState();
   }
 
+  /// Clears every input back to a blank editor: media, audio, preset, fit
+  /// mode, duration, and any errors or in-flight export state.
+  function resetEditor() {
+    if (isImageTimeline) revokeSlideUrls();
+    else revokeSourceUrls();
+    if (audioAsset) URL.revokeObjectURL(audioAsset.url);
+    setImageAsset(null);
+    setImageSlides([]);
+    setSelectedSlideId("");
+    setAudioAsset(null);
+    setPresetId("reels");
+    setFitMode("fit");
+    setDuration(DEFAULT_DURATION_SECONDS);
+    setImageError("");
+    setAudioError("");
+    setImageUpload(emptyUploadState);
+    setAudioUpload(emptyUploadState);
+    setIsAudioPlaying(false);
+    resetExportState();
+  }
+
   function onImageDrop(event: DragEvent<HTMLButtonElement>) {
     event.preventDefault();
     void handleMediaFiles(event.dataTransfer.files);
@@ -395,7 +416,7 @@ export function useEditorModel(): EditorModel {
     refs: { imageInputRef, addImagesInputRef, audioInputRef, audioRef },
     user,
     state: { imageAsset, imageSlides, selectedSlideId, selectedSlide, audioAsset, presetId, selectedPreset, fitMode, duration, imageError, audioError, imageUpload, audioUpload, isAudioPlaying, exportStatus, exportProgress, exportResult, exportError, isImageTimeline, timelineDuration, sourceUploadReady, previewAspectRatio, previewFrameWidth, outputDimensions, isAuthenticated: Boolean(user), authLoading },
-    actions: { handleMediaFiles, handleAdditionalImageFiles, handleAudioFile, removeImage, removeAudio, onImageDrop, onAudioDrop, startExport, resetExportState, handleExportDownload, updateSlideDuration, fitTimelineToDuration, removeSlide, uploadSlideImage, toggleAudio, handleAudioEnded, setSelectedSlideId, setPresetId, setFitMode, setDuration, setExportStatus, setExportProgress, setExportResult, setExportError, requireAuth },
+    actions: { handleMediaFiles, handleAdditionalImageFiles, handleAudioFile, removeImage, removeAudio, resetEditor, onImageDrop, onAudioDrop, startExport, resetExportState, handleExportDownload, updateSlideDuration, fitTimelineToDuration, removeSlide, uploadSlideImage, toggleAudio, handleAudioEnded, setSelectedSlideId, setPresetId, setFitMode, setDuration, setExportStatus, setExportProgress, setExportResult, setExportError, requireAuth },
   };
 }
 

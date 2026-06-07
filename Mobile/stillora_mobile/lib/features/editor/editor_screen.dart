@@ -63,18 +63,54 @@ class EditorView extends ConsumerWidget {
 
   void _convert(BuildContext context, WidgetRef ref, EditorState editor) {
     final session = ref.read(authControllerProvider).asData?.value;
-    if (!editor.canExport) {
-      return;
-    }
 
+    // Not signed in → send to login/register first. This is allowed even with
+    // no media so the "Register to Convert" CTA is always actionable; after
+    // signing in we resume the export when media is ready, otherwise we drop
+    // them back on the editor to pick media.
     if (session == null) {
+      final next = editor.canExport
+          ? ExportProgressScreen.routePath
+          : EditorScreen.routePath;
       context.go(
-        '${LoginScreen.routePath}?next=${Uri.encodeComponent(ExportProgressScreen.routePath)}',
+        '${LoginScreen.routePath}?next=${Uri.encodeComponent(next)}',
       );
       return;
     }
 
+    if (!editor.canExport) {
+      return;
+    }
+
     context.push(PreExportPreviewScreen.routePath);
+  }
+
+  Future<void> _confirmReset(
+    BuildContext context,
+    EditorController controller,
+  ) async {
+    final shouldReset = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Start over?'),
+        content: const Text(
+          'This clears your media, audio, and settings. This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Reset'),
+          ),
+        ],
+      ),
+    );
+    if (shouldReset == true) {
+      controller.reset();
+    }
   }
 
   @override
@@ -102,6 +138,7 @@ class EditorView extends ConsumerWidget {
                 controller: controller,
                 onPickAudio: () => _pickAudio(ref),
                 onConvert: () => _convert(context, ref, editor),
+                onReset: () => _confirmReset(context, controller),
               )
             : _MobileEditorFlow(
                 editor: editor,
@@ -109,6 +146,7 @@ class EditorView extends ConsumerWidget {
                 controller: controller,
                 onPickAudio: () => _pickAudio(ref),
                 onConvert: () => _convert(context, ref, editor),
+                onReset: () => _confirmReset(context, controller),
               ),
       ),
     );
@@ -122,6 +160,7 @@ class _MobileEditorFlow extends StatelessWidget {
     required this.controller,
     required this.onPickAudio,
     required this.onConvert,
+    required this.onReset,
   });
 
   final EditorState editor;
@@ -129,6 +168,7 @@ class _MobileEditorFlow extends StatelessWidget {
   final EditorController controller;
   final VoidCallback onPickAudio;
   final VoidCallback onConvert;
+  final VoidCallback onReset;
 
   @override
   Widget build(BuildContext context) {
@@ -144,6 +184,17 @@ class _MobileEditorFlow extends StatelessWidget {
         const SizedBox(height: StilloraSpacing.lg),
         const _ProgressRail(),
         const SizedBox(height: StilloraSpacing.lg),
+        if (_canReset(editor)) ...[
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: onReset,
+              icon: const Icon(Icons.restart_alt_rounded, size: 18),
+              label: const Text('Start over'),
+            ),
+          ),
+          const SizedBox(height: StilloraSpacing.xs),
+        ],
         // Main preview card – tap empty state to upload
         _MobilePreviewPanel(editor: editor, controller: controller),
         const SizedBox(height: StilloraSpacing.sm),
@@ -168,7 +219,7 @@ class _MobileEditorFlow extends StatelessWidget {
         _PrivacyCard(isSignedIn: session != null),
         const SizedBox(height: StilloraSpacing.sm),
         StilloraPrimaryButton(
-          onPressed: editor.canExport ? onConvert : null,
+          onPressed: (session == null || editor.canExport) ? onConvert : null,
           icon: session == null
               ? Icons.lock_rounded
               : Icons.auto_fix_high_rounded,
@@ -377,6 +428,7 @@ class _DesktopEditorWorkspace extends StatelessWidget {
     required this.controller,
     required this.onPickAudio,
     required this.onConvert,
+    required this.onReset,
   });
 
   final EditorState editor;
@@ -384,6 +436,7 @@ class _DesktopEditorWorkspace extends StatelessWidget {
   final EditorController controller;
   final VoidCallback onPickAudio;
   final VoidCallback onConvert;
+  final VoidCallback onReset;
 
   @override
   Widget build(BuildContext context) {
@@ -425,6 +478,7 @@ class _DesktopEditorWorkspace extends StatelessWidget {
                 editor: editor,
                 isSignedIn: session != null,
                 onConvert: onConvert,
+                onReset: onReset,
                 compact: compact,
               ),
               const SizedBox(height: 10),
@@ -498,6 +552,7 @@ class _DesktopEditorWorkspace extends StatelessWidget {
                           editor: editor,
                           isSignedIn: session != null,
                           onConvert: onConvert,
+                          onReset: onReset,
                           compact: compact,
                         ),
                         const SizedBox(height: 10),
@@ -825,12 +880,14 @@ class _DesktopExportPanel extends StatelessWidget {
     required this.editor,
     required this.isSignedIn,
     required this.onConvert,
+    required this.onReset,
     this.compact = false,
   });
 
   final EditorState editor;
   final bool isSignedIn;
   final VoidCallback onConvert;
+  final VoidCallback onReset;
   final bool compact;
 
   @override
@@ -911,10 +968,18 @@ class _DesktopExportPanel extends StatelessWidget {
           ),
           SizedBox(height: compact ? 10 : StilloraSpacing.sm),
           StilloraPrimaryButton(
-            onPressed: editor.canExport ? onConvert : null,
+            onPressed: (!isSignedIn || editor.canExport) ? onConvert : null,
             icon: isSignedIn ? Icons.auto_fix_high_rounded : Icons.lock_rounded,
             label: isSignedIn ? 'Convert to MP4' : 'Register to Convert',
           ),
+          if (_canReset(editor)) ...[
+            const SizedBox(height: StilloraSpacing.xs),
+            OutlinedButton.icon(
+              onPressed: onReset,
+              icon: const Icon(Icons.restart_alt_rounded, size: 18),
+              label: const Text('Start over'),
+            ),
+          ],
         ],
       ),
     );
@@ -2126,6 +2191,15 @@ String _formatDuration(int seconds) {
   }
   return '$minutes:${remainder.toString().padLeft(2, '0')}';
 }
+
+/// Whether the editor holds anything worth clearing (media, audio, or a
+/// non-default preset/duration/resize choice).
+bool _canReset(EditorState editor) =>
+    editor.hasMedia ||
+    editor.audioPath != null ||
+    editor.preset != defaultVideoPreset ||
+    editor.durationSeconds != defaultDurationSeconds ||
+    editor.resizeMode != ResizeMode.fit;
 
 class _PrivacyCard extends StatelessWidget {
   const _PrivacyCard({required this.isSignedIn, this.compact = false});

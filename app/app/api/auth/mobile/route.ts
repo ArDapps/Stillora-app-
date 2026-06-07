@@ -3,6 +3,7 @@ import {
   fetchGoogleUser,
   fetchGoogleUserFromIdToken,
 } from "@/lib/auth";
+import { recordUserLogin } from "@/lib/admin-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,6 +38,10 @@ export async function POST(request: Request) {
       ? await fetchGoogleUserFromIdToken(idToken)
       : await fetchGoogleUser(accessToken!);
     const token = await encodeSession(user);
+
+    // Surface native (mobile/desktop) sign-ins in the admin dashboard, same as
+    // the web OAuth callback does. Fire-and-forget — never block sign-in.
+    void recordUserLogin(user);
 
     return Response.json({ token, user });
   } catch {

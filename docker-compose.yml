@@ -17,6 +17,9 @@ services:
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       DATABASE_URL: postgresql://${POSTGRES_USER:-stillora}:${POSTGRES_PASSWORD:-change-me}@postgres:55432/${POSTGRES_DB:-stillora}
       MEDIA_ROOT: /data/stillora
+      # Keep the admin dashboard store on the persistent volume so user/export
+      # activity survives redeploys (default is an ephemeral container path).
+      ADMIN_STORE_PATH: /data/stillora/admin-store.json
       PUBLIC_MEDIA_BASE_URL: ${PUBLIC_MEDIA_BASE_URL:-}
     ports:
       - "${APP_PORT:-8317}:3087"

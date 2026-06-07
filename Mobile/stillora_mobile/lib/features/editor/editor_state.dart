@@ -408,6 +408,14 @@ class EditorController extends Notifier<EditorState> {
     _persist();
   }
 
+  /// Clears every input back to a blank editor: media, audio, preset, duration,
+  /// and resize mode. Also wipes the saved session so nothing is restored.
+  void reset() {
+    state = const EditorState();
+    final prefs = ref.read(appPreferencesProvider);
+    unawaited(prefs.clearEditorSession());
+  }
+
   Future<void> setAudioPath(String path) async {
     final localPath = await _mediaStore.materializePath(
       path,

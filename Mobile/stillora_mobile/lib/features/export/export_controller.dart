@@ -1,9 +1,12 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:stillora_video_engine/stillora_video_engine.dart' as engine;
 
+import '../../core/api/api_client.dart';
+import '../../core/auth/auth_controller.dart';
 import '../../core/platform/platform_info.dart';
 import '../editor/editor_state.dart';
 import '../gallery/gallery_controller.dart';
@@ -81,6 +84,34 @@ class ExportController extends AsyncNotifier<engine.ExportResult?> {
               createdAt: DateTime.now(),
             ),
           );
+      // Report the local export to the backend so it shows in the admin
+      // dashboard alongside web activity. Telemetry only — never block export.
+      unawaited(_reportExport(exportEditor, result));
+    }
+  }
+
+  /// Tells the shared backend an export completed so every app's activity is
+  /// reflected in the admin dashboard. Native apps export on-device and never
+  /// hit `/api/exports`, so this is the only signal the server gets.
+  Future<void> _reportExport(
+    EditorState editor,
+    engine.ExportResult result,
+  ) async {
+    try {
+      final token = ref.read(authControllerProvider).asData?.value?.token;
+      if (token == null) {
+        return;
+      }
+      await ref.read(dioProvider).post<void>(
+        '/api/exports/record',
+        data: {
+          'presetId': editor.preset.id,
+          'duration': result.durationSeconds,
+        },
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+    } catch (_) {
+      // Telemetry must never disrupt the export flow.
     }
   }
 

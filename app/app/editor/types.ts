@@ -88,6 +88,7 @@ export type EditorActions = {
   handleAudioFile: (file: File | undefined) => Promise<void>;
   removeImage: () => void;
   removeAudio: () => void;
+  resetEditor: () => void;
   onImageDrop: (event: React.DragEvent<HTMLButtonElement>) => void;
   onAudioDrop: (event: React.DragEvent<HTMLButtonElement>) => void;
   startExport: () => Promise<void>;
