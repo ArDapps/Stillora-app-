@@ -1,5 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import path from "node:path";
+import { query } from "./db";
 
 export type UserRecord = {
   sub: string;
@@ -21,31 +20,52 @@ export type ExportRecord = {
   duration: number;
 };
 
-type AdminStore = {
-  users: UserRecord[];
-  exports: ExportRecord[];
+type UserRow = {
+  sub: string;
+  email: string;
+  name: string;
+  picture: string;
+  first_seen: Date;
+  last_seen: Date;
+  export_count: number;
 };
 
-function getStorePath(): string {
-  return (
-    process.env.ADMIN_STORE_PATH ??
-    path.join(process.cwd(), "data", "admin-store.json")
-  );
+type ExportRow = {
+  id: string;
+  user_sub: string;
+  user_email: string;
+  user_name: string;
+  preset_id: string;
+  duration: number;
+  created_at: Date;
+};
+
+function toIso(value: Date | string): string {
+  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
 }
 
-async function readStore(): Promise<AdminStore> {
-  try {
-    const raw = await readFile(getStorePath(), "utf-8");
-    return JSON.parse(raw) as AdminStore;
-  } catch {
-    return { users: [], exports: [] };
-  }
+function mapUser(row: UserRow): UserRecord {
+  return {
+    sub: row.sub,
+    email: row.email,
+    name: row.name,
+    picture: row.picture,
+    firstSeen: toIso(row.first_seen),
+    lastSeen: toIso(row.last_seen),
+    exportCount: Number(row.export_count) || 0,
+  };
 }
 
-async function writeStore(store: AdminStore): Promise<void> {
-  const storePath = getStorePath();
-  await mkdir(path.dirname(storePath), { recursive: true });
-  await writeFile(storePath, JSON.stringify(store, null, 2));
+function mapExport(row: ExportRow): ExportRecord {
+  return {
+    id: row.id,
+    userSub: row.user_sub,
+    userEmail: row.user_email,
+    userName: row.user_name,
+    timestamp: toIso(row.created_at),
+    presetId: row.preset_id,
+    duration: Number(row.duration) || 0,
+  };
 }
 
 export async function recordUserLogin(user: {
@@ -55,19 +75,19 @@ export async function recordUserLogin(user: {
   picture: string;
 }): Promise<void> {
   try {
-    const store = await readStore();
-    const now = new Date().toISOString();
-    const existing = store.users.find((u) => u.sub === user.sub);
-    if (existing) {
-      existing.lastSeen = now;
-      existing.name = user.name;
-      existing.picture = user.picture;
-    } else {
-      store.users.push({ ...user, firstSeen: now, lastSeen: now, exportCount: 0 });
-    }
-    await writeStore(store);
-  } catch {
-    // Never fail a login because of store errors
+    await query(
+      `INSERT INTO admin_users (sub, email, name, picture, first_seen, last_seen)
+       VALUES ($1, $2, $3, $4, now(), now())
+       ON CONFLICT (sub) DO UPDATE
+         SET email = EXCLUDED.email,
+             name = EXCLUDED.name,
+             picture = EXCLUDED.picture,
+             last_seen = now()`,
+      [user.sub, user.email, user.name, user.picture],
+    );
+  } catch (error) {
+    // Never fail a login because of store errors.
+    console.error("recordUserLogin failed:", error);
   }
 }
 
@@ -76,46 +96,61 @@ export async function recordExport(
   data: { presetId: string; duration: number },
 ): Promise<void> {
   try {
-    const store = await readStore();
-    store.exports.push({
-      id: crypto.randomUUID(),
-      userSub: user.sub,
-      userEmail: user.email,
-      userName: user.name,
-      timestamp: new Date().toISOString(),
-      presetId: data.presetId,
-      duration: data.duration,
-    });
-    if (store.exports.length > 1000) {
-      store.exports = store.exports.slice(-1000);
-    }
-    const rec = store.users.find((u) => u.sub === user.sub);
-    if (rec) rec.exportCount += 1;
-    await writeStore(store);
-  } catch {
-    // Never fail an export because of store errors
+    // Ensure the user row exists even if the login event was missed (e.g. a
+    // returning native client that only restored its session).
+    await query(
+      `INSERT INTO admin_users (sub, email, name, last_seen)
+       VALUES ($1, $2, $3, now())
+       ON CONFLICT (sub) DO UPDATE SET last_seen = now()`,
+      [user.sub, user.email, user.name],
+    );
+    await query(
+      `INSERT INTO admin_exports (user_sub, user_email, user_name, preset_id, duration)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [user.sub, user.email, user.name, data.presetId, data.duration],
+    );
+  } catch (error) {
+    // Never fail an export because of store errors.
+    console.error("recordExport failed:", error);
   }
 }
 
 export async function getUsers(): Promise<UserRecord[]> {
-  const store = await readStore();
-  return [...store.users].sort(
-    (a, b) => new Date(b.lastSeen).getTime() - new Date(a.lastSeen).getTime(),
-  );
+  try {
+    const rows = await query<UserRow>(
+      `SELECT u.sub, u.email, u.name, u.picture, u.first_seen, u.last_seen,
+              COUNT(e.id)::int AS export_count
+       FROM admin_users u
+       LEFT JOIN admin_exports e ON e.user_sub = u.sub
+       GROUP BY u.sub
+       ORDER BY u.last_seen DESC`,
+    );
+    return rows.map(mapUser);
+  } catch (error) {
+    console.error("getUsers failed:", error);
+    return [];
+  }
 }
 
 export async function getRecentExports(limit = 50): Promise<ExportRecord[]> {
-  const store = await readStore();
-  return [...store.exports]
-    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-    .slice(0, limit);
+  try {
+    const rows = await query<ExportRow>(
+      `SELECT id, user_sub, user_email, user_name, preset_id, duration, created_at
+       FROM admin_exports
+       ORDER BY created_at DESC
+       LIMIT $1`,
+      [limit],
+    );
+    return rows.map(mapExport);
+  } catch (error) {
+    console.error("getRecentExports failed:", error);
+    return [];
+  }
 }
 
 export async function deleteUser(sub: string): Promise<void> {
-  const store = await readStore();
-  store.users = store.users.filter((u) => u.sub !== sub);
-  store.exports = store.exports.filter((e) => e.userSub !== sub);
-  await writeStore(store);
+  await query(`DELETE FROM admin_exports WHERE user_sub = $1`, [sub]);
+  await query(`DELETE FROM admin_users WHERE sub = $1`, [sub]);
 }
 
 export async function getStats(): Promise<{
@@ -123,11 +158,26 @@ export async function getStats(): Promise<{
   totalExports: number;
   exportsToday: number;
 }> {
-  const store = await readStore();
-  const today = new Date().toISOString().slice(0, 10);
-  return {
-    totalUsers: store.users.length,
-    totalExports: store.exports.length,
-    exportsToday: store.exports.filter((e) => e.timestamp.startsWith(today)).length,
-  };
+  try {
+    const rows = await query<{
+      total_users: number;
+      total_exports: number;
+      exports_today: number;
+    }>(
+      `SELECT
+         (SELECT COUNT(*)::int FROM admin_users) AS total_users,
+         (SELECT COUNT(*)::int FROM admin_exports) AS total_exports,
+         (SELECT COUNT(*)::int FROM admin_exports
+            WHERE created_at >= date_trunc('day', now())) AS exports_today`,
+    );
+    const row = rows[0];
+    return {
+      totalUsers: Number(row?.total_users) || 0,
+      totalExports: Number(row?.total_exports) || 0,
+      exportsToday: Number(row?.exports_today) || 0,
+    };
+  } catch (error) {
+    console.error("getStats failed:", error);
+    return { totalUsers: 0, totalExports: 0, exportsToday: 0 };
+  }
 }
