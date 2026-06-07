@@ -12,15 +12,33 @@ import '../../core/design/stillora_spacing.dart';
 import '../../core/design/stillora_surface.dart';
 import '../../core/widgets/desktop_shell.dart';
 import '../export/export_controller.dart';
+import '../rating/rating_prompt.dart';
 import '../tabs/app_tabs_screen.dart';
 
-class PreviewScreen extends ConsumerWidget {
+class PreviewScreen extends ConsumerStatefulWidget {
   const PreviewScreen({super.key});
 
   static const routePath = '/preview';
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PreviewScreen> createState() => _PreviewScreenState();
+}
+
+class _PreviewScreenState extends ConsumerState<PreviewScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final outputPath = ref.read(exportControllerProvider).asData?.value?.outputPath;
+      if (outputPath != null && File(outputPath).existsSync()) {
+        maybePromptForReview(ref);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final result = ref.watch(exportControllerProvider).asData?.value;
     final outputPath = result?.outputPath;
     final fileExists =

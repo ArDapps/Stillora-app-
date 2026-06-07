@@ -21,6 +21,7 @@ class AppPreferences {
   static const _defaultPresetKey = 'stillora.editor.defaultPreset';
   static const _defaultResizeModeKey = 'stillora.editor.defaultResizeMode';
   static const _hasSeenOnboardingKey = 'stillora.onboarding.seen';
+  static const _ratingLastPromptKey = 'stillora.rating.lastPromptMs';
 
   final SharedPreferences _preferences;
 
@@ -29,6 +30,21 @@ class AppPreferences {
 
   Future<void> setHasSeenOnboarding(bool value) {
     return _preferences.setBool(_hasSeenOnboardingKey, value);
+  }
+
+  // ── Rating prompt ──────────────────────────────────────────────────────────
+
+  /// Last time the review request was made, used for the 4-day cooldown.
+  DateTime? get ratingLastPromptAt {
+    final ms = _preferences.getInt(_ratingLastPromptKey);
+    return ms == null ? null : DateTime.fromMillisecondsSinceEpoch(ms);
+  }
+
+  Future<void> setRatingLastPromptAt(DateTime value) {
+    return _preferences.setInt(
+      _ratingLastPromptKey,
+      value.millisecondsSinceEpoch,
+    );
   }
 
   int get defaultDurationSeconds =>

@@ -22,4 +22,9 @@ class AppConstants {
   );
   static const privacyUrl = 'https://stillora.loopara.app/privacy';
   static const termsUrl = 'https://stillora.loopara.app/terms';
+
+  /// Where to send users to leave a review on platforms without a native
+  /// in-app review dialog (Linux/Windows, or when the store flow is
+  /// unavailable). Point this at the store listing once it exists.
+  static const reviewUrl = 'https://stillora.loopara.app';
 }
