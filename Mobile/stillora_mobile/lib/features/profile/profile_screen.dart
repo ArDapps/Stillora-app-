@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/auth/auth_controller.dart';
 import '../../core/constants/app_constants.dart';
+import '../auth/auth_buttons.dart';
 import '../auth/login_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {

@@ -91,6 +91,33 @@ export async function recordUserLogin(user: {
   }
 }
 
+/**
+ * Returns the `sub` of an existing user with this exact email, if any. Used to
+ * link an Apple sign-in to a pre-existing (e.g. Google) account when the email
+ * is verified, so both providers resolve to the same Stillora user.
+ */
+export async function findUserSubByEmail(
+  email: string,
+): Promise<string | null> {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+  try {
+    const rows = await query<{ sub: string }>(
+      `SELECT sub FROM admin_users
+       WHERE lower(email) = $1
+       ORDER BY first_seen ASC
+       LIMIT 1`,
+      [normalized],
+    );
+    return rows[0]?.sub ?? null;
+  } catch (error) {
+    console.error("findUserSubByEmail failed:", error);
+    return null;
+  }
+}
+
 export async function recordExport(
   user: { sub: string; email: string; name: string },
   data: { presetId: string; duration: number },

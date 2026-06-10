@@ -2,11 +2,12 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_spacing.dart';
+import '../../core/platform/media_actions.dart';
 import '../../core/widgets/stillora_video_player_panel.dart';
 import 'gallery_controller.dart';
 import 'local_export_record.dart';
@@ -54,13 +55,47 @@ class _GalleryVideoScreenState extends ConsumerState<GalleryVideoScreen> {
     super.dispose();
   }
 
-  Future<void> _share() async {
-    await SharePlus.instance.share(
-      ShareParams(
-        files: [XFile(widget.record.outputPath, mimeType: 'video/mp4')],
-        text: 'Made with Stillora',
+  bool _saving = false;
+
+  void _snack(String message, {bool offerSettings = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        action: offerSettings
+            ? SnackBarAction(label: 'Settings', onPressed: openAppSettings)
+            : null,
       ),
     );
+  }
+
+  Future<void> _share() async {
+    final ok = await MediaActions.shareVideo(context, widget.record.outputPath);
+    if (!ok) {
+      _snack('That video is no longer available.');
+    }
+  }
+
+  Future<void> _save() async {
+    if (_saving) return;
+    setState(() => _saving = true);
+    try {
+      final outcome = await MediaActions.saveToCameraRoll(
+        widget.record.outputPath,
+      );
+      switch (outcome) {
+        case SaveOutcome.saved:
+          _snack('Saved to your Camera Roll.');
+        case SaveOutcome.missingFile:
+          _snack('That video is no longer available.');
+        case SaveOutcome.permissionDenied:
+          _snack('Allow photo access to save your video.', offerSettings: true);
+        case SaveOutcome.failed:
+          _snack('Could not save the video. Please try again.');
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   Future<void> _delete() async {
@@ -109,7 +144,6 @@ class _GalleryVideoScreenState extends ConsumerState<GalleryVideoScreen> {
   @override
   Widget build(BuildContext context) {
     final controller = _controller;
-    final ready = controller != null && controller.value.isInitialized;
 
     return Scaffold(
       appBar: AppBar(
@@ -141,10 +175,21 @@ class _GalleryVideoScreenState extends ConsumerState<GalleryVideoScreen> {
           const SizedBox(height: StilloraSpacing.sm),
           StilloraVideoPlayerPanel(controller: controller),
           const SizedBox(height: StilloraSpacing.xs),
+          FilledButton.icon(
+            onPressed: _saving ? null : _save,
+            icon: _saving
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.download_rounded),
+            label: Text(_saving ? 'Saving…' : 'Save to Camera Roll'),
+          ),
+          const SizedBox(height: StilloraSpacing.xs),
           OutlinedButton.icon(
-            onPressed: ready ? _share : null,
+            onPressed: _share,
             icon: const Icon(Icons.ios_share_rounded),
-            label: const Text('Save or Share'),
+            label: const Text('Share'),
           ),
         ],
       ),

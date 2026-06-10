@@ -22,6 +22,8 @@ class AppPreferences {
   static const _defaultResizeModeKey = 'stillora.editor.defaultResizeMode';
   static const _hasSeenOnboardingKey = 'stillora.onboarding.seen';
   static const _ratingLastPromptKey = 'stillora.rating.lastPromptMs';
+  static const _ratedAfterFirstExportKey =
+      'stillora.rating.requestedAfterFirstExport';
 
   final SharedPreferences _preferences;
 
@@ -45,6 +47,15 @@ class AppPreferences {
       _ratingLastPromptKey,
       value.millisecondsSinceEpoch,
     );
+  }
+
+  /// Whether the one-time "rate after your first export" prompt has already been
+  /// requested on this device. Once true, Stillora never auto-requests again.
+  bool get hasRequestedRatingAfterFirstExport =>
+      _preferences.getBool(_ratedAfterFirstExportKey) ?? false;
+
+  Future<void> setHasRequestedRatingAfterFirstExport(bool value) {
+    return _preferences.setBool(_ratedAfterFirstExportKey, value);
   }
 
   int get defaultDurationSeconds =>

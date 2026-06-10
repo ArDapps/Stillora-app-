@@ -7,6 +7,7 @@ import '../features/editor/choose_preset_screen.dart';
 import '../features/editor/editor_screen.dart';
 import '../features/editor/pre_export_preview_screen.dart';
 import '../features/editor/upload_media_screen.dart';
+import '../features/editor/voice_narration_screen.dart';
 import '../features/export/export_progress_screen.dart';
 import '../features/gallery/gallery_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
@@ -60,6 +61,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AddAudioScreen.routePath,
         builder: (context, state) => const AddAudioScreen(),
+      ),
+      GoRoute(
+        path: VoiceNarrationScreen.routePath,
+        builder: (context, state) => const VoiceNarrationScreen(),
       ),
       GoRoute(
         path: PreExportPreviewScreen.routePath,

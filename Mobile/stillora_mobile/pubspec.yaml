@@ -32,6 +32,7 @@ dependencies:
     sdk: flutter
 
   cupertino_icons: ^1.0.8
+  crypto: ^3.0.6
   dio: ^5.9.0
   equatable: ^2.0.7
   file_picker: ^10.3.7
@@ -52,6 +53,11 @@ dependencies:
   hive_flutter: ^1.1.0
   url_launcher: ^6.3.1
   in_app_review: ^2.0.12
+  sign_in_with_apple: ^7.0.1
+  record: ^6.0.0
+  audioplayers: ^6.1.0
+  gal: ^2.3.0
+  permission_handler: ^12.0.0
 
 # path_provider_foundation 2.5.0+ migrated to the `objective_c` package, which
 # uses Flutter's native-assets/code-assets build hooks. On Flutter 3.38.x stable

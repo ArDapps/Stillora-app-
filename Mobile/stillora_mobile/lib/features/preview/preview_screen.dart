@@ -4,12 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_glow.dart';
 import '../../core/design/stillora_spacing.dart';
 import '../../core/design/stillora_surface.dart';
+import '../../core/platform/media_actions.dart';
 import '../../core/widgets/desktop_shell.dart';
 import '../export/export_controller.dart';
 import '../rating/rating_prompt.dart';
@@ -25,6 +26,11 @@ class PreviewScreen extends ConsumerStatefulWidget {
 }
 
 class _PreviewScreenState extends ConsumerState<PreviewScreen> {
+  bool _sharing = false;
+  bool _saving = false;
+
+  bool get _busy => _sharing || _saving;
+
   @override
   void initState() {
     super.initState();
@@ -37,6 +43,62 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
     });
   }
 
+  String? get _outputPath =>
+      ref.read(exportControllerProvider).asData?.value?.outputPath;
+
+  void _snack(String message, {bool offerSettings = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        action: offerSettings
+            ? SnackBarAction(
+                label: 'Settings',
+                onPressed: openAppSettings,
+              )
+            : null,
+      ),
+    );
+  }
+
+  Future<void> _share() async {
+    final path = _outputPath;
+    if (path == null || _busy) return;
+    setState(() => _sharing = true);
+    try {
+      final ok = await MediaActions.shareVideo(context, path);
+      if (!ok) {
+        _snack('That video is no longer available. Please export again.');
+      }
+    } finally {
+      if (mounted) setState(() => _sharing = false);
+    }
+  }
+
+  Future<void> _save() async {
+    final path = _outputPath;
+    if (path == null || _busy) return;
+    setState(() => _saving = true);
+    try {
+      final outcome = await MediaActions.saveToCameraRoll(path);
+      switch (outcome) {
+        case SaveOutcome.saved:
+          _snack('Saved to your Camera Roll.');
+        case SaveOutcome.missingFile:
+          _snack('That video is no longer available. Please export again.');
+        case SaveOutcome.permissionDenied:
+          _snack(
+            'Allow photo access to save your video.',
+            offerSettings: true,
+          );
+        case SaveOutcome.failed:
+          _snack('Could not save the video. Please try again.');
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final result = ref.watch(exportControllerProvider).asData?.value;
@@ -47,16 +109,6 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
     void openEditor() {
       ref.read(homeTabProvider.notifier).state = 0;
       context.go(AppTabsScreen.routePath);
-    }
-
-    Future<void> share() async {
-      if (outputPath == null) return;
-      await SharePlus.instance.share(
-        ShareParams(
-          files: [XFile(outputPath, mimeType: 'video/mp4')],
-          text: 'Made with Stillora',
-        ),
-      );
     }
 
     if (!fileExists) {
@@ -117,18 +169,23 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
                 ),
               ),
               const SizedBox(height: 14),
-              _PlatformRow(onShare: share),
+              _PlatformRow(onShare: _busy ? null : _share),
               const SizedBox(height: 24),
               StilloraPrimaryButton(
-                onPressed: share,
+                onPressed: _busy ? null : _share,
                 icon: Icons.ios_share_rounded,
-                label: 'Save & Share',
+                label: _sharing ? 'Preparing…' : 'Save & Share',
               ),
               const SizedBox(height: 12),
               OutlinedButton.icon(
-                onPressed: share,
-                icon: const Icon(Icons.download_rounded),
-                label: const Text('Save to Camera Roll'),
+                onPressed: _busy ? null : _save,
+                icon: _saving
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.download_rounded),
+                label: Text(_saving ? 'Saving…' : 'Save to Camera Roll'),
               ),
               const SizedBox(height: 20),
               Center(
@@ -303,7 +360,7 @@ class _VideoCard extends StatelessWidget {
 class _PlatformRow extends StatelessWidget {
   const _PlatformRow({required this.onShare});
 
-  final Future<void> Function() onShare;
+  final Future<void> Function()? onShare;
 
   @override
   Widget build(BuildContext context) {
@@ -349,7 +406,7 @@ class _PlatformButton extends StatelessWidget {
   final dynamic icon;
   final String label;
   final Color color;
-  final Future<void> Function() onTap;
+  final Future<void> Function()? onTap;
   final bool isMaterial;
 
   @override

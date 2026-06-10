@@ -13,6 +13,7 @@ import '../../core/design/stillora_glow.dart';
 import '../../core/design/stillora_spacing.dart';
 import '../../core/widgets/stillora_mark.dart';
 import '../tabs/app_tabs_screen.dart';
+import 'auth_buttons.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key, this.nextPath});
@@ -108,8 +109,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                         _Reveal(
                           animation: _step(0.2, 0.68),
                           child: Text(
-                            'Register to convert. You can explore Stillora '
-                            'before signing in.',
+                            'Sign in to unlock Voice Narration. Basic videos '
+                            'stay free — no account needed.',
                             textAlign: TextAlign.center,
                             style: Theme.of(context).textTheme.bodyLarge
                                 ?.copyWith(
@@ -124,6 +125,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                           child: const _PrivacyNote(),
                         ),
                         const SizedBox(height: 20),
+                        if (appleSignInSupported) ...[
+                          _Reveal(
+                            animation: _step(0.38, 0.86),
+                            child: _AppleButton(
+                              loading: auth.isLoading,
+                              onPressed: () => ref
+                                  .read(authControllerProvider.notifier)
+                                  .signInWithApple(),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
                         _Reveal(
                           animation: _step(0.42, 0.9),
                           child: _GoogleButton(
@@ -173,7 +186,48 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     if (error is AuthFailure) {
       return error.message;
     }
-    return 'Google sign-in failed. Please try again.';
+    return 'Sign-in failed. Please try again.';
+  }
+}
+
+/// Black "Continue with Apple" button with the same animated brand glow as the
+/// Google button so both options read as equally prominent.
+class _AppleButton extends StatelessWidget {
+  const _AppleButton({required this.loading, required this.onPressed});
+
+  final bool loading;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return StilloraPulse(
+      builder: (context, t) {
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: loading
+                ? null
+                : [
+                    BoxShadow(
+                      color: const Color(0xff8b5cf6).withValues(
+                        alpha: 0.20 + t * 0.20,
+                      ),
+                      blurRadius: 20 + t * 16,
+                      spreadRadius: 1,
+                    ),
+                    BoxShadow(
+                      color: const Color(0xff22d3ee).withValues(
+                        alpha: 0.16 + t * 0.16,
+                      ),
+                      blurRadius: 26 + t * 18,
+                      spreadRadius: 1,
+                    ),
+                  ],
+          ),
+          child: StilloraAppleButton(loading: loading, onPressed: onPressed),
+        );
+      },
+    );
   }
 }
 

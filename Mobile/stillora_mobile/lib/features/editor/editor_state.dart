@@ -87,6 +87,7 @@ class EditorState extends Equatable {
     this.selectedIndex = 0,
     this.audioPath,
     this.audioDurationSeconds,
+    this.audioIsNarration = false,
     this.preset = defaultVideoPreset,
     this.durationSeconds = defaultDurationSeconds,
     this.resizeMode = ResizeMode.fit,
@@ -96,6 +97,11 @@ class EditorState extends Equatable {
   final int selectedIndex;
   final String? audioPath;
   final int? audioDurationSeconds;
+
+  /// True when the attached audio came from the Voice Narration recorder rather
+  /// than a picked soundtrack file. Only affects how the editor labels it.
+  final bool audioIsNarration;
+
   final VideoPreset preset;
   final int durationSeconds;
   final ResizeMode resizeMode;
@@ -149,6 +155,7 @@ class EditorState extends Equatable {
     String? audioPath,
     bool clearAudio = false,
     Object? audioDurationSeconds = _unset,
+    bool? audioIsNarration,
     VideoPreset? preset,
     int? durationSeconds,
     ResizeMode? resizeMode,
@@ -167,6 +174,9 @@ class EditorState extends Equatable {
       selectedIndex: selectedIndex ?? this.selectedIndex,
       audioPath: clearAudio ? null : audioPath ?? this.audioPath,
       audioDurationSeconds: nextAudioDurationSeconds,
+      audioIsNarration: clearAudio
+          ? false
+          : audioIsNarration ?? this.audioIsNarration,
       preset: preset ?? this.preset,
       durationSeconds: normalizeDurationSeconds(
         durationSeconds ?? this.durationSeconds,
@@ -181,6 +191,7 @@ class EditorState extends Equatable {
     selectedIndex,
     audioPath,
     audioDurationSeconds,
+    audioIsNarration,
     preset,
     durationSeconds,
     resizeMode,
@@ -231,6 +242,8 @@ class EditorController extends Notifier<EditorState> {
         audioDurationSeconds: validAudio != null
             ? data['audioDurationSeconds'] as int?
             : null,
+        audioIsNarration:
+            validAudio != null && (data['audioIsNarration'] as bool? ?? false),
         preset: presetById(data['presetId'] as String? ?? 'reels'),
         durationSeconds: normalizeDurationSeconds(
           (data['durationSeconds'] as int?) ?? defaultDurationSeconds,
@@ -255,6 +268,7 @@ class EditorController extends Notifier<EditorState> {
         ],
         'audioPath': state.audioPath,
         'audioDurationSeconds': state.audioDurationSeconds,
+        'audioIsNarration': state.audioIsNarration,
         'presetId': state.preset.id,
         'durationSeconds': state.durationSeconds,
         'resizeMode': state.resizeMode == ResizeMode.fill ? 'fill' : 'fit',
@@ -416,7 +430,12 @@ class EditorController extends Notifier<EditorState> {
     unawaited(prefs.clearEditorSession());
   }
 
-  Future<void> setAudioPath(String path) async {
+  /// Attaches a Voice Narration recording. Same pipeline as [setAudioPath] but
+  /// flagged so the editor labels it as narration rather than a soundtrack.
+  Future<void> setNarration(String path) =>
+      setAudioPath(path, isNarration: true);
+
+  Future<void> setAudioPath(String path, {bool isNarration = false}) async {
     final localPath = await _mediaStore.materializePath(
       path,
       kind: EditorMediaStoreKind.audio,
@@ -424,7 +443,11 @@ class EditorController extends Notifier<EditorState> {
     if (localPath == null) {
       return;
     }
-    state = state.copyWith(audioPath: localPath, audioDurationSeconds: null);
+    state = state.copyWith(
+      audioPath: localPath,
+      audioDurationSeconds: null,
+      audioIsNarration: isNarration,
+    );
     final duration = await _readMediaDurationSeconds(localPath);
     if (state.audioPath != localPath || duration == null) {
       _persist();

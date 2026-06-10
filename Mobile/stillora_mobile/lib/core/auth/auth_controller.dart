@@ -19,6 +19,13 @@ class AuthController extends AsyncNotifier<AuthSession?> {
     );
   }
 
+  Future<void> signInWithApple() async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(
+      () => ref.read(authRepositoryProvider).signInWithApple(),
+    );
+  }
+
   Future<void> signOut() async {
     await ref.read(authRepositoryProvider).signOut();
     state = const AsyncData(null);

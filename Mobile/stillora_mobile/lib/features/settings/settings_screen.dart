@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/auth/auth_controller.dart';
 import '../../core/constants/app_constants.dart';
-import '../auth/login_screen.dart';
+import '../tabs/app_tabs_screen.dart';
 
 Future<void> _confirmDeleteAccount(BuildContext context, WidgetRef ref) async {
   final confirmed = await showDialog<bool>(
@@ -32,7 +32,9 @@ Future<void> _confirmDeleteAccount(BuildContext context, WidgetRef ref) async {
   if (confirmed == true && context.mounted) {
     await ref.read(authControllerProvider.notifier).deleteAccount();
     if (context.mounted) {
-      context.go(LoginScreen.routePath);
+      // Deleting an account drops the user back to guest mode — they can keep
+      // making basic videos without signing in.
+      context.go(AppTabsScreen.routePath);
     }
   }
 }
@@ -44,6 +46,7 @@ class SettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final signedIn = ref.watch(authControllerProvider).asData?.value != null;
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(
@@ -88,31 +91,40 @@ class SettingsScreen extends ConsumerWidget {
             title: Text('Terms of Service'),
             subtitle: Text(AppConstants.termsUrl),
           ),
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: OutlinedButton.icon(
-              onPressed: () async {
-                await ref.read(authControllerProvider.notifier).signOut();
-                if (context.mounted) {
-                  context.go(LoginScreen.routePath);
-                }
-              },
-              icon: const Icon(Icons.logout_rounded),
-              label: const Text('Logout'),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-            child: OutlinedButton.icon(
-              onPressed: () => _confirmDeleteAccount(context, ref),
-              icon: const Icon(Icons.delete_forever_rounded),
-              label: const Text('Delete Account'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Theme.of(context).colorScheme.error,
-                side: BorderSide(color: Theme.of(context).colorScheme.error),
+          if (signedIn) ...[
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: Text(
+                'Account',
+                style: TextStyle(fontWeight: FontWeight.w700),
               ),
             ),
-          ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  await ref.read(authControllerProvider.notifier).signOut();
+                  if (context.mounted) {
+                    context.go(AppTabsScreen.routePath);
+                  }
+                },
+                icon: const Icon(Icons.logout_rounded),
+                label: const Text('Logout'),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+              child: OutlinedButton.icon(
+                onPressed: () => _confirmDeleteAccount(context, ref),
+                icon: const Icon(Icons.delete_forever_rounded),
+                label: const Text('Delete Account'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Theme.of(context).colorScheme.error,
+                  side: BorderSide(color: Theme.of(context).colorScheme.error),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

@@ -13,4 +13,15 @@ void main() {
 
     expect(preferences.defaultDurationSeconds, 30);
   });
+
+  test('first-export rating flag defaults to false and persists', () async {
+    SharedPreferences.setMockInitialValues({});
+    final preferences = AppPreferences(await SharedPreferences.getInstance());
+
+    expect(preferences.hasRequestedRatingAfterFirstExport, isFalse);
+
+    await preferences.setHasRequestedRatingAfterFirstExport(true);
+
+    expect(preferences.hasRequestedRatingAfterFirstExport, isTrue);
+  });
 }

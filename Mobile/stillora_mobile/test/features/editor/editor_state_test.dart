@@ -59,4 +59,20 @@ void main() {
     expect(ready.exportsMixedTimeline, isTrue);
     expect(ready.exportsVideoSource, isFalse);
   });
+
+  test('narration flag is set with audio and cleared with it', () {
+    const empty = EditorState();
+    expect(empty.audioIsNarration, isFalse);
+
+    final withNarration = empty.copyWith(
+      audioPath: '/tmp/narration.m4a',
+      audioIsNarration: true,
+    );
+    expect(withNarration.audioIsNarration, isTrue);
+    expect(withNarration.audioPath, '/tmp/narration.m4a');
+
+    final cleared = withNarration.copyWith(clearAudio: true);
+    expect(cleared.audioPath, isNull);
+    expect(cleared.audioIsNarration, isFalse);
+  });
 }

@@ -37,6 +37,8 @@
 	<string>718272031198-kr3vqn6j3cchpo0vqp7usajm3734ignb.apps.googleusercontent.com</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Stillora uses your microphone only when you choose to record voice narration for your video.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Stillora saves generated videos to your photo library when you choose Save.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

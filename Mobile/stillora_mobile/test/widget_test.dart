@@ -36,6 +36,11 @@ class _FakeAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<AuthSession> signInWithApple() {
+    throw const AuthFailure('Apple sign-in is not available in widget tests.');
+  }
+
+  @override
   Future<void> deleteAccount() async {}
 
   @override

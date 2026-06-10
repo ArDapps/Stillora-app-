@@ -1,4 +1,5 @@
-import { SignJWT, jwtVerify } from "jose";
+import { SignJWT, jwtVerify, createRemoteJWKSet } from "jose";
+import { createHash } from "node:crypto";
 import type { NextRequest } from "next/server";
 import { cookies } from "next/headers";
 
@@ -252,5 +253,101 @@ export async function fetchGoogleUserFromIdToken(
     email: profile.email ?? "",
     name: profile.name ?? profile.email ?? "Stillora user",
     picture: profile.picture ?? "",
+  };
+}
+
+// --- Sign in with Apple ---
+
+const APPLE_ISSUER = "https://appleid.apple.com";
+const APPLE_JWKS = createRemoteJWKSet(
+  new URL("https://appleid.apple.com/auth/keys"),
+);
+
+function getAllowedAppleClientIds() {
+  return new Set(
+    [
+      process.env.APPLE_CLIENT_ID,
+      process.env.APPLE_BUNDLE_ID,
+      process.env.APPLE_SERVICE_ID,
+      process.env.APPLE_NATIVE_CLIENT_IDS,
+      // Fallback to the shipped iOS bundle id / Android service id.
+      "app.loopara.stillora",
+      "app.loopara.stillora.signin",
+    ]
+      .flatMap((value) => value?.split(",") ?? [])
+      .map((value) => value.trim())
+      .filter(Boolean),
+  );
+}
+
+export type AppleVerifyInput = {
+  idToken: string;
+  rawNonce?: string;
+  /** Apple only returns these on first authorization; the client supplies them. */
+  name?: string;
+  email?: string;
+};
+
+export type AppleVerifyResult = {
+  user: SessionUser;
+  /** Whether Apple reports the email as verified — gates account linking. */
+  emailVerified: boolean;
+};
+
+/**
+ * Verifies an Apple identity token against Apple's public keys, checking the
+ * issuer, audience, and (when supplied) the replay-protection nonce. Apple's
+ * token never carries the user's name, so the client-provided name/email are
+ * merged in. Returns the resolved user plus whether the email is verified.
+ */
+export async function verifyAppleIdToken({
+  idToken,
+  rawNonce,
+  name,
+  email,
+}: AppleVerifyInput): Promise<AppleVerifyResult> {
+  const { payload } = await jwtVerify(idToken, APPLE_JWKS, {
+    issuer: APPLE_ISSUER,
+  });
+
+  const aud = payload.aud;
+  const audValues = Array.isArray(aud) ? aud : [aud];
+  const allowed = getAllowedAppleClientIds();
+  if (
+    !audValues.some((value) => typeof value === "string" && allowed.has(value))
+  ) {
+    throw new Error("Apple identity token audience is not allowed.");
+  }
+
+  if (rawNonce) {
+    const expected = createHash("sha256").update(rawNonce).digest("hex");
+    if (typeof payload.nonce !== "string" || payload.nonce !== expected) {
+      throw new Error("Apple identity token nonce mismatch.");
+    }
+  }
+
+  const sub = typeof payload.sub === "string" ? payload.sub : "";
+  if (!sub) {
+    throw new Error("Apple identity token subject is missing.");
+  }
+
+  const tokenEmail =
+    typeof payload.email === "string" ? payload.email : undefined;
+  const resolvedEmail = (tokenEmail ?? email ?? "").trim();
+  // Apple sends email_verified as a boolean or the string "true".
+  const verifiedClaim = payload.email_verified;
+  const emailVerified = verifiedClaim === true || verifiedClaim === "true";
+
+  const resolvedName = (name ?? "").trim() || resolvedEmail || "Stillora user";
+
+  return {
+    user: {
+      // Namespace Apple subjects so they never collide with Google `sub`s.
+      sub: `apple:${sub}`,
+      email: resolvedEmail,
+      name: resolvedName,
+      picture: "",
+    },
+    emailVerified: Boolean(resolvedEmail) && emailVerified,
   };
 }

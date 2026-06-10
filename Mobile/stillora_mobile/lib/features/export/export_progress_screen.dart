@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/auth/auth_controller.dart';
 import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_glow.dart';
 import '../../core/design/stillora_spacing.dart';
@@ -13,7 +12,6 @@ import '../../core/design/stillora_surface.dart';
 import '../../core/platform/platform_info.dart';
 import '../../core/widgets/desktop_shell.dart';
 import '../../core/widgets/ad_widget.dart';
-import '../auth/login_screen.dart';
 import '../editor/editor_state.dart';
 import '../preview/preview_screen.dart';
 import '../tabs/app_tabs_screen.dart';
@@ -34,13 +32,7 @@ class _ExportProgressScreenState extends ConsumerState<ExportProgressScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final session = ref.read(authControllerProvider).asData?.value;
-      if (session == null) {
-        context.go(
-          '${LoginScreen.routePath}?next=${Uri.encodeComponent(ExportProgressScreen.routePath)}',
-        );
-        return;
-      }
+      // Export is available to everyone — guests included. No login gate here.
       final editor = ref.read(editorControllerProvider);
       ref.read(exportControllerProvider.notifier).start(editor);
     });

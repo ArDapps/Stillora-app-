@@ -1,9 +1,13 @@
+import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
+import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import '../api/api_client.dart';
 import '../constants/app_constants.dart';
@@ -35,6 +39,13 @@ class AuthRepository {
   Future<AuthSession?> restoreSession() async {
     final token = await _tokenStorage.readToken();
     if (token == null) {
+      return null;
+    }
+
+    // If this device signed in with Apple, honour a revoked/removed credential
+    // by ending the local session instead of restoring a stale one.
+    if (await _isAppleCredentialRevoked()) {
+      await _tokenStorage.clear();
       return null;
     }
 
@@ -120,6 +131,105 @@ class AuthRepository {
     }
   }
 
+  Future<AuthSession> signInWithApple() async {
+    if (!Platform.isIOS && !Platform.isMacOS && !Platform.isAndroid) {
+      throw const AuthFailure(
+        'Sign in with Apple is not supported on this platform yet.',
+      );
+    }
+    if (Platform.isIOS || Platform.isMacOS) {
+      final available = await SignInWithApple.isAvailable();
+      if (!available) {
+        throw const AuthFailure(
+          'Sign in with Apple requires iOS 13 or later.',
+        );
+      }
+    }
+
+    // A raw nonce is sent to Apple as its SHA-256 hash; the backend compares the
+    // raw value against the `nonce` claim in the identity token to block replay.
+    final rawNonce = _generateNonce();
+    final hashedNonce = sha256.convert(utf8.encode(rawNonce)).toString();
+
+    try {
+      final credential = await SignInWithApple.getAppleIDCredential(
+        scopes: const [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+        nonce: hashedNonce,
+        webAuthenticationOptions: (Platform.isAndroid)
+            ? WebAuthenticationOptions(
+                clientId: AppConstants.appleServiceId,
+                redirectUri: Uri.parse(AppConstants.appleRedirectUri),
+              )
+            : null,
+      );
+
+      final identityToken = credential.identityToken;
+      if (identityToken == null || identityToken.isEmpty) {
+        throw const AuthFailure('Sign in with Apple failed. Please try again.');
+      }
+
+      // Apple sends name/email only on the very first authorization. Cache them
+      // and fall back to the cache on later logins so we never send nulls.
+      final userId = credential.userIdentifier;
+      if (userId != null && userId.isNotEmpty) {
+        await _tokenStorage.saveAppleUserId(userId);
+      }
+      final fullName = [
+        credential.givenName,
+        credential.familyName,
+      ].where((part) => part != null && part.isNotEmpty).join(' ').trim();
+      await _tokenStorage.cacheAppleProfile(
+        name: fullName.isEmpty ? null : fullName,
+        email: credential.email,
+      );
+
+      final cachedName = await _tokenStorage.readAppleName();
+      final cachedEmail = await _tokenStorage.readAppleEmail();
+      final resolvedName = fullName.isNotEmpty ? fullName : cachedName;
+      final resolvedEmail = (credential.email != null &&
+              credential.email!.isNotEmpty)
+          ? credential.email
+          : cachedEmail;
+
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/api/auth/mobile',
+        data: {
+          'provider': 'apple',
+          'appleIdToken': identityToken,
+          'rawNonce': rawNonce,
+          if (credential.authorizationCode.isNotEmpty)
+            'appleAuthorizationCode': credential.authorizationCode,
+          if (resolvedName != null && resolvedName.isNotEmpty)
+            'name': resolvedName,
+          if (resolvedEmail != null && resolvedEmail.isNotEmpty)
+            'email': resolvedEmail,
+          'app': 'stillora',
+        },
+      );
+
+      final data = response.data ?? const <String, dynamic>{};
+      final token = data['token'] as String?;
+      final userJson = data['user'];
+      if (token == null || userJson is! Map<String, dynamic>) {
+        throw const AuthFailure('Sign in with Apple failed.');
+      }
+
+      await _tokenStorage.saveToken(token);
+      return AuthSession(token: token, user: SessionUser.fromJson(userJson));
+    } on AuthFailure {
+      rethrow;
+    } on SignInWithAppleAuthorizationException catch (error) {
+      throw AuthFailure(_appleSignInMessage(error));
+    } on SignInWithAppleException {
+      throw const AuthFailure('Sign in with Apple failed. Please try again.');
+    } on DioException catch (error) {
+      throw AuthFailure(_dioMessage(error, fallbackProvider: 'Apple'));
+    }
+  }
+
   Future<void> signOut() async {
     await _tokenStorage.clear();
     if (Platform.isLinux || Platform.isWindows) {
@@ -140,10 +250,61 @@ class AuthRepository {
     } on DioException {
       // Continue with local cleanup even if the server call fails
     }
-    await _tokenStorage.clear();
+    // Account deletion wipes the Apple credential cache too.
+    await _tokenStorage.clearAll();
     if (!Platform.isLinux && !Platform.isWindows) {
       await _googleSignIn.signOut();
     }
+  }
+
+  /// True when this device previously signed in with Apple and that credential
+  /// has since been revoked or removed. Never throws — failures mean "unknown",
+  /// in which case we keep the session and let `/api/auth/me` decide.
+  Future<bool> _isAppleCredentialRevoked() async {
+    if (!Platform.isIOS && !Platform.isMacOS) {
+      return false;
+    }
+    final appleUserId = await _tokenStorage.readAppleUserId();
+    if (appleUserId == null || appleUserId.isEmpty) {
+      return false;
+    }
+    try {
+      final state = await SignInWithApple.getCredentialState(appleUserId);
+      return state == CredentialState.revoked ||
+          state == CredentialState.notFound;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  String _appleSignInMessage(SignInWithAppleAuthorizationException error) {
+    if (error.code == AuthorizationErrorCode.canceled) {
+      return 'Sign in with Apple was cancelled.';
+    }
+    if (error.code == AuthorizationErrorCode.notInteractive ||
+        error.code == AuthorizationErrorCode.notHandled) {
+      return 'Sign in with Apple is unavailable right now. Please try again.';
+    }
+    return 'Sign in with Apple failed. Please check your connection and '
+        'try again.';
+  }
+
+  String _dioMessage(DioException error, {required String fallbackProvider}) {
+    final data = error.response?.data;
+    if (data is Map && data['error'] is String) {
+      return data['error'] as String;
+    }
+    return 'Stillora could not verify your $fallbackProvider account.';
+  }
+
+  static String _generateNonce([int length = 32]) {
+    const charset =
+        '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-._';
+    final random = Random.secure();
+    return List.generate(
+      length,
+      (_) => charset[random.nextInt(charset.length)],
+    ).join();
   }
 
   String _googleSignInMessage(GoogleSignInException error) {

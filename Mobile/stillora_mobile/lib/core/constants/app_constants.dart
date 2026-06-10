@@ -20,6 +20,21 @@ class AppConstants {
     defaultValue:
         '718272031198-jcl994t1b9ucib32k08hb3rc5v29ngur.apps.googleusercontent.com',
   );
+  /// Apple "Services ID" used for Sign in with Apple on non-Apple platforms
+  /// (Android/web). On iOS/macOS the native flow uses the app's bundle id as the
+  /// token audience, so this is only required for the Android web-redirect flow.
+  static const appleServiceId = String.fromEnvironment(
+    'APPLE_SERVICE_ID',
+    defaultValue: 'app.loopara.stillora.signin',
+  );
+
+  /// Redirect URI registered with Apple for the Android/web sign-in flow. Must
+  /// point at a backend endpoint that forwards the result back to the app.
+  static const appleRedirectUri = String.fromEnvironment(
+    'APPLE_REDIRECT_URI',
+    defaultValue: 'https://stillora.loopara.app/api/auth/apple/callback',
+  );
+
   static const privacyUrl = 'https://stillora.loopara.app/privacy';
   static const termsUrl = 'https://stillora.loopara.app/terms';
 
