@@ -1,4 +1,4 @@
-package com.tecnoblocks.stillora_mobile
+package com.mrbebo.hadidi
 
 import io.flutter.embedding.android.FlutterActivity
 
