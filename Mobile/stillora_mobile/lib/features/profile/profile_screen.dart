@@ -26,7 +26,8 @@ class ProfileView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final session = ref.watch(authControllerProvider).asData?.value;
+    final auth = ref.watch(authControllerProvider);
+    final session = auth.asData?.value;
 
     if (session == null) {
       return SafeArea(
@@ -35,24 +36,38 @@ class ProfileView extends ConsumerWidget {
           padding: const EdgeInsets.all(20),
           children: [
             Text(
-              'Register when you convert',
+              'Sign in to unlock more',
               style: Theme.of(
                 context,
               ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 8),
             Text(
-              'Browse the app freely. Google sign-in is only required before video conversion.',
+              'Browse and make basic videos freely. Sign in to unlock Voice '
+              'Narration and sync your account.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 18),
-            FilledButton.icon(
-              onPressed: () => context.go(LoginScreen.routePath),
-              icon: const FaIcon(FontAwesomeIcons.google, size: 18),
-              label: const Text('Continue with Google'),
+            if (appleSignInSupported) ...[
+              StilloraAppleButton(
+                loading: auth.isLoading,
+                onPressed: () => ref
+                    .read(authControllerProvider.notifier)
+                    .signInWithApple(),
+              ),
+              const SizedBox(height: 12),
+            ],
+            StilloraGoogleButton(
+              loading: auth.isLoading,
+              onPressed: () =>
+                  ref.read(authControllerProvider.notifier).signInWithGoogle(),
             ),
+            if (auth.hasError) ...[
+              const SizedBox(height: 12),
+              AuthErrorBanner(message: authErrorMessage(auth.error)),
+            ],
             const SizedBox(height: 18),
             const _PolicyLinks(),
           ],

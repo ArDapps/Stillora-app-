@@ -15,14 +15,12 @@ import '../../core/widgets/ad_widget.dart';
 import '../../core/design/stillora_spacing.dart';
 import '../../core/design/stillora_surface.dart';
 import '../../core/platform/platform_info.dart';
-import '../auth/registration_sheet.dart';
 import 'add_audio_screen.dart';
 import 'choose_preset_screen.dart';
 import 'editor_state.dart';
 import 'pre_export_preview_screen.dart';
 import 'upload_media_screen.dart';
 import 'video_preset.dart';
-import 'voice_narration_screen.dart';
 
 const _standardAudioExtensions = ['mp3', 'm4a', 'aac', 'wav'];
 const _androidAudioExtensions = ['m4a', 'aac'];
@@ -187,11 +185,17 @@ class _MobileEditorFlow extends StatelessWidget {
         const SizedBox(height: StilloraSpacing.sm),
         // Step rows: audio and preset
         _StepRow(
-          icon: Icons.music_note_rounded,
+          icon: editor.audioIsNarration
+              ? Icons.mic_rounded
+              : Icons.music_note_rounded,
           label: editor.audioPath == null
               ? 'Add Soundtrack'
+              : editor.audioIsNarration
+              ? 'Voice narration'
               : _audioName(editor.audioPath!),
-          subtitle: editor.audioPath == null ? 'Optional' : 'Tap to change',
+          subtitle: editor.audioPath == null
+              ? 'Soundtrack or voice narration'
+              : 'Tap to change',
           onTap: () => context.push(AddAudioScreen.routePath),
         ),
         const SizedBox(height: StilloraSpacing.xs),
@@ -210,8 +214,6 @@ class _MobileEditorFlow extends StatelessWidget {
           icon: Icons.auto_fix_high_rounded,
           label: 'Create MP4',
         ),
-        const SizedBox(height: StilloraSpacing.sm),
-        _VoiceNarrationCard(isSignedIn: session != null),
         const SizedBox(height: StilloraSpacing.sm),
         const AdSlotWidget(placement: 'HOME_BANNER'),
       ],
@@ -2189,113 +2191,6 @@ bool _canReset(EditorState editor) =>
     editor.preset != defaultVideoPreset ||
     editor.durationSeconds != defaultDurationSeconds ||
     editor.resizeMode != ResizeMode.fit;
-
-/// Account-based Voice Narration entry point. Guests see "Sign in to Unlock"
-/// which opens the registration modal; signed-in users can record, then
-/// re-record or remove the attached narration.
-class _VoiceNarrationCard extends ConsumerWidget {
-  const _VoiceNarrationCard({required this.isSignedIn});
-
-  final bool isSignedIn;
-
-  Future<void> _openRecorder(BuildContext context) async {
-    await context.push(VoiceNarrationScreen.routePath);
-  }
-
-  Future<void> _unlock(BuildContext context) async {
-    final start = await showRegistrationSheet(context);
-    if (start == true && context.mounted) {
-      await _openRecorder(context);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final editor = ref.watch(editorControllerProvider);
-    final hasNarration = editor.audioIsNarration && editor.audioPath != null;
-
-    return StilloraGlassCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  gradient: stilloraBrandGradient,
-                  borderRadius: BorderRadius.circular(StilloraRadius.xl),
-                ),
-                child: const Icon(Icons.mic_rounded, color: Colors.white),
-              ),
-              const SizedBox(width: StilloraSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Voice Narration',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    Text(
-                      hasNarration
-                          ? 'Narration added to your video.'
-                          : 'Record your voice and add it to your video.',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: StilloraColors.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (!isSignedIn)
-                const Icon(Icons.lock_rounded, color: StilloraColors.secondary),
-            ],
-          ),
-          const SizedBox(height: StilloraSpacing.sm),
-          if (!isSignedIn)
-            StilloraPrimaryButton(
-              onPressed: () => _unlock(context),
-              icon: Icons.lock_open_rounded,
-              label: 'Sign in to Unlock',
-            )
-          else if (hasNarration)
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _openRecorder(context),
-                    icon: const Icon(Icons.refresh_rounded),
-                    label: const Text('Re-record'),
-                  ),
-                ),
-                const SizedBox(width: StilloraSpacing.sm),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: ref
-                        .read(editorControllerProvider.notifier)
-                        .removeAudio,
-                    icon: const Icon(Icons.delete_outline_rounded),
-                    label: const Text('Remove'),
-                  ),
-                ),
-              ],
-            )
-          else
-            StilloraPrimaryButton(
-              onPressed: () => _openRecorder(context),
-              icon: Icons.mic_rounded,
-              label: 'Record Voice',
-            ),
-        ],
-      ),
-    );
-  }
-}
 
 class _PrivacyCard extends StatelessWidget {
   const _PrivacyCard({required this.isSignedIn, this.compact = false});

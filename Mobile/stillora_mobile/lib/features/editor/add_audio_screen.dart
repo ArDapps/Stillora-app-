@@ -6,11 +6,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/auth/auth_controller.dart';
 import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_glow.dart';
 import '../../core/design/stillora_spacing.dart';
 import '../../core/design/stillora_surface.dart';
+import '../auth/registration_sheet.dart';
 import 'editor_state.dart';
+import 'voice_narration_screen.dart';
 
 class AddAudioScreen extends ConsumerStatefulWidget {
   const AddAudioScreen({super.key});
@@ -36,11 +39,27 @@ class _AddAudioScreenState extends ConsumerState<AddAudioScreen> {
     }
   }
 
+  Future<void> _openRecorder() async {
+    await context.push(VoiceNarrationScreen.routePath);
+  }
+
+  /// Guests must sign in before recording. Opens the registration modal and, if
+  /// they sign in and tap "Start Recording", goes straight to the recorder.
+  Future<void> _unlockNarration() async {
+    final start = await showRegistrationSheet(context);
+    if (start == true && mounted) {
+      await _openRecorder();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final editor = ref.watch(editorControllerProvider);
     final controller = ref.read(editorControllerProvider.notifier);
+    final isSignedIn =
+        ref.watch(authControllerProvider).asData?.value != null;
     final hasAudio = editor.audioPath != null;
+    final hasNarration = editor.audioIsNarration && hasAudio;
 
     return Scaffold(
       appBar: AppBar(leading: const BackButton()),
@@ -139,10 +158,18 @@ class _AddAudioScreenState extends ConsumerState<AddAudioScreen> {
                         ),
                       ),
                     ),
+                    const SizedBox(height: 24),
+                    _VoiceNarrationSection(
+                      isSignedIn: isSignedIn,
+                      hasNarration: hasNarration,
+                      onRecord: _openRecorder,
+                      onUnlock: _unlockNarration,
+                      onRemove: controller.removeAudio,
+                    ),
                     if (hasAudio) ...[
                       const SizedBox(height: 20),
                       Text(
-                        'Selected Track',
+                        hasNarration ? 'Your Narration' : 'Selected Track',
                         style: Theme.of(context).textTheme.titleSmall
                             ?.copyWith(fontWeight: FontWeight.w700),
                       ),
@@ -188,6 +215,106 @@ class _AddAudioScreenState extends ConsumerState<AddAudioScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Voice Narration entry point living inside the Add Soundtrack screen. Guests
+/// see "Sign in to Unlock"; signed-in users can record, then re-record/remove.
+class _VoiceNarrationSection extends StatelessWidget {
+  const _VoiceNarrationSection({
+    required this.isSignedIn,
+    required this.hasNarration,
+    required this.onRecord,
+    required this.onUnlock,
+    required this.onRemove,
+  });
+
+  final bool isSignedIn;
+  final bool hasNarration;
+  final VoidCallback onRecord;
+  final VoidCallback onUnlock;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return StilloraGlassCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  gradient: stilloraBrandGradient,
+                  borderRadius: BorderRadius.circular(StilloraRadius.xl),
+                ),
+                child: const Icon(Icons.mic_rounded, color: Colors.white),
+              ),
+              const SizedBox(width: StilloraSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Voice Narration',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    Text(
+                      hasNarration
+                          ? 'Narration added to your video.'
+                          : 'Record your voice and add it to your video.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: StilloraColors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (!isSignedIn)
+                const Icon(Icons.lock_rounded, color: StilloraColors.secondary),
+            ],
+          ),
+          const SizedBox(height: StilloraSpacing.sm),
+          if (!isSignedIn)
+            StilloraPrimaryButton(
+              onPressed: onUnlock,
+              icon: Icons.lock_open_rounded,
+              label: 'Sign in to Unlock',
+            )
+          else if (hasNarration)
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: onRecord,
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: const Text('Re-record'),
+                  ),
+                ),
+                const SizedBox(width: StilloraSpacing.sm),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: onRemove,
+                    icon: const Icon(Icons.delete_outline_rounded),
+                    label: const Text('Remove'),
+                  ),
+                ),
+              ],
+            )
+          else
+            StilloraPrimaryButton(
+              onPressed: onRecord,
+              icon: Icons.mic_rounded,
+              label: 'Record Voice',
+            ),
+        ],
       ),
     );
   }
