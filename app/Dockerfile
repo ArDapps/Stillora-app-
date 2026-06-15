@@ -3,6 +3,9 @@ FROM node:22-bookworm-slim AS deps
 WORKDIR /app
 
 ENV NEXT_TELEMETRY_DISABLED=1
+# Use the distro Chromium (installed in the runner) instead of puppeteer's bundled
+# download, so the image stays smaller and the binary has all its system deps.
+ENV PUPPETEER_SKIP_DOWNLOAD=1
 
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -25,6 +28,19 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
+# Headless Chromium for the HTML → MP4 renderer (app/api/convert/html).
+ENV PUPPETEER_SKIP_DOWNLOAD=1
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+
+# chromium + fonts (incl. color emoji) for deterministic HTML video rendering.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
+    chromium \
+    fonts-liberation \
+    fonts-noto-core \
+    fonts-noto-color-emoji \
+    ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
 
 RUN useradd --system --uid 1001 nextjs \
   && mkdir -p /data/stillora /app \

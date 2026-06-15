@@ -93,6 +93,8 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
           );
         case SaveOutcome.failed:
           _snack('Could not save the video. Please try again.');
+        case SaveOutcome.cancelled:
+          break; // Camera-roll save has no cancellable dialog.
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -426,7 +428,7 @@ class _PlatformButton extends StatelessWidget {
             child: Center(
               child: isMaterial
                   ? Icon(icon as IconData, color: color, size: 24)
-                  : FaIcon(icon as IconData, color: color, size: 22),
+                  : FaIcon(icon as FaIconData, color: color, size: 22),
             ),
           ),
           const SizedBox(height: 6),

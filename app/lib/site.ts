@@ -13,3 +13,10 @@ export const TECNOBLOCKS_URL = "https://tecnoblocks.com/";
 
 /** The existing editor route — every primary CTA points here. */
 export const EDITOR_PATH = "/editor";
+
+/**
+ * Live Apple App Store listing. The single universal listing serves iPhone and
+ * iPad, and is also downloadable on Apple Silicon Macs from the Mac App Store.
+ */
+export const APP_STORE_URL =
+  "https://apps.apple.com/ae/app/stillora-mp4-video-maker/id6777488603";

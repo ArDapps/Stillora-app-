@@ -5,10 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/auth/auth_controller.dart';
+import '../../core/design/render_components.dart';
 import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_glow.dart';
 import '../../core/widgets/ad_widget.dart';
@@ -1113,40 +1113,6 @@ class _PreviewMedia extends StatelessWidget {
   }
 }
 
-class _CompactSectionHeader extends StatelessWidget {
-  const _CompactSectionHeader({required this.title, required this.meta});
-
-  final String title;
-  final String meta;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
-          ),
-        ),
-        Text(
-          meta,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: StilloraColors.primary,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _SourceMediaCard extends StatelessWidget {
   const _SourceMediaCard({
     required this.editor,
@@ -1160,21 +1126,12 @@ class _SourceMediaCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StilloraGlassCard(
-      padding: EdgeInsets.all(compact ? 12 : StilloraSpacing.sm),
+    return RenderStepCard(
+      number: '1',
+      title: 'Source Media',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          compact
-              ? const _CompactSectionHeader(
-                  title: 'Source Media',
-                  meta: 'Step 1',
-                )
-              : const StilloraSectionHeader(
-                  title: 'Source Media',
-                  step: 'Step 1',
-                ),
-          SizedBox(height: compact ? 10 : StilloraSpacing.sm),
           if (!editor.hasMedia)
             _MediaDropZone(onTap: controller.pickMedia, compact: compact)
           else ...[
@@ -1762,22 +1719,13 @@ class _SoundscapeCard extends StatelessWidget {
           '${_formatDuration(editor.audioDurationSeconds!)} · ${editor.audioPath!}';
     }
 
-    return StilloraGlassCard(
-      padding: EdgeInsets.all(compact ? 12 : StilloraSpacing.sm),
+    return RenderStepCard(
+      number: '2',
+      title: 'Soundscape',
+      trailing: const RenderTagPill('optional'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          compact
-              ? const _CompactSectionHeader(
-                  title: 'Soundscape',
-                  meta: 'Optional',
-                )
-              : const StilloraSectionHeader(
-                  title: 'Soundscape',
-                  step: 'Optional',
-                  subtitle: 'Add a soundtrack — this step is optional.',
-                ),
-          SizedBox(height: compact ? 10 : StilloraSpacing.sm),
           DecoratedBox(
             decoration: BoxDecoration(
               color: StilloraColors.surfaceContainerLow,
@@ -1863,129 +1811,34 @@ class _PresetCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StilloraGlassCard(
-      padding: EdgeInsets.all(compact ? 12 : StilloraSpacing.sm),
+    return RenderStepCard(
+      number: '3',
+      title: 'Presets',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          compact
-              ? const _CompactSectionHeader(title: 'Presets', meta: 'Step 3')
-              : const StilloraSectionHeader(title: 'Presets', step: 'Step 3'),
-          SizedBox(height: compact ? 10 : StilloraSpacing.sm),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final columns = compact && constraints.maxWidth >= 560 ? 4 : 2;
-              return GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: columns,
-                  mainAxisSpacing: StilloraSpacing.xs,
-                  crossAxisSpacing: StilloraSpacing.xs,
-                  childAspectRatio: compact ? 2.65 : 1.45,
+          RenderTileGrid(
+            tiles: [
+              for (final preset in videoPresets)
+                RenderSelectTile(
+                  title: preset.label,
+                  subtitle: preset.ratioLabel,
+                  selected: editor.preset == preset,
+                  onTap: () => controller.setPreset(preset),
                 ),
-                itemCount: videoPresets.length,
-                itemBuilder: (context, index) {
-                  final preset = videoPresets[index];
-                  final selected = editor.preset == preset;
-                  return StilloraGlassCard(
-                    selected: selected,
-                    onTap: () => controller.setPreset(preset),
-                    padding: EdgeInsets.all(compact ? 8 : StilloraSpacing.xs),
-                    child: compact
-                        ? Row(
-                            children: [
-                              FaIcon(
-                                preset.icon,
-                                size: 15,
-                                color: selected
-                                    ? StilloraColors.primary
-                                    : StilloraColors.onSurfaceVariant,
-                              ),
-                              const SizedBox(width: 7),
-                              Expanded(
-                                child: Text(
-                                  preset.label,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context).textTheme.labelSmall
-                                      ?.copyWith(
-                                        color: selected
-                                            ? StilloraColors.primary
-                                            : StilloraColors.onSurfaceVariant,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                ),
-                              ),
-                              const SizedBox(width: 5),
-                              Text(
-                                preset.ratioLabel,
-                                style: Theme.of(context).textTheme.labelSmall
-                                    ?.copyWith(
-                                      color: StilloraColors.onSurfaceVariant,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                              ),
-                            ],
-                          )
-                        : Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              FaIcon(
-                                preset.icon,
-                                size: 22,
-                                color: selected
-                                    ? StilloraColors.primary
-                                    : StilloraColors.onSurfaceVariant,
-                              ),
-                              const SizedBox(height: StilloraSpacing.xs),
-                              Text(
-                                preset.label,
-                                textAlign: TextAlign.center,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.labelMedium
-                                    ?.copyWith(
-                                      color: selected
-                                          ? StilloraColors.primary
-                                          : StilloraColors.onSurfaceVariant,
-                                    ),
-                              ),
-                              Text(
-                                preset.ratioLabel,
-                                style: Theme.of(context).textTheme.bodyMedium
-                                    ?.copyWith(
-                                      color: StilloraColors.onSurfaceVariant,
-                                    ),
-                              ),
-                            ],
-                          ),
-                  );
-                },
-              );
-            },
+            ],
           ),
-          SizedBox(height: compact ? 10 : StilloraSpacing.sm),
+          const SizedBox(height: StilloraSpacing.sm),
           Text('Resize', style: Theme.of(context).textTheme.labelMedium),
           const SizedBox(height: StilloraSpacing.xs),
-          SegmentedButton<ResizeMode>(
-            segments: const [
-              ButtonSegment(
-                value: ResizeMode.fit,
-                icon: Icon(Icons.fit_screen_rounded),
-                label: Text('Fit'),
-              ),
-              ButtonSegment(
-                value: ResizeMode.fill,
-                icon: Icon(Icons.fullscreen_rounded),
-                label: Text('Fill'),
-              ),
-            ],
-            selected: {editor.resizeMode},
-            onSelectionChanged: (value) =>
-                controller.setResizeMode(value.first),
+          RenderPillSegmented(
+            options: const ['Fit', 'Fill'],
+            selectedIndex: editor.resizeMode == ResizeMode.fit ? 0 : 1,
+            onSelected: (i) => controller.setResizeMode(
+              i == 0 ? ResizeMode.fit : ResizeMode.fill,
+            ),
           ),
-          SizedBox(height: compact ? 10 : StilloraSpacing.sm),
+          const SizedBox(height: StilloraSpacing.sm),
           Text(
             editor.media.length > 1 ? 'Total duration' : 'Duration',
             style: Theme.of(context).textTheme.labelMedium,

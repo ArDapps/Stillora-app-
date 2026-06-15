@@ -1,5 +1,5 @@
 import { Check, Film, ImageIcon, Music } from "lucide-react";
-import { SectionHeading } from "./shared";
+import { AppStoreButton, SectionHeading } from "./shared";
 import { appPlatforms } from "./data";
 
 export function CrossPlatform() {
@@ -35,6 +35,9 @@ export function CrossPlatform() {
                   </li>
                 ))}
               </ul>
+              {"appStore" in platform && platform.appStore ? (
+                <AppStoreButton className="mt-6 w-full px-5 py-3" />
+              ) : null}
             </div>
           ))}
         </div>

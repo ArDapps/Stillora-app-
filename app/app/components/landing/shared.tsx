@@ -1,3 +1,24 @@
+import { Apple } from "lucide-react";
+import { APP_STORE_URL } from "@/lib/site";
+
+export function AppStoreButton({ className = "" }: { className?: string }) {
+  return (
+    <a
+      href={APP_STORE_URL}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Download Stillora on the App Store — iPhone, iPad and Mac"
+      className={`inline-flex items-center justify-center gap-2.5 rounded-full bg-foreground px-7 py-4 text-base font-semibold text-background transition hover:opacity-90 ${className}`}
+    >
+      <Apple className="size-5" />
+      <span className="flex flex-col items-start leading-none">
+        <span className="text-[10px] font-medium opacity-80">Download on the</span>
+        <span className="text-base font-bold">App Store</span>
+      </span>
+    </a>
+  );
+}
+
 export function SocialBadge({
   badge,
   gradient,

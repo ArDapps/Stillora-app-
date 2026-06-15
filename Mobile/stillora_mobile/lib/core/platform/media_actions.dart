@@ -1,12 +1,13 @@
 import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:gal/gal.dart';
 import 'package:share_plus/share_plus.dart';
 
-/// Outcome of a "Save to Camera Roll" attempt, so the UI can show the right
-/// message instead of failing silently.
-enum SaveOutcome { saved, missingFile, permissionDenied, failed }
+/// Outcome of a save attempt, so the UI can show the right message instead of
+/// failing silently. `cancelled` is when the user dismissed a save dialog.
+enum SaveOutcome { saved, missingFile, permissionDenied, failed, cancelled }
 
 class MediaActions {
   const MediaActions._();
@@ -70,6 +71,40 @@ class MediaActions {
         return SaveOutcome.permissionDenied;
       }
       return SaveOutcome.failed;
+    } catch (_) {
+      return SaveOutcome.failed;
+    }
+  }
+
+  /// Desktop save: there is no camera roll, so open a native "Save As" dialog
+  /// and write the video to the chosen location. Returns [SaveOutcome.cancelled]
+  /// when the user dismisses the dialog so the caller can stay silent.
+  static Future<SaveOutcome> saveVideoToFile(
+    String path, {
+    String suggestedName = 'stillora.mp4',
+  }) async {
+    final source = File(path);
+    if (!source.existsSync()) {
+      return SaveOutcome.missingFile;
+    }
+    try {
+      final bytes = await source.readAsBytes();
+      final destination = await FilePicker.platform.saveFile(
+        dialogTitle: 'Save video',
+        fileName: suggestedName,
+        type: FileType.custom,
+        allowedExtensions: const ['mp4'],
+        bytes: bytes,
+      );
+      if (destination == null) {
+        return SaveOutcome.cancelled;
+      }
+      // Some platforms write the bytes themselves; others only return the path.
+      final out = File(destination);
+      if (!out.existsSync() || await out.length() != bytes.length) {
+        await out.writeAsBytes(bytes, flush: true);
+      }
+      return SaveOutcome.saved;
     } catch (_) {
       return SaveOutcome.failed;
     }

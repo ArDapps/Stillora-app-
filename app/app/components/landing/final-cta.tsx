@@ -2,6 +2,7 @@ import { ArrowRight, Check } from "lucide-react";
 import Image from "next/image";
 import { PrimaryCta } from "@/app/components/app-navbar";
 import stilloraIcon from "@/public/logo/stillora-icon.svg";
+import { AppStoreButton } from "./shared";
 import { ctaPerks } from "./data";
 
 export function FinalCta() {
@@ -35,10 +36,16 @@ export function FinalCta() {
                 </div>
               ))}
             </div>
-            <PrimaryCta className="px-10 py-4 text-base sm:px-12 sm:text-lg">
-              Start Free
-              <ArrowRight className="ml-3 size-5" />
-            </PrimaryCta>
+            <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <PrimaryCta className="px-10 py-4 text-base sm:px-12 sm:text-lg">
+                Start Free
+                <ArrowRight className="ml-3 size-5" />
+              </PrimaryCta>
+              <AppStoreButton />
+            </div>
+            <p className="mt-4 text-xs text-muted-foreground">
+              Available on iPhone, iPad and Mac
+            </p>
           </div>
         </div>
       </div>

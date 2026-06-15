@@ -36,7 +36,7 @@ dependencies:
   dio: ^5.9.0
   equatable: ^2.0.7
   file_picker: ^10.3.7
-  font_awesome_flutter: ^10.8.0
+  font_awesome_flutter: ^11.0.0
   flutter_riverpod: ^3.0.3
   flutter_svg: ^2.0.10
   flutter_secure_storage: ^10.0.0

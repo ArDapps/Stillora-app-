@@ -28,6 +28,11 @@ const _navItems = [
     selectedIcon: Icons.video_library_rounded,
   ),
   (
+    label: 'HTML → Video',
+    icon: Icons.html_outlined,
+    selectedIcon: Icons.html_rounded,
+  ),
+  (
     label: 'Profile',
     icon: Icons.person_outline_rounded,
     selectedIcon: Icons.person_rounded,

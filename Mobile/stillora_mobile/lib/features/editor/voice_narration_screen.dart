@@ -44,7 +44,7 @@ class _VoiceNarrationScreenState extends ConsumerState<VoiceNarrationScreen> {
   // Live input level (0..1) and a rolling history of bars for the waveform.
   static const int _waveBars = 32;
   StreamSubscription<Amplitude>? _ampSub;
-  final List<double> _levels = List<double>.filled(_waveBars, 0.04);
+  final List<double> _levels = List<double>.filled(_waveBars, 0.04, growable: true);
   double _level = 0;
 
   @override

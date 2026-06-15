@@ -28,11 +28,12 @@ export const appPlatforms = [
   {
     icon: Smartphone,
     name: "Mobile App",
-    sub: "iOS and Android",
+    sub: "iPhone, iPad and Mac",
     status: "Live",
     color: "text-primary",
     bg: "bg-primary/10 border-primary/25",
     features: ["Full editor on the go", "Native camera upload", "Direct share to apps", "Offline export"],
+    appStore: true,
   },
   {
     icon: Monitor,

@@ -5,6 +5,7 @@ import '../../core/platform/platform_info.dart';
 import '../../core/widgets/desktop_shell.dart';
 import '../editor/editor_screen.dart';
 import '../gallery/gallery_screen.dart';
+import '../html_to_video/html_to_video_screen.dart';
 import '../profile/profile_screen.dart';
 
 class AppTabsScreen extends ConsumerWidget {
@@ -15,14 +16,19 @@ class AppTabsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final index = ref.watch(homeTabProvider);
-    const titles = ['Create', 'Library', 'Profile'];
-    const views = [EditorView(), GalleryView(), ProfileView()];
+    const titles = ['Create', 'Library', 'HTML → Video', 'Profile'];
+    const views = [
+      EditorView(),
+      GalleryView(),
+      HtmlToVideoView(),
+      ProfileView(),
+    ];
 
     if (useDesktopLayout(context)) {
       return DesktopShell(
         activeIndex: index,
         title: titles[index],
-        trailing: index == 2 ? const ProfileSettingsButton() : null,
+        trailing: index == 3 ? const ProfileSettingsButton() : null,
         child: views[index],
       );
     }
@@ -30,7 +36,7 @@ class AppTabsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(titles[index]),
-        actions: index == 2 ? const [ProfileSettingsButton()] : null,
+        actions: index == 3 ? const [ProfileSettingsButton()] : null,
       ),
       body: IndexedStack(index: index, children: views),
       bottomNavigationBar: NavigationBar(
@@ -47,6 +53,11 @@ class AppTabsScreen extends ConsumerWidget {
             icon: Icon(Icons.video_library_outlined),
             selectedIcon: Icon(Icons.video_library_rounded),
             label: 'Library',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.html_outlined),
+            selectedIcon: Icon(Icons.html_rounded),
+            label: 'HTML',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline_rounded),

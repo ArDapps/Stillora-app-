@@ -92,6 +92,8 @@ class _GalleryVideoScreenState extends ConsumerState<GalleryVideoScreen> {
           _snack('Allow photo access to save your video.', offerSettings: true);
         case SaveOutcome.failed:
           _snack('Could not save the video. Please try again.');
+        case SaveOutcome.cancelled:
+          break; // Camera-roll save has no cancellable dialog.
       }
     } finally {
       if (mounted) setState(() => _saving = false);

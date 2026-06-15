@@ -1,4 +1,4 @@
-package com.mrbebo.hadidi
+package app.loopara.stillora
 
 import io.flutter.embedding.android.FlutterActivity
 
