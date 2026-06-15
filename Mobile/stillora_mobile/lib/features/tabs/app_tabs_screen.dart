@@ -6,6 +6,7 @@ import '../../core/widgets/desktop_shell.dart';
 import '../editor/editor_screen.dart';
 import '../gallery/gallery_screen.dart';
 import '../html_to_video/html_to_video_screen.dart';
+import '../loop_images/loop_images_screen.dart';
 import '../profile/profile_screen.dart';
 
 class AppTabsScreen extends ConsumerWidget {
@@ -16,12 +17,13 @@ class AppTabsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final index = ref.watch(homeTabProvider);
-    const titles = ['Create', 'Library', 'HTML → Video', 'Profile'];
+    const titles = ['Create', 'Library', 'HTML → Video', 'Profile', 'Loop images'];
     const views = [
       EditorView(),
       GalleryView(),
       HtmlToVideoView(),
       ProfileView(),
+      LoopImagesView(),
     ];
 
     if (useDesktopLayout(context)) {
@@ -63,6 +65,11 @@ class AppTabsScreen extends ConsumerWidget {
             icon: Icon(Icons.person_outline_rounded),
             selectedIcon: Icon(Icons.person_rounded),
             label: 'Profile',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.repeat_rounded),
+            selectedIcon: Icon(Icons.repeat_on_rounded),
+            label: 'Loop',
           ),
         ],
       ),

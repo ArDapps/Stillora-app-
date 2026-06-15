@@ -16,23 +16,37 @@ const kHomeRoute = '/home';
 /// before navigating back to the home shell.
 final homeTabProvider = StateProvider<int>((ref) => 0);
 
+// Display order for the desktop sidebar. `index` is the underlying home tab
+// (matches app_tabs_screen views), so the list can be reordered for display
+// without changing which screen each item opens. Library sits directly before
+// Profile on desktop.
 const _navItems = [
   (
+    index: 0,
     label: 'Create',
     icon: Icons.add_photo_alternate_outlined,
     selectedIcon: Icons.add_photo_alternate_rounded,
   ),
   (
-    label: 'Library',
-    icon: Icons.video_library_outlined,
-    selectedIcon: Icons.video_library_rounded,
+    index: 4,
+    label: 'Loop images',
+    icon: Icons.repeat_rounded,
+    selectedIcon: Icons.repeat_on_rounded,
   ),
   (
+    index: 2,
     label: 'HTML → Video',
     icon: Icons.html_outlined,
     selectedIcon: Icons.html_rounded,
   ),
   (
+    index: 1,
+    label: 'Library',
+    icon: Icons.video_library_outlined,
+    selectedIcon: Icons.video_library_rounded,
+  ),
+  (
+    index: 3,
     label: 'Profile',
     icon: Icons.person_outline_rounded,
     selectedIcon: Icons.person_rounded,
@@ -131,13 +145,13 @@ class _DesktopSidebar extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 20),
-          for (var i = 0; i < _navItems.length; i++)
+          for (final item in _navItems)
             _DesktopNavItem(
-              selected: i == activeIndex,
-              icon: _navItems[i].icon,
-              selectedIcon: _navItems[i].selectedIcon,
-              label: _navItems[i].label,
-              onTap: () => onSelect(i),
+              selected: item.index == activeIndex,
+              icon: item.icon,
+              selectedIcon: item.selectedIcon,
+              label: item.label,
+              onTap: () => onSelect(item.index),
             ),
           const Spacer(),
           const AdSlotWidget(placement: 'USER_DASHBOARD_LEFT'),

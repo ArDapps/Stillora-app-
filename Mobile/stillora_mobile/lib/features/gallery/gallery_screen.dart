@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_spacing.dart';
+import '../../core/widgets/video_thumbnail.dart';
 import 'gallery_controller.dart';
 import 'gallery_video_screen.dart';
 import 'local_export_record.dart';
@@ -64,18 +65,11 @@ class _GalleryTile extends StatelessWidget {
 
     return Card(
       child: ListTile(
-        leading: Container(
+        leading: VideoThumbnail(
+          path: record.outputPath,
           width: 56,
           height: 56,
-          decoration: BoxDecoration(
-            color: StilloraColors.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(StilloraRadius.full),
-          ),
-          child: const Icon(
-            Icons.play_circle_fill_rounded,
-            color: StilloraColors.primary,
-            size: 32,
-          ),
+          radius: StilloraRadius.full,
         ),
         title: Text('${record.preset} · ${record.width}×${record.height}'),
         subtitle: Text('${record.durationSeconds}s · $dateLabel'),

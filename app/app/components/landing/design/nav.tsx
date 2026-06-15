@@ -1,8 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { EDITOR_PATH } from "@/lib/site";
+import stilloraIcon from "@/public/logo/stillora-icon.svg";
 
 const NAV_LINKS = [
   { href: "#features", label: "Features" },
@@ -12,13 +14,17 @@ const NAV_LINKS = [
   { href: "#faq", label: "FAQ" },
 ];
 
-export function BrandMark({ size = 32 }: { size?: number }) {
+// The real Stillora mark (matches the mobile app icon). viewBox aspect ≈ 312/190.
+export function BrandMark({ size = 30 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 116 116" aria-hidden="true">
-      <rect x="8" y="8" width="100" height="100" rx="26" fill="#7c3aed" />
-      <path d="M48 41.5 L78 58 L48 74.5 Z" fill="#fff" />
-      <circle cx="40" cy="41" r="3.6" fill="#facc15" />
-    </svg>
+    <Image
+      src={stilloraIcon}
+      alt="Stillora"
+      height={size}
+      width={Math.round((size * 312) / 190)}
+      priority
+      className="flex-shrink-0"
+    />
   );
 }
 

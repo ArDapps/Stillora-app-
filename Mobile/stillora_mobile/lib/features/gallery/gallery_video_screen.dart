@@ -8,6 +8,7 @@ import 'package:video_player/video_player.dart';
 import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_spacing.dart';
 import '../../core/platform/media_actions.dart';
+import '../../core/platform/platform_info.dart';
 import '../../core/widgets/stillora_video_player_panel.dart';
 import 'gallery_controller.dart';
 import 'local_export_record.dart';
@@ -80,12 +81,17 @@ class _GalleryVideoScreenState extends ConsumerState<GalleryVideoScreen> {
     if (_saving) return;
     setState(() => _saving = true);
     try {
-      final outcome = await MediaActions.saveToCameraRoll(
-        widget.record.outputPath,
-      );
+      // Desktop has no Camera Roll — open a native "Save As" dialog instead of
+      // asking for photo-library access (which doesn't apply on macOS/Windows).
+      final outcome = isDesktopPlatform
+          ? await MediaActions.saveVideoToFile(
+              widget.record.outputPath,
+              suggestedName: _suggestedFileName(),
+            )
+          : await MediaActions.saveToCameraRoll(widget.record.outputPath);
       switch (outcome) {
         case SaveOutcome.saved:
-          _snack('Saved to your Camera Roll.');
+          _snack(isDesktopPlatform ? 'Video saved.' : 'Saved to your Camera Roll.');
         case SaveOutcome.missingFile:
           _snack('That video is no longer available.');
         case SaveOutcome.permissionDenied:
@@ -93,11 +99,17 @@ class _GalleryVideoScreenState extends ConsumerState<GalleryVideoScreen> {
         case SaveOutcome.failed:
           _snack('Could not save the video. Please try again.');
         case SaveOutcome.cancelled:
-          break; // Camera-roll save has no cancellable dialog.
+          break; // User dismissed the save dialog.
       }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  String _suggestedFileName() {
+    final r = widget.record;
+    final preset = r.preset.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-');
+    return 'stillora-$preset-${r.width}x${r.height}.mp4';
   }
 
   Future<void> _delete() async {

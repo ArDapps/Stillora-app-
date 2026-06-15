@@ -92,6 +92,18 @@ export function AppNavbar() {
         </nav>
 
         <div className="hidden items-center gap-2 md:flex">
+          <Link
+            href="/batch"
+            className="rounded-md px-3 py-2 text-sm font-semibold text-muted-foreground transition-all hover:bg-foreground/5 hover:text-foreground"
+          >
+            Batch
+          </Link>
+          <Link
+            href="/html-to-video"
+            className="rounded-md px-3 py-2 text-sm font-semibold text-muted-foreground transition-all hover:bg-foreground/5 hover:text-foreground"
+          >
+            HTML → Video
+          </Link>
           <span className="rounded-full border border-green-500/25 bg-green-500/15 px-2.5 py-1 text-xs font-bold text-green-400">
             100% Free
           </span>
@@ -129,6 +141,20 @@ export function AppNavbar() {
             ))}
           </nav>
           <div className="flex flex-col gap-3">
+            <Link
+              href="/batch"
+              onClick={() => setMenuOpen(false)}
+              className="rounded-md px-4 py-3 text-sm font-semibold text-muted-foreground transition hover:bg-foreground/5 hover:text-foreground"
+            >
+              Batch · Loop images
+            </Link>
+            <Link
+              href="/html-to-video"
+              onClick={() => setMenuOpen(false)}
+              className="rounded-md px-4 py-3 text-sm font-semibold text-muted-foreground transition hover:bg-foreground/5 hover:text-foreground"
+            >
+              HTML → Video
+            </Link>
             <div className="text-center text-xs font-bold text-green-400">
               100% Free - Web - Mobile - Desktop soon
             </div>
