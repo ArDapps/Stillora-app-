@@ -20,3 +20,13 @@ export const EDITOR_PATH = "/editor";
  */
 export const APP_STORE_URL =
   "https://apps.apple.com/ae/app/stillora-mp4-video-maker/id6777488603";
+
+/**
+ * Platform download targets used by the landing download buttons.
+ * iOS and macOS both ship from the universal App Store listing above.
+ * Google Play and Windows are not live yet — leave empty until the store /
+ * installer URLs exist, and the UI renders them as "Soon".
+ */
+export const MACOS_DOWNLOAD_URL = APP_STORE_URL;
+export const GOOGLE_PLAY_URL = "";
+export const WINDOWS_DOWNLOAD_URL = "";

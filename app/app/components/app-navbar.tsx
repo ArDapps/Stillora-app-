@@ -15,10 +15,11 @@ export type NavLink = {
 };
 
 export const MARKETING_NAV_LINKS: NavLink[] = [
-  { href: "/#how-it-works", label: "How it works" },
-  { href: "/#formats", label: "Formats" },
   { href: "/#features", label: "Features" },
-  { href: "/#testimonials", label: "Reviews" },
+  { href: "/#formats", label: "Formats" },
+  { href: "/#how", label: "How it works" },
+  { href: "/#platforms", label: "Apps" },
+  { href: "/#faq", label: "FAQ" },
 ];
 
 export function Logo() {

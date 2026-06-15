@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stillora — Logo Exploration</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --onyx:#020617;
+    --surface:#0b1326;
+    --surface-low:#131b2e;
+    --surface-high:#222a3d;
+    --stroke:rgba(218,226,253,.10);
+    --stroke-bright:rgba(218,226,253,.18);
+    --on:#dae2fd;
+    --on-dim:#8b93ac;
+    --violet:#7c3aed;
+    --violet-bright:#d2bbff;
+    --gold:#facc15;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--onyx);color:var(--on);font-family:"Geist",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  body{padding:72px 80px 120px}
+  .mono{font-family:"Geist Mono",monospace}
+
+  /* ---------- header ---------- */
+  .head{max-width:1180px;margin:0 auto 56px}
+  .eyebrow{font-family:"Geist Mono",monospace;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--violet-bright);opacity:.75;margin-bottom:18px}
+  .head h1{font-size:44px;font-weight:700;letter-spacing:-.04em;line-height:1.05}
+  .head p{margin-top:14px;max-width:620px;color:var(--on-dim);font-size:16px;line-height:1.6}
+
+  .wrap{max-width:1180px;margin:0 auto}
+  .sec-label{font-family:"Geist Mono",monospace;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--on-dim);margin:64px 0 22px;display:flex;align-items:center;gap:14px}
+  .sec-label::after{content:"";flex:1;height:1px;background:var(--stroke)}
+
+  /* ---------- concept grid ---------- */
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:24px}
+  .card{
+    background:linear-gradient(180deg,var(--surface) 0%,var(--surface-low) 100%);
+    border:1px solid var(--stroke);border-radius:16px;overflow:hidden;
+    display:flex;flex-direction:column;
+  }
+  .stage{flex:1;min-height:260px;display:flex;align-items:center;justify-content:center;padding:48px;position:relative}
+  .stage.lock{justify-content:flex-start;padding:48px 56px}
+  .meta{border-top:1px solid var(--stroke);padding:18px 24px;display:flex;align-items:baseline;justify-content:space-between;gap:16px}
+  .meta .name{font-size:15px;font-weight:600;letter-spacing:-.01em}
+  .meta .idx{font-family:"Geist Mono",monospace;font-size:12px;color:var(--violet-bright);opacity:.7}
+  .meta .desc{font-size:13px;color:var(--on-dim);line-height:1.5;flex:1;text-align:right}
+
+  /* ---------- wordmark ---------- */
+  .wordmark{font-weight:700;letter-spacing:-.045em;color:var(--on)}
+  .wordmark .dot{color:var(--violet-bright)}
+
+  .lockup{display:flex;align-items:center;gap:18px}
+  .lockup .wordmark{font-size:38px}
+
+  /* favicon row */
+  .fav-row{display:flex;align-items:flex-end;gap:36px;flex-wrap:wrap}
+  .fav cap{display:block}
+  .fav .cap{display:block;margin-top:14px;font-family:"Geist Mono",monospace;font-size:11px;color:var(--on-dim);text-align:center}
+  .chip{border-radius:14px;background:var(--surface-high);display:flex;align-items:center;justify-content:center}
+
+  /* usage swatches */
+  .usage{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+  .swatch{border-radius:16px;border:1px solid var(--stroke);min-height:200px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;position:relative}
+  .swatch .tag{position:absolute;left:16px;bottom:14px;font-family:"Geist Mono",monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+  .bg-onyx{background:var(--onyx)}
+  .bg-violet{background:var(--violet)}
+  .bg-paper{background:#f4f2fb}
+  .bg-gold{background:var(--gold)}
+
+  svg{display:block}
+</style>
+</head>
+<body>
+
+  <header class="head">
+    <div class="eyebrow">Stillora · Built by Tecno Blocks</div>
+    <h1>Logo exploration</h1>
+    <p>Four logomark directions on the “Professional Magic” system — Electric Violet &amp; Liquid Gold on Midnight Onyx, set in Geist. Each plays on the core idea: a <em>still</em> image set into motion. My lead pick is marked below.</p>
+  </header>
+
+  <div class="wrap">
+
+    <!-- ============ MARKS ============ -->
+    <div class="sec-label">Logomark concepts</div>
+    <div class="grid">
+
+      <!-- A: Frame → Play -->
+      <div class="card">
+        <div class="stage">
+          <svg width="116" height="116" viewBox="0 0 116 116" fill="none" aria-label="Stillora mark — frame play">
+            <rect x="8" y="8" width="100" height="100" rx="26" fill="#131b2e" stroke="rgba(210,187,255,.20)" stroke-width="1.5"/>
+            <rect x="8" y="8" width="100" height="100" rx="26" fill="url(#gA)"/>
+            <path d="M48 41.5 L78 58 L48 74.5 Z" fill="#fff"/>
+            <circle cx="40" cy="41" r="3.4" fill="#facc15"/>
+            <defs>
+              <linearGradient id="gA" x1="8" y1="8" x2="108" y2="108" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#7c3aed" stop-opacity=".0"/>
+                <stop offset="1" stop-color="#7c3aed" stop-opacity=".22"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <div class="meta">
+          <div><span class="name">Frame &amp; Play</span> <span class="idx">A</span></div>
+          <div class="desc">Viewport frame with a play head — the moment a still becomes a clip.</div>
+        </div>
+      </div>
+
+      <!-- B: Image stack to motion -->
+      <div class="card">
+        <div class="stage">
+          <svg width="124" height="116" viewBox="0 0 124 116" fill="none" aria-label="Stillora mark — image stack to motion">
+            <rect x="20" y="34" width="58" height="58" rx="14" fill="#222a3d" opacity=".55"/>
+            <rect x="32" y="26" width="58" height="58" rx="14" fill="#3a2f6b"/>
+            <rect x="44" y="18" width="58" height="58" rx="14" fill="#7c3aed"/>
+            <path d="M64 33 L86 47 L64 61 Z" fill="#fff"/>
+            <circle cx="100" cy="84" r="4" fill="#facc15"/>
+            <circle cx="88" cy="90" r="2.6" fill="#facc15" opacity=".55"/>
+          </svg>
+        </div>
+        <div class="meta">
+          <div><span class="name">Motion Stack</span> <span class="idx">B</span></div>
+          <div class="desc">Fanned image cards resolving into a single playing frame.</div>
+        </div>
+      </div>
+
+      <!-- C: S monogram with play notch -->
+      <div class="card">
+        <div class="stage">
+          <svg width="116" height="116" viewBox="0 0 116 116" fill="none" aria-label="Stillora mark — S monogram">
+            <rect x="8" y="8" width="100" height="100" rx="26" fill="#0b1326" stroke="rgba(210,187,255,.16)" stroke-width="1.5"/>
+            <path d="M74 42c0-7-7-12-16-12s-16 5-16 12 7 11 16 13 16 6 16 13-7 12-16 12-16-5-16-12"
+                  stroke="#d2bbff" stroke-width="8" stroke-linecap="round" fill="none"/>
+            <path d="M55 53 L70 58 L55 63 Z" fill="#facc15"/>
+          </svg>
+        </div>
+        <div class="meta">
+          <div><span class="name">Monogram “S”</span> <span class="idx">C</span></div>
+          <div class="desc">A fluid S with a gold play seed at its pivot — compact, app-icon ready.</div>
+        </div>
+      </div>
+
+      <!-- D: Aperture sweep -->
+      <div class="card">
+        <div class="stage">
+          <svg width="116" height="116" viewBox="0 0 116 116" fill="none" aria-label="Stillora mark — sweep">
+            <circle cx="58" cy="58" r="42" stroke="rgba(210,187,255,.22)" stroke-width="2" fill="none"/>
+            <path d="M58 58 L58 16 A42 42 0 0 1 95 70 Z" fill="#7c3aed" opacity=".9"/>
+            <path d="M50 46 L74 58 L50 70 Z" fill="#fff"/>
+            <circle cx="58" cy="58" r="5" fill="#facc15"/>
+          </svg>
+        </div>
+        <div class="meta">
+          <div><span class="name">Sweep</span> <span class="idx">D</span></div>
+          <div class="desc">A play head inside a sweeping arc — render progress as identity.</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ============ LOCKUPS ============ -->
+    <div class="sec-label">Primary lockup — concept A “Frame &amp; Play” &nbsp;★ lead pick</div>
+    <div class="grid">
+
+      <div class="card">
+        <div class="stage lock">
+          <div class="lockup">
+            <svg width="56" height="56" viewBox="0 0 116 116" fill="none">
+              <rect x="8" y="8" width="100" height="100" rx="26" fill="#131b2e" stroke="rgba(210,187,255,.20)" stroke-width="1.5"/>
+              <path d="M48 41.5 L78 58 L48 74.5 Z" fill="#d2bbff"/>
+              <circle cx="40" cy="41" r="3.2" fill="#facc15"/>
+            </svg>
+            <span class="wordmark">Stillora</span>
+          </div>
+        </div>
+        <div class="meta">
+          <div><span class="name">Horizontal lockup</span></div>
+          <div class="desc">Default for nav bars &amp; headers.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="stage" style="flex-direction:column;gap:18px">
+          <svg width="72" height="72" viewBox="0 0 116 116" fill="none">
+            <rect x="8" y="8" width="100" height="100" rx="26" fill="#7c3aed"/>
+            <path d="M48 41.5 L78 58 L48 74.5 Z" fill="#fff"/>
+            <circle cx="40" cy="41" r="3.4" fill="#facc15"/>
+          </svg>
+          <span class="wordmark" style="font-size:30px">Stillora</span>
+        </div>
+        <div class="meta">
+          <div><span class="name">Stacked lockup</span></div>
+          <div class="desc">For splash, share cards &amp; export watermarks.</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ============ APP ICON SIZES ============ -->
+    <div class="sec-label">App icon &amp; favicon</div>
+    <div class="card">
+      <div class="stage">
+        <div class="fav-row">
+          <div class="fav">
+            <div class="chip" style="width:96px;height:96px;border-radius:24px;background:#7c3aed">
+              <svg width="56" height="56" viewBox="0 0 116 116"><path d="M48 41.5 L78 58 L48 74.5 Z" fill="#fff"/><circle cx="40" cy="41" r="3.4" fill="#facc15"/></svg>
+            </div>
+            <span class="cap">96 px</span>
+          </div>
+          <div class="fav">
+            <div class="chip" style="width:64px;height:64px;border-radius:16px;background:#7c3aed">
+              <svg width="38" height="38" viewBox="0 0 116 116"><path d="M48 41.5 L78 58 L48 74.5 Z" fill="#fff"/><circle cx="40" cy="41" r="3.4" fill="#facc15"/></svg>
+            </div>
+            <span class="cap">64 px</span>
+          </div>
+          <div class="fav">
+            <div class="chip" style="width:40px;height:40px;border-radius:10px;background:#7c3aed">
+              <svg width="24" height="24" viewBox="0 0 116 116"><path d="M48 41.5 L78 58 L48 74.5 Z" fill="#fff"/></svg>
+            </div>
+            <span class="cap">40 px</span>
+          </div>
+          <div class="fav">
+            <div class="chip" style="width:24px;height:24px;border-radius:7px;background:#7c3aed">
+              <svg width="15" height="15" viewBox="0 0 116 116"><path d="M48 41.5 L78 58 L48 74.5 Z" fill="#fff"/></svg>
+            </div>
+            <span class="cap">24 px</span>
+          </div>
+        </div>
+      </div>
+      <div class="meta">
+        <div><span class="name">Mark holds at small sizes</span></div>
+        <div class="desc">Gold seed drops below 40 px to keep the play head crisp.</div>
+      </div>
+    </div>
+
+    <!-- ============ USAGE ON BACKGROUNDS ============ -->
+    <div class="sec-label">Color &amp; reversal</div>
+    <div class="usage">
+      <div class="swatch bg-onyx">
+        <div class="lockup" style="gap:14px">
+          <svg width="40" height="40" viewBox="0 0 116 116"><rect x="8" y="8" width="100" height="100" rx="26" fill="#131b2e" stroke="rgba(210,187,255,.20)" stroke-width="1.5"/><path d="M48 41.5 L78 58 L48 74.5 Z" fill="#d2bbff"/><circle cx="40" cy="41" r="3" fill="#facc15"/></svg>
+          <span class="wordmark" style="font-size:26px">Stillora</span>
+        </div>
+        <span class="tag" style="color:var(--on-dim)">On Onyx</span>
+      </div>
+      <div class="swatch bg-violet">
+        <div class="lockup" style="gap:14px">
+          <svg width="40" height="40" viewBox="0 0 116 116"><rect x="8" y="8" width="100" height="100" rx="26" fill="rgba(255,255,255,.14)"/><path d="M48 41.5 L78 58 L48 74.5 Z" fill="#fff"/><circle cx="40" cy="41" r="3" fill="#facc15"/></svg>
+          <span class="wordmark" style="font-size:26px;color:#fff">Stillora</span>
+        </div>
+        <span class="tag" style="color:rgba(255,255,255,.7)">On Violet</span>
+      </div>
+      <div class="swatch bg-paper">
+        <div class="lockup" style="gap:14px">
+          <svg width="40" height="40" viewBox="0 0 116 116"><rect x="8" y="8" width="100" height="100" rx="26" fill="#7c3aed"/><path d="M48 41.5 L78 58 L48 74.5 Z" fill="#fff"/><circle cx="40" cy="41" r="3" fill="#facc15"/></svg>
+          <span class="wordmark" style="font-size:26px;color:#1a1430">Stillora</span>
+        </div>
+        <span class="tag" style="color:#6b6585">On Paper</span>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>
