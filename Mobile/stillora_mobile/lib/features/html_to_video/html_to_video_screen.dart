@@ -9,6 +9,7 @@ import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_spacing.dart';
 import '../../core/platform/media_actions.dart';
 import '../../core/platform/platform_info.dart';
+import 'html_to_video_controller.dart';
 import 'html_to_video_service.dart';
 
 // Accent + panel colours tuned to match the web "New render" design.
@@ -58,10 +59,24 @@ class _HtmlToVideoViewState extends ConsumerState<HtmlToVideoView> {
   int _durationSeconds = 10;
   int _fps = 30;
 
-  bool _converting = false;
-  String? _error;
-  File? _result;
+  String? _validationError;
   VideoPlayerController? _player;
+  String? _playerPath;
+
+  // Conversion state lives in a provider so it keeps running across tab
+  // switches and notifies the whole app on completion.
+  bool get _converting => ref.read(htmlToVideoControllerProvider).isLoading;
+  File? get _resultFile =>
+      ref.read(htmlToVideoControllerProvider).asData?.value;
+  String? get _displayError {
+    if (_validationError != null) return _validationError;
+    final state = ref.read(htmlToVideoControllerProvider);
+    return state.hasError ? _convertErrorMessage(state.error) : null;
+  }
+
+  String _convertErrorMessage(Object? error) => error is HtmlToVideoException
+      ? error.message
+      : 'Something went wrong. Try again.';
 
   @override
   void dispose() {
@@ -83,7 +98,7 @@ class _HtmlToVideoViewState extends ConsumerState<HtmlToVideoView> {
     setState(() {
       _pickedFileName = result!.files.single.name;
       _pickedHtml = content;
-      _error = null;
+      _validationError = null;
     });
   }
 
@@ -99,65 +114,68 @@ class _HtmlToVideoViewState extends ConsumerState<HtmlToVideoView> {
     }
   }
 
-  Future<void> _convert() async {
+  void _startConvert() {
     final html = _resolveHtml();
     final url = _mode == _InputMode.url ? _urlController.text.trim() : null;
 
     if (_mode == _InputMode.url && (url == null || url.isEmpty)) {
-      setState(() => _error = 'Enter a URL to render.');
+      setState(() => _validationError = 'Enter a URL to render.');
       return;
     }
     if (_mode != _InputMode.url && (html == null || html.isEmpty)) {
       setState(() {
-        _error = _mode == _InputMode.file
+        _validationError = _mode == _InputMode.file
             ? 'Pick an .html file first.'
             : 'Paste some HTML first.';
       });
       return;
     }
 
-    await _player?.dispose();
-    setState(() {
-      _converting = true;
-      _error = null;
-      _result = null;
-      _player = null;
-    });
+    setState(() => _validationError = null);
+    ref.read(htmlToVideoControllerProvider.notifier).convert(
+          HtmlToVideoRequest(
+            html: html,
+            url: url,
+            width: _size.width,
+            height: _size.height,
+            durationMs: _durationSeconds * 1000,
+            fps: _fps,
+          ),
+        );
+  }
 
-    try {
-      final file = await ref.read(htmlToVideoServiceProvider).convert(
-            HtmlToVideoRequest(
-              html: html,
-              url: url,
-              width: _size.width,
-              height: _size.height,
-              durationMs: _durationSeconds * 1000,
-              fps: _fps,
-            ),
-          );
-      final player = VideoPlayerController.file(file);
-      await player.initialize();
-      await player.setLooping(true);
-      await player.play();
-      if (!mounted) {
-        player.dispose();
-        return;
+  /// Keeps the preview player pointed at the latest rendered file.
+  Future<void> _syncPlayer(File? file) async {
+    if (file == null) {
+      final old = _player;
+      if (old != null) {
+        setState(() {
+          _player = null;
+          _playerPath = null;
+        });
+        await old.dispose();
       }
-      setState(() {
-        _result = file;
-        _player = player;
-      });
-    } on HtmlToVideoException catch (error) {
-      if (mounted) setState(() => _error = error.message);
-    } catch (_) {
-      if (mounted) setState(() => _error = 'Something went wrong. Try again.');
-    } finally {
-      if (mounted) setState(() => _converting = false);
+      return;
     }
+    if (file.path == _playerPath) return;
+    final old = _player;
+    final player = VideoPlayerController.file(file);
+    await player.initialize();
+    await player.setLooping(true);
+    await player.play();
+    if (!mounted) {
+      await player.dispose();
+      return;
+    }
+    setState(() {
+      _player = player;
+      _playerPath = file.path;
+    });
+    await old?.dispose();
   }
 
   Future<void> _save() async {
-    final file = _result;
+    final file = _resultFile;
     if (file == null) return;
     final name = 'stillora_${DateTime.now().millisecondsSinceEpoch}.mp4';
     final outcome = isDesktopPlatform
@@ -178,7 +196,7 @@ class _HtmlToVideoViewState extends ConsumerState<HtmlToVideoView> {
   }
 
   Future<void> _share() async {
-    final file = _result;
+    final file = _resultFile;
     if (file == null) return;
     final ok = await MediaActions.shareVideo(context, file.path);
     if (!mounted || ok) return;
@@ -189,6 +207,13 @@ class _HtmlToVideoViewState extends ConsumerState<HtmlToVideoView> {
 
   @override
   Widget build(BuildContext context) {
+    // Watch keeps the UI in sync with the background job; listen drives the
+    // preview player whenever a new render finishes (even from another tab).
+    ref.watch(htmlToVideoControllerProvider);
+    ref.listen(htmlToVideoControllerProvider, (previous, next) {
+      _syncPlayer(next.asData?.value);
+    });
+
     final desktop = useDesktopLayout(context);
     if (desktop) {
       return Padding(
@@ -223,12 +248,12 @@ class _HtmlToVideoViewState extends ConsumerState<HtmlToVideoView> {
             size: _size,
             fps: _fps,
             player: _player,
-            hasResult: _result != null,
+            hasResult: _resultFile != null,
             converting: _converting,
           ),
           const SizedBox(height: StilloraSpacing.sm),
           _convertButton(),
-          if (_result != null) ...[
+          if (_resultFile != null) ...[
             const SizedBox(height: StilloraSpacing.sm),
             _resultActions(),
           ],
@@ -312,7 +337,7 @@ class _HtmlToVideoViewState extends ConsumerState<HtmlToVideoView> {
               mode: _mode,
               onChanged: (mode) => setState(() {
                 _mode = mode;
-                _error = null;
+                _validationError = null;
               }),
             ),
             const SizedBox(height: StilloraSpacing.sm),
@@ -349,9 +374,9 @@ class _HtmlToVideoViewState extends ConsumerState<HtmlToVideoView> {
         const SizedBox(height: StilloraSpacing.sm),
         fpsCard,
       ],
-      if (_error != null) ...[
+      if (_displayError != null) ...[
         const SizedBox(height: StilloraSpacing.sm),
-        _ErrorBanner(message: _error!),
+        _ErrorBanner(message: _displayError!),
       ],
     ];
   }
@@ -364,13 +389,13 @@ class _HtmlToVideoViewState extends ConsumerState<HtmlToVideoView> {
             size: _size,
             fps: _fps,
             player: _player,
-            hasResult: _result != null,
+            hasResult: _resultFile != null,
             converting: _converting,
           ),
         ),
         const SizedBox(height: StilloraSpacing.sm),
         _convertButton(),
-        if (_result != null) ...[
+        if (_resultFile != null) ...[
           const SizedBox(height: StilloraSpacing.sm),
           _resultActions(),
         ],
@@ -379,19 +404,52 @@ class _HtmlToVideoViewState extends ConsumerState<HtmlToVideoView> {
   }
 
   Widget _convertButton() {
+    if (_converting) {
+      return SizedBox(
+        height: 56,
+        child: Row(
+          children: [
+            const Expanded(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  SizedBox(width: 10),
+                  Text('Rendering…'),
+                ],
+              ),
+            ),
+            const SizedBox(width: StilloraSpacing.xs),
+            OutlinedButton.icon(
+              onPressed: _cancel,
+              icon: const Icon(Icons.close_rounded),
+              label: const Text('Cancel'),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(0, 56),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return SizedBox(
       height: 56,
       child: FilledButton.icon(
-        onPressed: _converting ? null : _convert,
-        icon: _converting
-            ? const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : const Icon(Icons.auto_awesome),
-        label: Text(_converting ? 'Rendering…' : 'Convert to MP4'),
+        onPressed: _startConvert,
+        icon: const Icon(Icons.auto_awesome),
+        label: const Text('Convert to MP4'),
       ),
+    );
+  }
+
+  void _cancel() {
+    ref.read(htmlToVideoControllerProvider.notifier).cancel();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Conversion cancelled')),
     );
   }
 

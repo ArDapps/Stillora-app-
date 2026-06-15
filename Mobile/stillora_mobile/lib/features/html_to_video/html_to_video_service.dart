@@ -45,7 +45,10 @@ class HtmlToVideoService {
 
   final Ref _ref;
 
-  Future<File> convert(HtmlToVideoRequest request) async {
+  Future<File> convert(
+    HtmlToVideoRequest request, {
+    CancelToken? cancelToken,
+  }) async {
     final token = _ref.read(authControllerProvider).asData?.value?.token;
     if (token == null) {
       throw HtmlToVideoException('Please sign in to convert HTML to video.');
@@ -55,6 +58,7 @@ class HtmlToVideoService {
     try {
       final response = await dio.post<List<int>>(
         '/api/convert/html',
+        cancelToken: cancelToken,
         data: {
           if (request.html != null) 'html': request.html,
           if (request.url != null) 'url': request.url,

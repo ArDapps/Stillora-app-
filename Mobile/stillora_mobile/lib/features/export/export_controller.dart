@@ -26,6 +26,8 @@ final exportControllerProvider =
     );
 
 class ExportController extends AsyncNotifier<engine.ExportResult?> {
+  bool _cancelled = false;
+
   @override
   FutureOr<engine.ExportResult?> build() => null;
 
@@ -34,6 +36,7 @@ class ExportController extends AsyncNotifier<engine.ExportResult?> {
       throw StateError('Select media before exporting.');
     }
 
+    _cancelled = false;
     state = const AsyncLoading();
     final videoEngine = ref.read(videoEngineProvider);
     EditorState? preparedEditor;
@@ -67,6 +70,12 @@ class ExportController extends AsyncNotifier<engine.ExportResult?> {
             : engine.ResizeMode.fill,
       );
     });
+
+    // A user-initiated cancel resolves to a benign idle state, not an error.
+    if (_cancelled) {
+      state = const AsyncData(null);
+      return;
+    }
 
     final result = state.value;
     if (result != null) {
@@ -116,6 +125,7 @@ class ExportController extends AsyncNotifier<engine.ExportResult?> {
   }
 
   Future<void> cancel() async {
+    _cancelled = true;
     try {
       await ref.read(videoEngineProvider).cancelExport();
     } on MissingPluginException {

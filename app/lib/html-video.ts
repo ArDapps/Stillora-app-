@@ -135,6 +135,17 @@ let browserPromise: Promise<Browser> | null = null;
 
 /** Lazily launches a shared headless Chromium and reuses it across requests. */
 async function getBrowser(): Promise<Browser> {
+  // Reuse the existing browser only if it's still connected; a crashed/closed
+  // browser would otherwise hang every later request until it times out.
+  if (browserPromise) {
+    try {
+      const existing = await browserPromise;
+      if (existing.connected) return existing;
+    } catch {
+      // Fall through and relaunch below.
+    }
+    browserPromise = null;
+  }
   if (!browserPromise) {
     browserPromise = puppeteer
       .launch({

@@ -37,6 +37,7 @@
     <circle cx="310" cy="100" r="7" fill="#6A45E8"/>
   </g>
   <text x="86" y="90" fill="#08264C" font-family="Inter, Arial, sans-serif" font-size="42" font-weight="700">Stillora</text>
-  <text x="86" y="395" fill="#08264C" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="700">Image-to-video posts, polished fast</text>
-  <text x="86" y="438" fill="#425A76" font-family="Inter, Arial, sans-serif" font-size="23" font-weight="500">Create, preview, export, and share MP4 videos</text>
+  <text x="86" y="382" fill="#08264C" font-family="Inter, Arial, sans-serif" font-size="32" font-weight="700">Image-to-video posts</text>
+  <text x="86" y="424" fill="#08264C" font-family="Inter, Arial, sans-serif" font-size="32" font-weight="700">polished fast</text>
+  <text x="86" y="462" fill="#425A76" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="500">Create, preview, export, and share MP4 videos</text>
 </svg>

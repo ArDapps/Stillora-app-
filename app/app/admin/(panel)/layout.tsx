@@ -45,7 +45,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </nav>
 
         <div className="border-t p-2" style={{ borderColor: "var(--color-border)" }}>
-          <NavItem href="/editor">← App</NavItem>
+          <NavItem href="/editor">Editor</NavItem>
+          <NavItem href="/html-to-video">HTML → Video</NavItem>
           <AdminLogoutButton />
         </div>
       </aside>

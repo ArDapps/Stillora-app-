@@ -1,3 +1,4 @@
+import { getAdminFromRequest } from "@/lib/admin";
 import { getUserFromRequest } from "@/lib/auth";
 import {
   normalizeOptions,
@@ -17,8 +18,11 @@ export const maxDuration = 300;
  * body (nothing is persisted server-side, matching the rest of the pipeline).
  */
 export async function POST(request: Request) {
+  // Native apps authenticate as a user; the admin-only web tool may instead
+  // carry an admin session.
   const user = await getUserFromRequest(request);
-  if (!user) {
+  const admin = user ? null : await getAdminFromRequest(request);
+  if (!user && !admin) {
     return Response.json({ error: "Unauthorized." }, { status: 401 });
   }
 
