@@ -10,14 +10,36 @@ void main() {
     expect(state.durationSeconds, 30);
   });
 
-  test('custom duration is clamped to export limits', () {
+  test('custom duration has no artificial upper limit', () {
     var state = const EditorState();
 
     state = state.copyWith(durationSeconds: 999);
-    expect(state.durationSeconds, maxDurationSeconds);
+    expect(state.durationSeconds, 999);
 
     state = state.copyWith(durationSeconds: 0);
     expect(state.durationSeconds, minDurationSeconds);
+  });
+
+  test('duration slider expands to include long values', () {
+    expect(durationSliderMax(60), defaultDurationSliderMaxSeconds);
+    expect(durationSliderMax(301), 600);
+    expect(durationSliderMax(3600), 3600);
+  });
+
+  test('duration adjustment step scales for long projects', () {
+    expect(durationAdjustmentStep(30), 1);
+    expect(durationAdjustmentStep(60), 10);
+    expect(durationAdjustmentStep(600), 60);
+  });
+
+  test('long audio-sized projects retain their full duration', () {
+    final state = const EditorState().copyWith(
+      durationSeconds: 1800,
+      audioDurationSeconds: 1800,
+    );
+
+    expect(state.durationSeconds, 1800);
+    expect(state.audioDurationSeconds, 1800);
   });
 
   test('fit and fill resize modes are explicit', () {

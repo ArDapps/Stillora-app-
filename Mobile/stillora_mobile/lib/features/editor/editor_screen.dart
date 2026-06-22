@@ -202,8 +202,7 @@ class _MobileEditorFlow extends StatelessWidget {
         _StepRow(
           icon: Icons.aspect_ratio_rounded,
           label: 'Choose Preset',
-          subtitle:
-              '${editor.preset.label} · ${editor.preset.ratioLabel}',
+          subtitle: '${editor.preset.label} · ${editor.preset.ratioLabel}',
           onTap: () => context.push(ChoosePresetScreen.routePath),
         ),
         const SizedBox(height: StilloraSpacing.sm),
@@ -259,9 +258,9 @@ class _StepRow extends StatelessWidget {
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
                 ),
                 Text(
                   subtitle,
@@ -289,10 +288,7 @@ class _StepRow extends StatelessWidget {
 /// Tapping the empty state navigates to UploadMediaScreen.
 /// When media is selected, shows thumbnail strip with add/replace buttons.
 class _MobilePreviewPanel extends StatelessWidget {
-  const _MobilePreviewPanel({
-    required this.editor,
-    required this.controller,
-  });
+  const _MobilePreviewPanel({required this.editor, required this.controller});
 
   final EditorState editor;
   final EditorController controller;
@@ -335,8 +331,7 @@ class _MobilePreviewPanel extends StatelessWidget {
                 ),
               ),
               TextButton(
-                onPressed: () =>
-                    context.push(ChoosePresetScreen.routePath),
+                onPressed: () => context.push(ChoosePresetScreen.routePath),
                 child: const Text('Change'),
               ),
             ],
@@ -357,15 +352,13 @@ class _MobilePreviewPanel extends StatelessWidget {
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       color: StilloraColors.surfaceContainerLowest,
-                      borderRadius:
-                          BorderRadius.circular(StilloraRadius.full),
+                      borderRadius: BorderRadius.circular(StilloraRadius.full),
                       border: Border.all(
                         color: StilloraColors.primary.withValues(alpha: 0.5),
                       ),
                     ),
                     child: ClipRRect(
-                      borderRadius:
-                          BorderRadius.circular(StilloraRadius.full),
+                      borderRadius: BorderRadius.circular(StilloraRadius.full),
                       child: _PreviewMedia(
                         media: editor.selectedMedia,
                         resizeMode: editor.resizeMode,
@@ -378,17 +371,13 @@ class _MobilePreviewPanel extends StatelessWidget {
           ),
           if (editor.hasMedia) ...[
             const SizedBox(height: StilloraSpacing.sm),
-            _MediaTimeline(
-              editor: editor,
-              controller: controller,
-            ),
+            _MediaTimeline(editor: editor, controller: controller),
             const SizedBox(height: StilloraSpacing.xs),
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () =>
-                        context.push(UploadMediaScreen.routePath),
+                    onPressed: () => context.push(UploadMediaScreen.routePath),
                     icon: const Icon(Icons.add_rounded),
                     label: const Text('Add more'),
                   ),
@@ -1381,10 +1370,7 @@ class _ClipDurationSheet extends StatefulWidget {
 class _ClipDurationSheetState extends State<_ClipDurationSheet> {
   late int _seconds = widget.initialSeconds;
 
-  // A 60s ceiling keeps a single clip's slider usable; the typed field still
-  // accepts longer values up to the engine limit.
-  static const _sliderMax = 60;
-  static const _quickPicks = [1, 2, 3, 5, 10, 15, 30];
+  static const _quickPicks = [1, 3, 5, 10, 30, 60, 300, 600, 1800];
 
   void _set(int seconds) {
     final clamped = normalizeDurationSeconds(seconds);
@@ -1395,6 +1381,7 @@ class _ClipDurationSheetState extends State<_ClipDurationSheet> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final sliderMax = durationSliderMax(_seconds);
     return Padding(
       padding: EdgeInsets.fromLTRB(
         StilloraSpacing.md,
@@ -1424,7 +1411,7 @@ class _ClipDurationSheetState extends State<_ClipDurationSheet> {
             children: [
               for (final pick in _quickPicks)
                 _DurationChip(
-                  label: '${pick}s',
+                  label: _formatDuration(pick),
                   selected: _seconds == pick,
                   onSelected: () => _set(pick),
                 ),
@@ -1435,34 +1422,48 @@ class _ClipDurationSheetState extends State<_ClipDurationSheet> {
             children: [
               IconButton.filledTonal(
                 tooltip: 'Shorter',
-                onPressed: () => _set(_seconds - 1),
+                onPressed: () =>
+                    _set(_seconds - durationAdjustmentStep(_seconds)),
                 icon: const Icon(Icons.remove_rounded),
               ),
               Expanded(
                 child: Slider(
-                  value: _seconds
-                      .clamp(minDurationSeconds, _sliderMax)
-                      .toDouble(),
+                  value: _seconds.toDouble(),
                   min: minDurationSeconds.toDouble(),
-                  max: _sliderMax.toDouble(),
-                  divisions: _sliderMax - minDurationSeconds,
-                  label: '${_seconds}s',
+                  max: sliderMax,
+                  label: _formatDuration(_seconds),
                   onChanged: (value) => _set(value.round()),
                 ),
               ),
               IconButton.filledTonal(
                 tooltip: 'Longer',
-                onPressed: () => _set(_seconds + 1),
+                onPressed: () =>
+                    _set(_seconds + durationAdjustmentStep(_seconds)),
                 icon: const Icon(Icons.add_rounded),
               ),
             ],
           ),
           Center(
-            child: Text(
-              '${_seconds}s',
-              style: Theme.of(
-                context,
-              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+            child: SizedBox(
+              width: 180,
+              child: TextFormField(
+                key: ValueKey('clip-duration-$_seconds'),
+                initialValue: _seconds.toString(),
+                textAlign: TextAlign.center,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: const InputDecoration(
+                  isDense: true,
+                  suffixText: 'seconds',
+                  helperText: 'Enter any duration',
+                ),
+                onFieldSubmitted: (value) {
+                  final seconds = int.tryParse(value);
+                  if (seconds != null) {
+                    _set(seconds);
+                  }
+                },
+              ),
             ),
           ),
           const SizedBox(height: StilloraSpacing.sm),
@@ -1811,6 +1812,7 @@ class _PresetCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final sliderMax = durationSliderMax(editor.totalDurationSeconds);
     return RenderStepCard(
       number: '3',
       title: 'Presets',
@@ -1869,6 +1871,30 @@ class _PresetCard extends StatelessWidget {
                 onSelected: () => controller.setDuration(30),
                 compact: compact,
               ),
+              _DurationChip(
+                label: '1 min',
+                selected: editor.totalDurationSeconds == 60,
+                onSelected: () => controller.setDuration(60),
+                compact: compact,
+              ),
+              _DurationChip(
+                label: '5 min',
+                selected: editor.totalDurationSeconds == 300,
+                onSelected: () => controller.setDuration(300),
+                compact: compact,
+              ),
+              _DurationChip(
+                label: '10 min',
+                selected: editor.totalDurationSeconds == 600,
+                onSelected: () => controller.setDuration(600),
+                compact: compact,
+              ),
+              _DurationChip(
+                label: '30 min',
+                selected: editor.totalDurationSeconds == 1800,
+                onSelected: () => controller.setDuration(1800),
+                compact: compact,
+              ),
               if (editor.audioDurationSeconds != null)
                 _DurationChip(
                   label:
@@ -1884,12 +1910,9 @@ class _PresetCard extends StatelessWidget {
           ),
           const SizedBox(height: StilloraSpacing.xs),
           Slider(
-            value: editor.totalDurationSeconds
-                .clamp(minDurationSeconds, maxDurationSeconds)
-                .toDouble(),
+            value: editor.totalDurationSeconds.toDouble(),
             min: minDurationSeconds.toDouble(),
-            max: maxDurationSeconds.toDouble(),
-            divisions: maxDurationSeconds - minDurationSeconds,
+            max: sliderMax,
             label: _formatDuration(editor.totalDurationSeconds),
             onChanged: (value) => controller.setDuration(value.round()),
           ),
@@ -1897,8 +1920,10 @@ class _PresetCard extends StatelessWidget {
             children: [
               IconButton.filledTonal(
                 tooltip: 'Shorter',
-                onPressed: () =>
-                    controller.setDuration(editor.totalDurationSeconds - 1),
+                onPressed: () => controller.setDuration(
+                  editor.totalDurationSeconds -
+                      durationAdjustmentStep(editor.totalDurationSeconds),
+                ),
                 icon: const Icon(Icons.remove_rounded),
               ),
               const SizedBox(width: StilloraSpacing.xs),
@@ -1912,6 +1937,7 @@ class _PresetCard extends StatelessWidget {
                   decoration: const InputDecoration(
                     isDense: true,
                     suffixText: 's',
+                    helperText: 'Any positive duration',
                     contentPadding: EdgeInsets.symmetric(
                       horizontal: 12,
                       vertical: 12,
@@ -1928,8 +1954,10 @@ class _PresetCard extends StatelessWidget {
               const SizedBox(width: StilloraSpacing.xs),
               IconButton.filledTonal(
                 tooltip: 'Longer',
-                onPressed: () =>
-                    controller.setDuration(editor.totalDurationSeconds + 1),
+                onPressed: () => controller.setDuration(
+                  editor.totalDurationSeconds +
+                      durationAdjustmentStep(editor.totalDurationSeconds),
+                ),
                 icon: const Icon(Icons.add_rounded),
               ),
             ],
@@ -2028,8 +2056,14 @@ class _DurationChip extends StatelessWidget {
 }
 
 String _formatDuration(int seconds) {
+  final hours = seconds ~/ 3600;
   final minutes = seconds ~/ 60;
   final remainder = seconds % 60;
+  if (hours > 0) {
+    final remainingMinutes = minutes % 60;
+    return '$hours:${remainingMinutes.toString().padLeft(2, '0')}:'
+        '${remainder.toString().padLeft(2, '0')}';
+  }
   if (minutes == 0) {
     return '${seconds}s';
   }

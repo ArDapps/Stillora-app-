@@ -39,6 +39,10 @@
 	<string>718272031198-kr3vqn6j3cchpo0vqp7usajm3734ignb.apps.googleusercontent.com</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Stillora uses the camera only if you choose to capture a photo or video to turn into an MP4.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Stillora does not use your location. This permission is only referenced by a bundled sign-in component and is never used to track you.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Stillora uses your microphone only when you choose to record voice narration for your video.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
