@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/auth/auth_controller.dart';
 import '../../core/constants/app_constants.dart';
-import '../auth/auth_buttons.dart';
-import '../auth/login_screen.dart';
+import '../../core/design/stillora_spacing.dart';
+import '../../core/widgets/stillora_mark.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -26,101 +25,53 @@ class ProfileView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final auth = ref.watch(authControllerProvider);
-    final session = auth.asData?.value;
+    return _ProfileFrame(
+      child: ListView(
+        padding: const EdgeInsets.all(StilloraSpacing.md),
+        children: [
+          const SizedBox(height: StilloraSpacing.md),
+          const Center(child: StilloraMark(size: 64)),
+          const SizedBox(height: StilloraSpacing.sm),
+          Text(
+            'Stillora',
+            textAlign: TextAlign.center,
+            style: Theme.of(context)
+                .textTheme
+                .headlineSmall
+                ?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'No account needed — every video is made locally on your device.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
+          const SizedBox(height: StilloraSpacing.lg),
+          const _PolicyLinks(),
+        ],
+      ),
+    );
+  }
+}
 
-    if (session == null) {
-      return SafeArea(
-        top: false,
-        child: ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            Text(
-              'Sign in to unlock more',
-              style: Theme.of(
-                context,
-              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Browse and make basic videos freely. Sign in to unlock Voice '
-              'Narration and sync your account.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 18),
-            if (appleSignInSupported) ...[
-              StilloraAppleButton(
-                loading: auth.isLoading,
-                onPressed: () => ref
-                    .read(authControllerProvider.notifier)
-                    .signInWithApple(),
-              ),
-              const SizedBox(height: 12),
-            ],
-            StilloraGoogleButton(
-              loading: auth.isLoading,
-              onPressed: () =>
-                  ref.read(authControllerProvider.notifier).signInWithGoogle(),
-            ),
-            if (auth.hasError) ...[
-              const SizedBox(height: 12),
-              AuthErrorBanner(message: authErrorMessage(auth.error)),
-            ],
-            const SizedBox(height: 18),
-            const _PolicyLinks(),
-          ],
-        ),
-      );
-    }
+/// Centers the profile content and caps its width so it reads as a tidy panel
+/// on wide desktop windows instead of a stretched mobile column.
+class _ProfileFrame extends StatelessWidget {
+  const _ProfileFrame({required this.child});
+  final Widget child;
 
+  @override
+  Widget build(BuildContext context) {
     return SafeArea(
       top: false,
-      child: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          Center(
-            child: session.user.avatarUrl.isNotEmpty
-                ? ClipOval(
-                    child: Image.network(
-                      session.user.avatarUrl,
-                      width: 84,
-                      height: 84,
-                      fit: BoxFit.cover,
-                      errorBuilder: (ctx, err, st) => CircleAvatar(
-                        radius: 42,
-                        child: Text(session.user.name.characters.first),
-                      ),
-                    ),
-                  )
-                : CircleAvatar(
-                    radius: 42,
-                    child: Text(session.user.name.characters.first),
-                  ),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            session.user.name,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 4),
-          Text(session.user.email, textAlign: TextAlign.center),
-          const SizedBox(height: 24),
-          const _PolicyLinks(),
-          const SizedBox(height: 14),
-          FilledButton.icon(
-            onPressed: () async {
-              await ref.read(authControllerProvider.notifier).signOut();
-              if (context.mounted) {
-                context.go(LoginScreen.routePath);
-              }
-            },
-            icon: const Icon(Icons.logout_rounded),
-            label: const Text('Logout'),
-          ),
-        ],
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: child,
+        ),
       ),
     );
   }

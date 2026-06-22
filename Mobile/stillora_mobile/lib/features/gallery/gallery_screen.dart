@@ -38,15 +38,124 @@ class GalleryView extends ConsumerWidget {
           if (items.isEmpty) {
             return const _GalleryEmpty();
           }
-          return ListView.separated(
-            padding: const EdgeInsets.all(StilloraSpacing.sm),
-            itemCount: items.length,
-            separatorBuilder: (_, _) =>
-                const SizedBox(height: StilloraSpacing.xs),
-            itemBuilder: (context, index) =>
-                _GalleryTile(record: items[index]),
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              // Wide windows get a desktop grid of poster cards; phones keep the
+              // compact list.
+              if (constraints.maxWidth >= 640) {
+                return _GalleryGrid(items: items);
+              }
+              return ListView.separated(
+                padding: const EdgeInsets.all(StilloraSpacing.sm),
+                itemCount: items.length,
+                separatorBuilder: (_, _) =>
+                    const SizedBox(height: StilloraSpacing.xs),
+                itemBuilder: (context, index) =>
+                    _GalleryTile(record: items[index]),
+              );
+            },
           );
         },
+      ),
+    );
+  }
+}
+
+/// Responsive poster-card grid used on desktop / wide windows.
+class _GalleryGrid extends StatelessWidget {
+  const _GalleryGrid({required this.items});
+
+  final List<LocalExportRecord> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(StilloraSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${items.length} ${items.length == 1 ? 'video' : 'videos'}',
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: StilloraColors.onSurfaceVariant,
+                  letterSpacing: 0.4,
+                ),
+          ),
+          const SizedBox(height: StilloraSpacing.sm),
+          Wrap(
+            spacing: StilloraSpacing.sm,
+            runSpacing: StilloraSpacing.sm,
+            children: [
+              for (final record in items) _GalleryCard(record: record),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GalleryCard extends StatelessWidget {
+  const _GalleryCard({required this.record});
+
+  static const _w = 236.0;
+  static const _thumbH = 133.0; // 16:9
+
+  final LocalExportRecord record;
+
+  @override
+  Widget build(BuildContext context) {
+    final date = record.createdAt;
+    final dateLabel =
+        '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
+    return SizedBox(
+      width: _w,
+      child: Material(
+        color: StilloraColors.surfaceContainer.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(StilloraRadius.card),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => GalleryVideoScreen(record: record),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              VideoThumbnail(
+                path: record.outputPath,
+                width: _w,
+                height: _thumbH,
+                radius: 0,
+              ),
+              Padding(
+                padding: const EdgeInsets.all(StilloraSpacing.snug),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${record.preset} · ${record.width}×${record.height}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${record.durationSeconds}s · $dateLabel',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: StilloraColors.onSurfaceVariant,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

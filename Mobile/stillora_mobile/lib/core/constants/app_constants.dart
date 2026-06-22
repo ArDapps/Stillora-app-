@@ -43,3 +43,39 @@ class AppConstants {
   /// unavailable). Point this at the store listing once it exists.
   static const reviewUrl = 'https://stillora.loopara.app';
 }
+
+/// AdMob (Google Mobile Ads) configuration. Defaults are Google's official TEST
+/// unit IDs so banners render immediately during development without risking
+/// policy strikes. Replace with your real IDs (publisher pub-2861157663948368)
+/// via --dart-define or by editing the defaults before release.
+///
+/// Ads only show to NON-Pro users on iOS/Android. Pro subscribers and desktop
+/// see no ads.
+class AdConfig {
+  const AdConfig._();
+
+  // Google sample/test IDs — safe to ship in debug, must be replaced for release.
+  static const _testAndroidAppId = 'ca-app-pub-3940256099942544~3347511713';
+  static const _testAndroidBanner = 'ca-app-pub-3940256099942544/6300978111';
+
+  /// AdMob App ID. Must ALSO be set in ios/Runner/Info.plist (GADApplicationIdentifier)
+  /// and android AndroidManifest. Real format: ca-app-pub-2861157663948368~XXXXXXXXXX
+  static const iosAppId = String.fromEnvironment(
+    'ADMOB_IOS_APP_ID',
+    defaultValue: 'ca-app-pub-2861157663948368~5737899649',
+  );
+  static const androidAppId = String.fromEnvironment(
+    'ADMOB_ANDROID_APP_ID',
+    defaultValue: _testAndroidAppId,
+  );
+
+  /// Banner ad unit IDs. iOS = real "banner stillora" unit.
+  static const iosBannerUnitId = String.fromEnvironment(
+    'ADMOB_IOS_BANNER_ID',
+    defaultValue: 'ca-app-pub-2861157663948368/2754467489',
+  );
+  static const androidBannerUnitId = String.fromEnvironment(
+    'ADMOB_ANDROID_BANNER_ID',
+    defaultValue: _testAndroidBanner,
+  );
+}

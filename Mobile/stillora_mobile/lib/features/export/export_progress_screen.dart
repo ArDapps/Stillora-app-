@@ -66,12 +66,7 @@ class _ExportProgressScreenState extends ConsumerState<ExportProgressScreen> {
 
     final body = DecoratedBox(
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xff0c0718), Color(0xff060611), Color(0xff030309)],
-          stops: [0.0, 0.5, 1.0],
-        ),
+        gradient: stilloraBackgroundGradient,
       ),
       child: _ExportProgressContent(
         export: export,
@@ -196,9 +191,7 @@ class _ExportStatusCard extends StatelessWidget {
                     ? null
                     : [
                         BoxShadow(
-                          color: const Color(
-                            0xff8b5cf6,
-                          ).withValues(alpha: 0.36),
+                          color: StilloraColors.accent.withValues(alpha: 0.36),
                           blurRadius: 24,
                           offset: const Offset(0, 10),
                         ),

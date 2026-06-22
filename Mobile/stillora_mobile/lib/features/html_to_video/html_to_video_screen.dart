@@ -8,14 +8,15 @@ import 'package:video_player/video_player.dart';
 import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_spacing.dart';
 import '../../core/platform/media_actions.dart';
+import '../../core/widgets/seconds_input_field.dart';
 import '../../core/platform/platform_info.dart';
 import 'html_to_video_controller.dart';
 import 'html_to_video_service.dart';
 
 // Accent + panel colours tuned to match the web "New render" design.
-const _accent = Color(0xff8b5cf6);
-const _panel = Color(0xff101019);
-const _panelBorder = Color(0x14ffffff);
+const _accent = StilloraColors.accent;
+const _panel = StilloraColors.panel;
+const _panelBorder = StilloraColors.panelBorder;
 
 enum _InputMode { paste, file, url }
 
@@ -244,12 +245,17 @@ class _HtmlToVideoViewState extends ConsumerState<HtmlToVideoView> {
         children: [
           ..._leftColumn(desktop: false),
           const SizedBox(height: StilloraSpacing.md),
-          _PreviewPane(
-            size: _size,
-            fps: _fps,
-            player: _player,
-            hasResult: _resultFile != null,
-            converting: _converting,
+          // Bounded height on mobile: _PreviewPane uses an Expanded internally,
+          // which needs a finite height inside the scrolling ListView.
+          SizedBox(
+            height: 380,
+            child: _PreviewPane(
+              size: _size,
+              fps: _fps,
+              player: _player,
+              hasResult: _resultFile != null,
+              converting: _converting,
+            ),
           ),
           const SizedBox(height: StilloraSpacing.sm),
           _convertButton(),
@@ -286,14 +292,9 @@ class _HtmlToVideoViewState extends ConsumerState<HtmlToVideoView> {
               ),
             ],
           ),
-          Slider(
-            value: _durationSeconds.toDouble(),
-            min: 1,
-            max: 60,
-            divisions: 59,
-            label: '$_durationSeconds s',
-            onChanged: (value) =>
-                setState(() => _durationSeconds = value.round()),
+          SecondsInputField(
+            seconds: _durationSeconds,
+            onChanged: (value) => setState(() => _durationSeconds = value),
           ),
         ],
       ),
@@ -633,7 +634,7 @@ class _NumberBadge extends StatelessWidget {
       child: Text(
         number,
         style: const TextStyle(
-          color: Color(0xffd8c9ff),
+          color: StilloraColors.accentText,
           fontWeight: FontWeight.w800,
           fontSize: 13,
         ),
@@ -932,7 +933,7 @@ class _PreviewPane extends StatelessWidget {
                 child: Text(
                   size.chip,
                   style: const TextStyle(
-                    color: Color(0xffd8c9ff),
+                    color: StilloraColors.accentText,
                     fontWeight: FontWeight.w700,
                     fontSize: 12,
                   ),

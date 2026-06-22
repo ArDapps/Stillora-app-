@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/auth/auth_controller.dart';
 import '../../core/design/render_components.dart';
 import '../../core/design/stillora_colors.dart';
+import '../../core/widgets/seconds_input_field.dart';
 import '../../core/design/stillora_glow.dart';
 import '../../core/widgets/ad_widget.dart';
 import '../../core/design/stillora_spacing.dart';
@@ -107,12 +108,7 @@ class EditorView extends ConsumerWidget {
 
     return DecoratedBox(
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xff0c0718), Color(0xff060611), Color(0xff030309)],
-          stops: [0.0, 0.5, 1.0],
-        ),
+        gradient: stilloraBackgroundGradient,
       ),
       child: SafeArea(
         top: false,
@@ -213,8 +209,6 @@ class _MobileEditorFlow extends StatelessWidget {
           icon: Icons.auto_fix_high_rounded,
           label: 'Create MP4',
         ),
-        const SizedBox(height: StilloraSpacing.sm),
-        const AdSlotWidget(placement: 'HOME_BANNER'),
       ],
     );
   }
@@ -658,21 +652,21 @@ class _ProgressRail extends StatelessWidget {
         _ProgressStep(
           index: '1',
           label: 'Upload',
-          color: const Color(0xffd946ef),
+          color: StilloraColors.brandMagenta,
           compact: compact,
         ),
         _ProgressLine(compact: compact),
         _ProgressStep(
           index: '2',
           label: 'Audio',
-          color: const Color(0xff8b5cf6),
+          color: StilloraColors.accent,
           compact: compact,
         ),
         _ProgressLine(compact: compact),
         _ProgressStep(
           index: '3',
           label: 'Export',
-          color: const Color(0xff22d3ee),
+          color: StilloraColors.brandCyan,
           compact: compact,
         ),
       ],
@@ -1369,19 +1363,32 @@ class _ClipDurationSheet extends StatefulWidget {
 
 class _ClipDurationSheetState extends State<_ClipDurationSheet> {
   late int _seconds = widget.initialSeconds;
+  late final TextEditingController _controller =
+      TextEditingController(text: widget.initialSeconds.toString());
 
   static const _quickPicks = [1, 3, 5, 10, 30, 60, 300, 600, 1800];
 
-  void _set(int seconds) {
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  /// Applies a new duration. [syncField] keeps the text box in step when the
+  /// change comes from the steppers / quick-picks; it's left false while the
+  /// user is typing so the cursor doesn't jump.
+  void _set(int seconds, {bool syncField = true}) {
     final clamped = normalizeDurationSeconds(seconds);
     setState(() => _seconds = clamped);
+    if (syncField && _controller.text != clamped.toString()) {
+      _controller.text = clamped.toString();
+    }
     widget.onChanged(clamped);
   }
 
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    final sliderMax = durationSliderMax(_seconds);
     return Padding(
       padding: EdgeInsets.fromLTRB(
         StilloraSpacing.md,
@@ -1426,15 +1433,29 @@ class _ClipDurationSheetState extends State<_ClipDurationSheet> {
                     _set(_seconds - durationAdjustmentStep(_seconds)),
                 icon: const Icon(Icons.remove_rounded),
               ),
+              const SizedBox(width: StilloraSpacing.xs),
               Expanded(
-                child: Slider(
-                  value: _seconds.toDouble(),
-                  min: minDurationSeconds.toDouble(),
-                  max: sliderMax,
-                  label: _formatDuration(_seconds),
-                  onChanged: (value) => _set(value.round()),
+                child: TextField(
+                  controller: _controller,
+                  textAlign: TextAlign.center,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    suffixText: 'seconds',
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (value) {
+                    final seconds = int.tryParse(value);
+                    if (seconds != null) _set(seconds, syncField: false);
+                  },
+                  onEditingComplete: () {
+                    _set(_seconds);
+                    FocusScope.of(context).unfocus();
+                  },
                 ),
               ),
+              const SizedBox(width: StilloraSpacing.xs),
               IconButton.filledTonal(
                 tooltip: 'Longer',
                 onPressed: () =>
@@ -1442,29 +1463,6 @@ class _ClipDurationSheetState extends State<_ClipDurationSheet> {
                 icon: const Icon(Icons.add_rounded),
               ),
             ],
-          ),
-          Center(
-            child: SizedBox(
-              width: 180,
-              child: TextFormField(
-                key: ValueKey('clip-duration-$_seconds'),
-                initialValue: _seconds.toString(),
-                textAlign: TextAlign.center,
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: const InputDecoration(
-                  isDense: true,
-                  suffixText: 'seconds',
-                  helperText: 'Enter any duration',
-                ),
-                onFieldSubmitted: (value) {
-                  final seconds = int.tryParse(value);
-                  if (seconds != null) {
-                    _set(seconds);
-                  }
-                },
-              ),
-            ),
           ),
           const SizedBox(height: StilloraSpacing.sm),
           StilloraPrimaryButton(
@@ -1812,7 +1810,6 @@ class _PresetCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sliderMax = durationSliderMax(editor.totalDurationSeconds);
     return RenderStepCard(
       number: '3',
       title: 'Presets',
@@ -1909,12 +1906,10 @@ class _PresetCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: StilloraSpacing.xs),
-          Slider(
-            value: editor.totalDurationSeconds.toDouble(),
-            min: minDurationSeconds.toDouble(),
-            max: sliderMax,
-            label: _formatDuration(editor.totalDurationSeconds),
-            onChanged: (value) => controller.setDuration(value.round()),
+          SecondsInputField(
+            seconds: editor.totalDurationSeconds,
+            min: minDurationSeconds,
+            onChanged: controller.setDuration,
           ),
           Row(
             children: [
@@ -2011,7 +2006,7 @@ class _DurationChip extends StatelessWidget {
             boxShadow: selected
                 ? [
                     BoxShadow(
-                      color: const Color(0xff8b5cf6).withValues(alpha: 0.42),
+                      color: StilloraColors.accent.withValues(alpha: 0.42),
                       blurRadius: 14,
                       offset: const Offset(0, 6),
                     ),

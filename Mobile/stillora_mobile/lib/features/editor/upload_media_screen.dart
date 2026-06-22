@@ -34,12 +34,7 @@ class UploadMediaScreen extends ConsumerWidget {
       ),
       body: DecoratedBox(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xff0c0718), Color(0xff060611), Color(0xff030309)],
-            stops: [0.0, 0.5, 1.0],
-          ),
+          gradient: stilloraBackgroundGradient,
         ),
         child: SafeArea(
           child: Column(
@@ -279,7 +274,7 @@ class _PrivacyNote extends StatelessWidget {
       children: [
         const Icon(
           Icons.verified_user_rounded,
-          color: Color(0xff22d3ee),
+          color: StilloraColors.brandCyan,
           size: 18,
         ),
         const SizedBox(width: 10),

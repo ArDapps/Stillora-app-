@@ -149,12 +149,7 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
       appBar: AppBar(title: const Text('Export Complete')),
       body: DecoratedBox(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xff0c0718), Color(0xff060611), Color(0xff030309)],
-            stops: [0.0, 0.5, 1.0],
-          ),
+          gradient: stilloraBackgroundGradient,
         ),
         child: SafeArea(
           child: ListView(
@@ -226,7 +221,7 @@ class _SuccessHeader extends StatelessWidget {
                     gradient: stilloraBrandGradient,
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xff8b5cf6).withValues(
+                        color: StilloraColors.accent.withValues(
                           alpha: 0.3 + t * 0.3,
                         ),
                         blurRadius: 24 + t * 16,

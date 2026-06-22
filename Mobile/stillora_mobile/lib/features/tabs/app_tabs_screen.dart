@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/platform/platform_info.dart';
+import '../../core/widgets/ad_widget.dart';
 import '../../core/widgets/desktop_shell.dart';
 import '../editor/editor_screen.dart';
 import '../gallery/gallery_screen.dart';
@@ -35,42 +36,41 @@ class AppTabsScreen extends ConsumerWidget {
       );
     }
 
+    // Display order for the bottom bar, decoupled from the underlying view
+    // index. Profile sits last (the conventional spot); the creation tools
+    // (Create / HTML / Loop) and Library come first.
+    const navItems = [
+      (view: 0, icon: Icons.add_photo_alternate_outlined, selectedIcon: Icons.add_photo_alternate_rounded, label: 'Create'),
+      (view: 1, icon: Icons.video_library_outlined, selectedIcon: Icons.video_library_rounded, label: 'Library'),
+      (view: 2, icon: Icons.public_outlined, selectedIcon: Icons.public_rounded, label: 'HTML'),
+      (view: 4, icon: Icons.repeat_rounded, selectedIcon: Icons.repeat_on_rounded, label: 'Loop'),
+      (view: 3, icon: Icons.person_outline_rounded, selectedIcon: Icons.person_rounded, label: 'Profile'),
+    ];
+    final selectedPos = navItems.indexWhere((n) => n.view == index);
+
     return Scaffold(
       appBar: AppBar(
         title: Text(titles[index]),
         actions: index == 3 ? const [ProfileSettingsButton()] : null,
       ),
-      body: IndexedStack(index: index, children: views),
+      body: Column(
+        children: [
+          Expanded(child: IndexedStack(index: index, children: views)),
+          // Banner shown on every tab (collapses to nothing on desktop/web).
+          const SafeArea(top: false, child: AdSlotWidget()),
+        ],
+      ),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: index,
-        onDestinationSelected: (value) =>
-            ref.read(homeTabProvider.notifier).state = value,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.add_photo_alternate_outlined),
-            selectedIcon: Icon(Icons.add_photo_alternate_rounded),
-            label: 'Create',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.video_library_outlined),
-            selectedIcon: Icon(Icons.video_library_rounded),
-            label: 'Library',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.html_outlined),
-            selectedIcon: Icon(Icons.html_rounded),
-            label: 'HTML',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline_rounded),
-            selectedIcon: Icon(Icons.person_rounded),
-            label: 'Profile',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.repeat_rounded),
-            selectedIcon: Icon(Icons.repeat_on_rounded),
-            label: 'Loop',
-          ),
+        selectedIndex: selectedPos < 0 ? 0 : selectedPos,
+        onDestinationSelected: (pos) =>
+            ref.read(homeTabProvider.notifier).state = navItems[pos].view,
+        destinations: [
+          for (final item in navItems)
+            NavigationDestination(
+              icon: Icon(item.icon),
+              selectedIcon: Icon(item.selectedIcon),
+              label: item.label,
+            ),
         ],
       ),
     );

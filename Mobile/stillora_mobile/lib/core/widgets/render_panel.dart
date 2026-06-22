@@ -5,9 +5,9 @@ import '../design/stillora_spacing.dart';
 
 /// Shared "render" design language (accent + dark panel cards with numbered
 /// steps) used by the HTML → Video and Loop images screens so they look alike.
-const renderAccent = Color(0xff8b5cf6);
-const renderPanel = Color(0xff101019);
-const renderPanelBorder = Color(0x14ffffff);
+const renderAccent = StilloraColors.accent;
+const renderPanel = StilloraColors.panel;
+const renderPanelBorder = StilloraColors.panelBorder;
 
 class RenderEyebrow extends StatelessWidget {
   const RenderEyebrow(this.label, {super.key});

@@ -335,7 +335,23 @@ class EditorController extends Notifier<EditorState> {
       return;
     }
     state = state.copyWith(media: [...state.media, ...additions]);
+    _refitMediaToAudio();
     _persist();
+  }
+
+  /// When a soundtrack/narration is attached, keep the exported video the same
+  /// length as the audio by spreading the audio duration evenly across every
+  /// clip. No-op when there's no audio or no media. Called whenever the media
+  /// set changes so the fit survives adding/removing clips.
+  void _refitMediaToAudio() {
+    final audioDuration = state.audioDurationSeconds;
+    if (audioDuration == null || state.media.isEmpty) return;
+    final durations = _distributeEvenly(state.media.length, audioDuration);
+    final next = [
+      for (var i = 0; i < state.media.length; i++)
+        state.media[i].copyWith(durationSeconds: durations[i]),
+    ];
+    state = state.copyWith(media: next, durationSeconds: audioDuration);
   }
 
   Future<List<String>> _pickMediaPaths() async {
@@ -416,6 +432,7 @@ class EditorController extends Notifier<EditorState> {
       selected -= 1;
     }
     state = state.copyWith(media: next, selectedIndex: selected);
+    _refitMediaToAudio();
     _persist();
   }
 

@@ -30,21 +30,21 @@ const _slides = [
     title: 'Upload your media',
     body:
         'Pick one or many photos and videos. Drag to reorder them into the perfect sequence.',
-    color: Color(0xffd946ef),
+    color: StilloraColors.brandMagenta,
   ),
   _OnboardingSlide(
     icon: Icons.timer_rounded,
     title: 'Time each clip',
     body:
         'Set how long the whole video runs, or tap any clip to give it its own duration.',
-    color: Color(0xff8b5cf6),
+    color: StilloraColors.accent,
   ),
   _OnboardingSlide(
     icon: Icons.music_note_rounded,
     title: 'Add sound & export',
     body:
         'Drop in an optional soundtrack, choose a format, and export a ready-to-share MP4.',
-    color: Color(0xff22d3ee),
+    color: StilloraColors.brandCyan,
   ),
 ];
 
@@ -95,12 +95,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     return Scaffold(
       body: DecoratedBox(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xff0c0718), Color(0xff060611), Color(0xff030309)],
-            stops: [0.0, 0.5, 1.0],
-          ),
+          gradient: stilloraBackgroundGradient,
         ),
         child: SafeArea(
           child: Column(

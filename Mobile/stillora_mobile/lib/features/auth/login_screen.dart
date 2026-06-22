@@ -209,14 +209,14 @@ class _AppleButton extends StatelessWidget {
                 ? null
                 : [
                     BoxShadow(
-                      color: const Color(0xff8b5cf6).withValues(
+                      color: StilloraColors.accent.withValues(
                         alpha: 0.20 + t * 0.20,
                       ),
                       blurRadius: 20 + t * 16,
                       spreadRadius: 1,
                     ),
                     BoxShadow(
-                      color: const Color(0xff22d3ee).withValues(
+                      color: StilloraColors.brandCyan.withValues(
                         alpha: 0.16 + t * 0.16,
                       ),
                       blurRadius: 26 + t * 18,
@@ -270,8 +270,8 @@ class _AmbientGlow extends StatelessWidget {
                 center: const Alignment(0, -0.55),
                 radius: 1.1,
                 colors: [
-                  const Color(0xff8b5cf6).withValues(alpha: 0.20 + t * 0.10),
-                  const Color(0xff22d3ee).withValues(alpha: 0.05 + t * 0.04),
+                  StilloraColors.accent.withValues(alpha: 0.20 + t * 0.10),
+                  StilloraColors.brandCyan.withValues(alpha: 0.05 + t * 0.04),
                   Colors.transparent,
                 ],
                 stops: const [0.0, 0.45, 1.0],
@@ -306,14 +306,14 @@ class _AnimatedLogo extends StatelessWidget {
                     gradient: stilloraBrandGradient,
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xff8b5cf6).withValues(
+                        color: StilloraColors.accent.withValues(
                           alpha: 0.28 + t * 0.28,
                         ),
                         blurRadius: 32 + t * 22,
                         spreadRadius: 2,
                       ),
                       BoxShadow(
-                        color: const Color(0xff22d3ee).withValues(
+                        color: StilloraColors.brandCyan.withValues(
                           alpha: 0.18 + t * 0.18,
                         ),
                         blurRadius: 44 + t * 24,
@@ -326,7 +326,7 @@ class _AnimatedLogo extends StatelessWidget {
                   height: 92,
                   decoration: const BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Color(0xff0b0716),
+                    color: StilloraColors.surface,
                   ),
                   alignment: Alignment.center,
                   child: const StilloraMark(size: 58),
@@ -405,14 +405,14 @@ class _GoogleButton extends StatelessWidget {
                 ? null
                 : [
                     BoxShadow(
-                      color: const Color(0xffd946ef).withValues(
+                      color: StilloraColors.brandMagenta.withValues(
                         alpha: 0.22 + t * 0.22,
                       ),
                       blurRadius: 20 + t * 16,
                       spreadRadius: 1,
                     ),
                     BoxShadow(
-                      color: const Color(0xff22d3ee).withValues(
+                      color: StilloraColors.brandCyan.withValues(
                         alpha: 0.18 + t * 0.18,
                       ),
                       blurRadius: 26 + t * 18,

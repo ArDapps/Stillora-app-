@@ -9,6 +9,7 @@ import 'package:stillora_video_engine/stillora_video_engine.dart' as engine;
 import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_spacing.dart';
 import '../../core/platform/media_actions.dart';
+import '../../core/widgets/seconds_input_field.dart';
 import '../../core/platform/platform_info.dart';
 import '../../core/widgets/render_panel.dart';
 import '../editor/editor_state.dart';
@@ -74,7 +75,6 @@ class LoopImagesView extends ConsumerWidget {
   }) {
     final state = ref.watch(loopImagesControllerProvider);
     final controller = ref.read(loopImagesControllerProvider.notifier);
-    final sliderMax = durationSliderMax(state.durationSeconds);
 
     return [
       const RenderEyebrow('BATCH RENDER'),
@@ -128,12 +128,9 @@ class LoopImagesView extends ConsumerWidget {
                 ),
               ],
             ),
-            Slider(
-              value: state.durationSeconds.toDouble(),
-              min: 1,
-              max: sliderMax,
-              label: '${state.durationSeconds} s',
-              onChanged: (v) => controller.setDuration(v.round()),
+            SecondsInputField(
+              seconds: state.durationSeconds,
+              onChanged: controller.setDuration,
             ),
             Wrap(
               spacing: StilloraSpacing.xs,
