@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_spacing.dart';
 import '../../core/design/stillora_surface.dart';
+import '../../core/widgets/desktop_shell.dart';
 import '../export/export_progress_screen.dart';
 import 'editor_state.dart';
 
@@ -24,7 +25,8 @@ class PreExportPreviewScreen extends ConsumerWidget {
             : 9.0 / 16.0;
     final fitLabel = editor.resizeMode == ResizeMode.fit ? 'Fit' : 'Fill';
 
-    return Scaffold(
+    return SidebarScaffold(
+      desktopTitle: 'Preview',
       appBar: AppBar(
         title: const Text('Preview'),
         actions: [

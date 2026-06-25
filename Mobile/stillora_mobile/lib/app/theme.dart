@@ -120,13 +120,15 @@ ThemeData buildStilloraTheme(Brightness brightness) {
       contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
     ),
     sliderTheme: SliderThemeData(
-      activeTrackColor: StilloraColors.primaryContainer,
-      inactiveTrackColor: StilloraColors.surfaceContainerHigh,
-      thumbColor: Colors.white,
-      overlayColor: StilloraColors.primaryGlow,
-      valueIndicatorColor: StilloraColors.primaryContainer,
+      // Consistent violet brand slider: violet active track, faded-violet
+      // inactive track, and a violet thumb.
+      activeTrackColor: StilloraColors.accent,
+      inactiveTrackColor: StilloraColors.accent.withValues(alpha: 0.24),
+      thumbColor: StilloraColors.accent,
+      overlayColor: StilloraColors.accent.withValues(alpha: 0.18),
+      valueIndicatorColor: StilloraColors.accent,
       valueIndicatorTextStyle: const TextStyle(
-        color: StilloraColors.onPrimaryContainer,
+        color: Colors.white,
         fontWeight: FontWeight.w700,
       ),
       trackHeight: 5,

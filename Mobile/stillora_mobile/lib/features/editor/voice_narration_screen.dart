@@ -13,6 +13,7 @@ import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_glow.dart';
 import '../../core/design/stillora_spacing.dart';
 import '../../core/design/stillora_surface.dart';
+import '../../core/widgets/desktop_shell.dart';
 import 'editor_state.dart';
 
 enum _Phase { idle, permissionDenied, recording, paused, recorded }
@@ -265,7 +266,8 @@ class _VoiceNarrationScreenState extends ConsumerState<VoiceNarrationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return SidebarScaffold(
+      desktopTitle: 'Voice Narration',
       appBar: AppBar(title: const Text('Voice Narration')),
       body: DecoratedBox(
         decoration: const BoxDecoration(

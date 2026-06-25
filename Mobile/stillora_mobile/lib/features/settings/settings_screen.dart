@@ -6,6 +6,7 @@ import '../../core/auth/auth_controller.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_spacing.dart';
+import '../../core/widgets/desktop_shell.dart';
 import '../tabs/app_tabs_screen.dart';
 
 /// Small caps section label used to group the settings list.
@@ -75,7 +76,8 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final signedIn = ref.watch(authControllerProvider).asData?.value != null;
-    return Scaffold(
+    return SidebarScaffold(
+      desktopTitle: 'Settings',
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(
         children: [

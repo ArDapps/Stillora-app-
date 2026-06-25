@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../design/stillora_colors.dart';
 import '../design/stillora_spacing.dart';
+import '../platform/platform_info.dart';
 import 'ad_widget.dart';
 import 'stillora_mark.dart';
 
@@ -47,7 +48,7 @@ const _navItems = [
   ),
   (
     index: 3,
-    label: 'Profile',
+    label: 'Info',
     icon: Icons.person_outline_rounded,
     selectedIcon: Icons.person_rounded,
   ),
@@ -135,6 +136,37 @@ class DesktopShell extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+/// Drop-in [Scaffold] replacement for full-screen sub-pages that must keep the
+/// desktop sidebar visible. On desktop the [body] is hosted inside
+/// [DesktopShell] (titled with [desktopTitle], with an automatic back button);
+/// on mobile it behaves like an ordinary Scaffold with [appBar] + [body].
+class SidebarScaffold extends StatelessWidget {
+  const SidebarScaffold({
+    super.key,
+    required this.desktopTitle,
+    this.appBar,
+    this.body,
+    this.desktopTrailing,
+  });
+
+  final String desktopTitle;
+  final PreferredSizeWidget? appBar;
+  final Widget? body;
+  final Widget? desktopTrailing;
+
+  @override
+  Widget build(BuildContext context) {
+    if (useDesktopLayout(context)) {
+      return DesktopShell(
+        title: desktopTitle,
+        trailing: desktopTrailing,
+        child: body ?? const SizedBox.shrink(),
+      );
+    }
+    return Scaffold(appBar: appBar, body: body);
   }
 }
 
@@ -258,8 +290,10 @@ class _DesktopNavItemState extends State<_DesktopNavItem> {
   @override
   Widget build(BuildContext context) {
     final selected = widget.selected;
+    // Selected items get a bright brand-gradient pill with white text; the rest
+    // stay muted, brightening only on hover.
     final fg = selected
-        ? StilloraColors.onSurface
+        ? Colors.white
         : (_hovered ? StilloraColors.onSurface : StilloraColors.onSurfaceVariant);
 
     return Padding(
@@ -268,47 +302,64 @@ class _DesktopNavItemState extends State<_DesktopNavItem> {
         onEnter: (_) => setState(() => _hovered = true),
         onExit: (_) => setState(() => _hovered = false),
         child: Material(
-          color: selected
-              ? StilloraColors.accent.withValues(alpha: 0.16)
-              : (_hovered
-                  ? StilloraColors.onSurface.withValues(alpha: 0.05)
-                  : Colors.transparent),
+          color: Colors.transparent,
           borderRadius: BorderRadius.circular(StilloraRadius.md),
           child: InkWell(
             onTap: widget.onTap,
             borderRadius: BorderRadius.circular(StilloraRadius.md),
-            child: SizedBox(
-              height: StilloraSpacing.desktopNavItemHeight,
-              child: Row(
-                children: [
-                  // Active accent bar.
-                  Container(
-                    width: 3,
-                    height: 20,
-                    decoration: BoxDecoration(
-                      color: selected ? StilloraColors.accent : Colors.transparent,
-                      borderRadius: BorderRadius.circular(StilloraRadius.pill),
+            child: Ink(
+              decoration: BoxDecoration(
+                gradient: selected
+                    ? const LinearGradient(
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                        colors: [
+                          StilloraColors.brandMagenta,
+                          StilloraColors.accent,
+                        ],
+                      )
+                    : null,
+                color: selected
+                    ? null
+                    : (_hovered
+                        ? StilloraColors.onSurface.withValues(alpha: 0.06)
+                        : Colors.transparent),
+                borderRadius: BorderRadius.circular(StilloraRadius.md),
+                boxShadow: selected
+                    ? [
+                        BoxShadow(
+                          color: StilloraColors.accent.withValues(alpha: 0.45),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: SizedBox(
+                height: StilloraSpacing.desktopNavItemHeight,
+                child: Row(
+                  children: [
+                    const SizedBox(width: StilloraSpacing.base + 2),
+                    Icon(
+                      selected ? widget.selectedIcon : widget.icon,
+                      size: 19,
+                      color: fg,
                     ),
-                  ),
-                  const SizedBox(width: StilloraSpacing.snug - 3),
-                  Icon(
-                    selected ? widget.selectedIcon : widget.icon,
-                    size: 19,
-                    color: selected ? StilloraColors.accentText : fg,
-                  ),
-                  const SizedBox(width: StilloraSpacing.xs + 2),
-                  Expanded(
-                    child: Text(
-                      widget.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                            fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                            color: selected ? StilloraColors.onSurface : fg,
-                          ),
+                    const SizedBox(width: StilloraSpacing.xs + 2),
+                    Expanded(
+                      child: Text(
+                        widget.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                              fontWeight:
+                                  selected ? FontWeight.w800 : FontWeight.w600,
+                              color: fg,
+                            ),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -325,7 +376,7 @@ const _sectionSubtitles = {
   'Library': 'Every render you\'ve made',
   'HTML → Video': 'Capture any web page as a clip',
   'Loop images': 'Batch loops & slideshows',
-  'Profile': 'Account & subscription',
+  'Info': 'Account & subscription',
 };
 
 class _DesktopTopBar extends StatelessWidget {

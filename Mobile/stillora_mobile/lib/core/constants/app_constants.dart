@@ -44,38 +44,30 @@ class AppConstants {
   static const reviewUrl = 'https://stillora.loopara.app';
 }
 
-/// AdMob (Google Mobile Ads) configuration. Defaults are Google's official TEST
-/// unit IDs so banners render immediately during development without risking
-/// policy strikes. Replace with your real IDs (publisher pub-2861157663948368)
-/// via --dart-define or by editing the defaults before release.
+/// Loopara ad network configuration. The API is public, needs no auth and is
+/// CORS-enabled, so the banner widget calls it directly on every platform.
 ///
-/// Ads only show to NON-Pro users on iOS/Android. Pro subscribers and desktop
-/// see no ads.
+/// The same [appKey] is sent for the fetch, the click URL and the impression so
+/// all traffic is attributed to this app.
 class AdConfig {
   const AdConfig._();
 
-  // Google sample/test IDs — safe to ship in debug, must be replaced for release.
-  static const _testAndroidAppId = 'ca-app-pub-3940256099942544~3347511713';
-  static const _testAndroidBanner = 'ca-app-pub-3940256099942544/6300978111';
-
-  /// AdMob App ID. Must ALSO be set in ios/Runner/Info.plist (GADApplicationIdentifier)
-  /// and android AndroidManifest. Real format: ca-app-pub-2861157663948368~XXXXXXXXXX
-  static const iosAppId = String.fromEnvironment(
-    'ADMOB_IOS_APP_ID',
-    defaultValue: 'ca-app-pub-2861157663948368~5737899649',
-  );
-  static const androidAppId = String.fromEnvironment(
-    'ADMOB_ANDROID_APP_ID',
-    defaultValue: _testAndroidAppId,
+  /// Loopara base URL.
+  static const looparaBaseUrl = String.fromEnvironment(
+    'LOOPARA_BASE_URL',
+    defaultValue: 'https://www.loopara.app',
   );
 
-  /// Banner ad unit IDs. iOS = real "banner stillora" unit.
-  static const iosBannerUnitId = String.fromEnvironment(
-    'ADMOB_IOS_BANNER_ID',
-    defaultValue: 'ca-app-pub-2861157663948368/2754467489',
+  /// Campaign key used to fetch the ad pool (`?key=`). All campaigns sharing
+  /// this key rotate together; the widget picks one at random per load.
+  static const looparaKey = String.fromEnvironment(
+    'LOOPARA_KEY',
+    defaultValue: 'all',
   );
-  static const androidBannerUnitId = String.fromEnvironment(
-    'ADMOB_ANDROID_BANNER_ID',
-    defaultValue: _testAndroidBanner,
+
+  /// Traffic-source name reported on clicks and impressions for attribution.
+  static const appKey = String.fromEnvironment(
+    'LOOPARA_APP_KEY',
+    defaultValue: 'my-app',
   );
 }

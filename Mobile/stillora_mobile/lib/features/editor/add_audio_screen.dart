@@ -10,6 +10,7 @@ import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_glow.dart';
 import '../../core/design/stillora_spacing.dart';
 import '../../core/design/stillora_surface.dart';
+import '../../core/widgets/desktop_shell.dart';
 import 'editor_state.dart';
 import 'voice_narration_screen.dart';
 
@@ -48,7 +49,8 @@ class _AddAudioScreenState extends ConsumerState<AddAudioScreen> {
     final hasAudio = editor.audioPath != null;
     final hasNarration = editor.audioIsNarration && hasAudio;
 
-    return Scaffold(
+    return SidebarScaffold(
+      desktopTitle: 'Add Soundtrack',
       appBar: AppBar(leading: const BackButton()),
       body: DecoratedBox(
         decoration: const BoxDecoration(

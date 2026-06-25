@@ -8,6 +8,7 @@ import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_glow.dart';
 import '../../core/design/stillora_spacing.dart';
 import '../../core/design/stillora_surface.dart';
+import '../../core/widgets/desktop_shell.dart';
 import 'editor_state.dart';
 
 class UploadMediaScreen extends ConsumerWidget {
@@ -20,7 +21,8 @@ class UploadMediaScreen extends ConsumerWidget {
     final editor = ref.watch(editorControllerProvider);
     final controller = ref.read(editorControllerProvider.notifier);
 
-    return Scaffold(
+    return SidebarScaffold(
+      desktopTitle: 'Upload Media',
       appBar: AppBar(
         leading: const BackButton(),
         centerTitle: true,

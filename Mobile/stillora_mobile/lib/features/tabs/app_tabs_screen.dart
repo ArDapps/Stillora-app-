@@ -18,7 +18,7 @@ class AppTabsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final index = ref.watch(homeTabProvider);
-    const titles = ['Create', 'Library', 'HTML → Video', 'Profile', 'Loop images'];
+    const titles = ['Create', 'Library', 'HTML → Video', 'Info', 'Loop images'];
     const views = [
       EditorView(),
       GalleryView(),
@@ -37,14 +37,14 @@ class AppTabsScreen extends ConsumerWidget {
     }
 
     // Display order for the bottom bar, decoupled from the underlying view
-    // index. Profile sits last (the conventional spot); the creation tools
-    // (Create / HTML / Loop) and Library come first.
+    // index. Creation tools (Create / HTML / Loop) come first, then Library,
+    // and Info sits last (the conventional spot).
     const navItems = [
       (view: 0, icon: Icons.add_photo_alternate_outlined, selectedIcon: Icons.add_photo_alternate_rounded, label: 'Create'),
-      (view: 1, icon: Icons.video_library_outlined, selectedIcon: Icons.video_library_rounded, label: 'Library'),
       (view: 2, icon: Icons.public_outlined, selectedIcon: Icons.public_rounded, label: 'HTML'),
       (view: 4, icon: Icons.repeat_rounded, selectedIcon: Icons.repeat_on_rounded, label: 'Loop'),
-      (view: 3, icon: Icons.person_outline_rounded, selectedIcon: Icons.person_rounded, label: 'Profile'),
+      (view: 1, icon: Icons.video_library_outlined, selectedIcon: Icons.video_library_rounded, label: 'Library'),
+      (view: 3, icon: Icons.person_outline_rounded, selectedIcon: Icons.person_rounded, label: 'Info'),
     ];
     final selectedPos = navItems.indexWhere((n) => n.view == index);
 
