@@ -100,6 +100,17 @@ install(FILES "${FLUTTER_ICU_DATA_FILE}" DESTINATION "${INSTALL_BUNDLE_DATA_DIR}
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/runner/resources/app_icon.png"
   DESTINATION "${INSTALL_BUNDLE_DATA_DIR}" COMPONENT Runtime)
 
+# Bundle the static FFmpeg/ffprobe binaries the desktop export + duration probe
+# rely on, so the app works out of the box without a system FFmpeg install.
+# DesktopFfmpegVideoEngine / DesktopMediaProbe look for these under data/.
+set(STILLORA_FFMPEG_DIR "${CMAKE_CURRENT_SOURCE_DIR}/vendor")
+if(EXISTS "${STILLORA_FFMPEG_DIR}/ffmpeg")
+  install(PROGRAMS
+    "${STILLORA_FFMPEG_DIR}/ffmpeg"
+    "${STILLORA_FFMPEG_DIR}/ffprobe"
+    DESTINATION "${INSTALL_BUNDLE_DATA_DIR}" COMPONENT Runtime)
+endif()
+
 install(FILES "${FLUTTER_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
   COMPONENT Runtime)
 
