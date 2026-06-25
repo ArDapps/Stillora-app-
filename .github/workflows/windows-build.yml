@@ -1,0 +1,60 @@
+name: Windows Desktop Build
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - "Mobile/stillora_mobile/**"
+      - ".github/workflows/windows-build.yml"
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        working-directory: Mobile/stillora_mobile
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.44.1"
+          channel: stable
+          cache: true
+
+      - name: Enable Windows desktop
+        run: flutter config --enable-windows-desktop
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Windows (release)
+        run: flutter build windows --release
+
+      - name: Read app version
+        id: version
+        shell: pwsh
+        run: |
+          $v = (Select-String -Path pubspec.yaml -Pattern '^version:\s*(.+)$').Matches[0].Groups[1].Value.Trim()
+          $clean = $v -replace '\+.*$',''
+          "version=$clean" >> $env:GITHUB_OUTPUT
+
+      - name: Package build
+        shell: pwsh
+        run: |
+          $src = "build/windows/x64/runner/Release"
+          $out = "stillora-windows-${{ steps.version.outputs.version }}.zip"
+          Compress-Archive -Path "$src/*" -DestinationPath $out -Force
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: stillora-windows-${{ steps.version.outputs.version }}
+          path: Mobile/stillora_mobile/stillora-windows-${{ steps.version.outputs.version }}.zip
+          if-no-files-found: error
+          retention-days: 30
