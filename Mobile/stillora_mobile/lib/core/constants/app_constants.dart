@@ -57,3 +57,31 @@ class AppConstants {
   /// unavailable). Point this at the store listing once it exists.
   static const reviewUrl = 'https://stillora.loopara.app';
 }
+
+/// Loopara ad network configuration. The API is public, needs no auth and is
+/// CORS-enabled, so the banner widget calls it directly on every platform.
+///
+/// The same [appKey] is sent for the fetch, the click URL and the impression so
+/// all traffic is attributed to this app.
+class AdConfig {
+  const AdConfig._();
+
+  /// Loopara base URL.
+  static const looparaBaseUrl = String.fromEnvironment(
+    'LOOPARA_BASE_URL',
+    defaultValue: 'https://www.loopara.app',
+  );
+
+  /// Campaign key used to fetch the ad pool (`?key=`). All campaigns sharing
+  /// this key rotate together; the widget picks one at random per load.
+  static const looparaKey = String.fromEnvironment(
+    'LOOPARA_KEY',
+    defaultValue: 'all',
+  );
+
+  /// Traffic-source name reported on clicks and impressions for attribution.
+  static const appKey = String.fromEnvironment(
+    'LOOPARA_APP_KEY',
+    defaultValue: 'my-app',
+  );
+}

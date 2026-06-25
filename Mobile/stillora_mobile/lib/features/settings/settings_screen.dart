@@ -4,7 +4,36 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/auth/auth_controller.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/design/stillora_colors.dart';
+import '../../core/design/stillora_spacing.dart';
+import '../../core/widgets/desktop_shell.dart';
 import '../tabs/app_tabs_screen.dart';
+
+/// Small caps section label used to group the settings list.
+class _SettingsSection extends StatelessWidget {
+  const _SettingsSection(this.label);
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        StilloraSpacing.sm,
+        StilloraSpacing.md,
+        StilloraSpacing.sm,
+        StilloraSpacing.xs,
+      ),
+      child: Text(
+        label.toUpperCase(),
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: StilloraColors.accentText,
+              letterSpacing: 1.2,
+              fontWeight: FontWeight.w800,
+            ),
+      ),
+    );
+  }
+}
 
 Future<void> _confirmDeleteAccount(BuildContext context, WidgetRef ref) async {
   final confirmed = await showDialog<bool>(
@@ -47,10 +76,12 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final signedIn = ref.watch(authControllerProvider).asData?.value != null;
-    return Scaffold(
+    return SidebarScaffold(
+      desktopTitle: 'Settings',
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(
         children: [
+          const _SettingsSection('Defaults'),
           const ListTile(
             leading: Icon(Icons.language_rounded),
             title: Text('Language'),
@@ -76,11 +107,13 @@ class SettingsScreen extends ConsumerWidget {
             title: Text('Default resize mode'),
             subtitle: Text('Fit'),
           ),
+          const _SettingsSection('Storage'),
           const ListTile(
             leading: Icon(Icons.cleaning_services_rounded),
             title: Text('Clear temporary files'),
             subtitle: Text('Video engine cleanup will run here.'),
           ),
+          const _SettingsSection('About'),
           const ListTile(
             leading: Icon(Icons.privacy_tip_rounded),
             title: Text('Privacy Policy'),
@@ -92,15 +125,14 @@ class SettingsScreen extends ConsumerWidget {
             subtitle: Text(AppConstants.termsUrl),
           ),
           if (signedIn) ...[
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
-              child: Text(
-                'Account',
-                style: TextStyle(fontWeight: FontWeight.w700),
-              ),
-            ),
+            const _SettingsSection('Account'),
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+              padding: const EdgeInsets.fromLTRB(
+                StilloraSpacing.sm,
+                StilloraSpacing.base,
+                StilloraSpacing.sm,
+                StilloraSpacing.xs,
+              ),
               child: OutlinedButton.icon(
                 onPressed: () async {
                   await ref.read(authControllerProvider.notifier).signOut();
@@ -113,7 +145,12 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+              padding: const EdgeInsets.fromLTRB(
+                StilloraSpacing.sm,
+                0,
+                StilloraSpacing.sm,
+                StilloraSpacing.md,
+              ),
               child: OutlinedButton.icon(
                 onPressed: () => _confirmDeleteAccount(context, ref),
                 icon: const Icon(Icons.delete_forever_rounded),

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../design/stillora_colors.dart';
 import '../design/stillora_spacing.dart';
+import '../platform/platform_info.dart';
 import 'ad_widget.dart';
 import 'stillora_mark.dart';
 
@@ -47,7 +48,7 @@ const _navItems = [
   ),
   (
     index: 3,
-    label: 'Profile',
+    label: 'Info',
     icon: Icons.person_outline_rounded,
     selectedIcon: Icons.person_rounded,
   ),
@@ -87,25 +88,46 @@ class DesktopShell extends ConsumerWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xff090613), Color(0xff050610), Color(0xff030309)],
+            colors: [Color(0xff0d0820), Color(0xff070611), Color(0xff030309)],
           ),
         ),
         child: SafeArea(
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              SizedBox(
-                width: 204,
+              // Sidebar sits on its own slightly-raised glass surface so the
+              // navigation reads as desktop chrome, not a stretched phone.
+              Container(
+                width: StilloraSpacing.desktopSidebarWidth,
+                decoration: BoxDecoration(
+                  color: StilloraColors.surfaceContainerLow.withValues(alpha: 0.55),
+                  border: const Border(
+                    right: BorderSide(color: StilloraColors.glassStroke),
+                  ),
+                ),
                 child: _DesktopSidebar(
                   activeIndex: activeIndex,
                   onSelect: (index) => _select(context, ref, index),
                 ),
               ),
-              Container(width: 1, color: StilloraColors.glassStroke),
               Expanded(
                 child: Column(
                   children: [
                     _DesktopTopBar(title: title, trailing: trailing),
-                    Expanded(child: child),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          StilloraSpacing.md,
+                          StilloraSpacing.xs,
+                          StilloraSpacing.md,
+                          StilloraSpacing.md,
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(StilloraRadius.xl),
+                          child: child,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -117,34 +139,79 @@ class DesktopShell extends ConsumerWidget {
   }
 }
 
-class _DesktopSidebar extends StatelessWidget {
+/// Drop-in [Scaffold] replacement for full-screen sub-pages that must keep the
+/// desktop sidebar visible. On desktop the [body] is hosted inside
+/// [DesktopShell] (titled with [desktopTitle], with an automatic back button);
+/// on mobile it behaves like an ordinary Scaffold with [appBar] + [body].
+class SidebarScaffold extends StatelessWidget {
+  const SidebarScaffold({
+    super.key,
+    required this.desktopTitle,
+    this.appBar,
+    this.body,
+    this.desktopTrailing,
+  });
+
+  final String desktopTitle;
+  final PreferredSizeWidget? appBar;
+  final Widget? body;
+  final Widget? desktopTrailing;
+
+  @override
+  Widget build(BuildContext context) {
+    if (useDesktopLayout(context)) {
+      return DesktopShell(
+        title: desktopTitle,
+        trailing: desktopTrailing,
+        child: body ?? const SizedBox.shrink(),
+      );
+    }
+    return Scaffold(appBar: appBar, body: body);
+  }
+}
+
+class _DesktopSidebar extends ConsumerWidget {
   const _DesktopSidebar({required this.activeIndex, required this.onSelect});
 
   final int activeIndex;
   final ValueChanged<int> onSelect;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
+      padding: const EdgeInsets.fromLTRB(
+        StilloraSpacing.snug,
+        StilloraSpacing.sm,
+        StilloraSpacing.snug,
+        StilloraSpacing.snug,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
-            children: [
-              StilloraMark(size: 34),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Stillora',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+          // Brand lockup.
+          Padding(
+            padding: const EdgeInsets.only(left: StilloraSpacing.base),
+            child: Row(
+              children: [
+                const StilloraMark(size: 30),
+                const SizedBox(width: StilloraSpacing.xs),
+                Expanded(
+                  child: Text(
+                    'Stillora',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.2,
+                        ),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: StilloraSpacing.md),
+          const _SidebarLabel('Workspace'),
+          const SizedBox(height: StilloraSpacing.xs),
           for (final item in _navItems)
             _DesktopNavItem(
               selected: item.index == activeIndex,
@@ -155,40 +222,21 @@ class _DesktopSidebar extends StatelessWidget {
             ),
           const Spacer(),
           const AdSlotWidget(placement: 'USER_DASHBOARD_LEFT'),
-          const SizedBox(height: StilloraSpacing.sm),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(StilloraRadius.full),
-              border: Border.all(color: StilloraColors.glassStroke),
-              color: StilloraColors.surfaceContainer.withValues(alpha: 0.5),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(StilloraSpacing.sm),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(
-                    Icons.lock_rounded,
-                    color: StilloraColors.secondary,
-                    size: 18,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Local desktop workspace',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Files stay on this computer while you build exports.',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: StilloraColors.onSurfaceVariant,
-                    ),
-                  ),
-                ],
+          const SizedBox(height: StilloraSpacing.snug),
+          Row(
+            children: [
+              const Icon(Icons.shield_rounded,
+                  color: StilloraColors.secondary, size: 15),
+              const SizedBox(width: StilloraSpacing.base + 2),
+              Expanded(
+                child: Text(
+                  'Files stay on this computer.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: StilloraColors.onSurfaceVariant,
+                      ),
+                ),
               ),
-            ),
+            ],
           ),
         ],
       ),
@@ -196,7 +244,28 @@ class _DesktopSidebar extends StatelessWidget {
   }
 }
 
-class _DesktopNavItem extends StatelessWidget {
+class _SidebarLabel extends StatelessWidget {
+  const _SidebarLabel(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: StilloraSpacing.snug),
+      child: Text(
+        text.toUpperCase(),
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: StilloraColors.onSurfaceVariant,
+              letterSpacing: 1.4,
+              fontWeight: FontWeight.w800,
+              fontSize: 11,
+            ),
+      ),
+    );
+  }
+}
+
+class _DesktopNavItem extends StatefulWidget {
   const _DesktopNavItem({
     required this.selected,
     required this.icon,
@@ -212,52 +281,86 @@ class _DesktopNavItem extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
+  State<_DesktopNavItem> createState() => _DesktopNavItemState();
+}
+
+class _DesktopNavItemState extends State<_DesktopNavItem> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
+    final selected = widget.selected;
+    // Selected items get a bright brand-gradient pill with white text; the rest
+    // stay muted, brightening only on hover.
+    final fg = selected
+        ? Colors.white
+        : (_hovered ? StilloraColors.onSurface : StilloraColors.onSurfaceVariant);
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: StilloraSpacing.xs),
-      child: Material(
-        color: selected
-            ? StilloraColors.primaryContainer.withValues(alpha: 0.2)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(StilloraRadius.full),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(StilloraRadius.full),
-          child: Container(
-            height: 40,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(StilloraRadius.full),
-              border: Border.all(
+      padding: const EdgeInsets.only(bottom: StilloraSpacing.base),
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(StilloraRadius.md),
+          child: InkWell(
+            onTap: widget.onTap,
+            borderRadius: BorderRadius.circular(StilloraRadius.md),
+            child: Ink(
+              decoration: BoxDecoration(
+                gradient: selected
+                    ? const LinearGradient(
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                        colors: [
+                          StilloraColors.brandMagenta,
+                          StilloraColors.accent,
+                        ],
+                      )
+                    : null,
                 color: selected
-                    ? StilloraColors.primary.withValues(alpha: 0.4)
-                    : Colors.transparent,
+                    ? null
+                    : (_hovered
+                        ? StilloraColors.onSurface.withValues(alpha: 0.06)
+                        : Colors.transparent),
+                borderRadius: BorderRadius.circular(StilloraRadius.md),
+                boxShadow: selected
+                    ? [
+                        BoxShadow(
+                          color: StilloraColors.accent.withValues(alpha: 0.45),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ]
+                    : null,
               ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  selected ? selectedIcon : icon,
-                  size: 20,
-                  color: selected
-                      ? StilloraColors.primary
-                      : StilloraColors.onSurfaceVariant,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: selected
-                          ? StilloraColors.primary
-                          : StilloraColors.onSurfaceVariant,
+              child: SizedBox(
+                height: StilloraSpacing.desktopNavItemHeight,
+                child: Row(
+                  children: [
+                    const SizedBox(width: StilloraSpacing.base + 2),
+                    Icon(
+                      selected ? widget.selectedIcon : widget.icon,
+                      size: 19,
+                      color: fg,
                     ),
-                  ),
+                    const SizedBox(width: StilloraSpacing.xs + 2),
+                    Expanded(
+                      child: Text(
+                        widget.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                              fontWeight:
+                                  selected ? FontWeight.w800 : FontWeight.w600,
+                              color: fg,
+                            ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -265,6 +368,16 @@ class _DesktopNavItem extends StatelessWidget {
     );
   }
 }
+
+/// Short descriptive subtitle per section, shown under the title in the desktop
+/// header so the chrome feels intentional rather than a bare app-bar.
+const _sectionSubtitles = {
+  'Create': 'Turn images into video, on this device',
+  'Library': 'Every render you\'ve made',
+  'HTML → Video': 'Capture any web page as a clip',
+  'Loop images': 'Batch loops & slideshows',
+  'Info': 'Account & subscription',
+};
 
 class _DesktopTopBar extends StatelessWidget {
   const _DesktopTopBar({required this.title, required this.trailing});
@@ -275,34 +388,85 @@ class _DesktopTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final canPop = context.canPop();
-    return SizedBox(
-      height: 56,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Row(
-          children: [
-            if (canPop) ...[
-              IconButton(
-                onPressed: () => context.pop(),
-                icon: const Icon(Icons.arrow_back_rounded),
-                tooltip: 'Back',
-              ),
-              const SizedBox(width: StilloraSpacing.xs),
-            ],
-            Expanded(
-              child: Text(
-                title ?? '',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
-              ),
+    final subtitle = _sectionSubtitles[title];
+    return Container(
+      height: StilloraSpacing.desktopTopBarHeight + 8,
+      decoration: const BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: StilloraColors.glassStroke),
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: StilloraSpacing.md),
+      child: Row(
+        children: [
+          if (canPop) ...[
+            _GlassIconButton(
+              icon: Icons.arrow_back_rounded,
+              tooltip: 'Back',
+              onTap: () => context.pop(),
             ),
-            ?trailing,
+            const SizedBox(width: StilloraSpacing.snug),
           ],
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title ?? '',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -0.2),
+                ),
+                if (subtitle != null)
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: StilloraColors.onSurfaceVariant,
+                        ),
+                  ),
+              ],
+            ),
+          ),
+          ?trailing,
+        ],
+      ),
+    );
+  }
+}
+
+class _GlassIconButton extends StatelessWidget {
+  const _GlassIconButton({
+    required this.icon,
+    required this.onTap,
+    this.tooltip,
+  });
+
+  final IconData icon;
+  final VoidCallback onTap;
+  final String? tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    final button = Material(
+      color: StilloraColors.surfaceContainer.withValues(alpha: 0.6),
+      shape: const CircleBorder(
+        side: BorderSide(color: StilloraColors.glassStroke),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const CircleBorder(),
+        child: Padding(
+          padding: const EdgeInsets.all(7),
+          child: Icon(icon, size: 18, color: StilloraColors.onSurface),
         ),
       ),
     );
+    return tooltip != null ? Tooltip(message: tooltip!, child: button) : button;
   }
 }

@@ -9,6 +9,7 @@ import 'core/storage/app_preferences.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
+  // Loopara banners load on demand inside AdSlotWidget — no SDK init needed.
   final preferences = await SharedPreferences.getInstance();
   runApp(
     ProviderScope(

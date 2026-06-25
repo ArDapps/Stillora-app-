@@ -50,10 +50,6 @@ class HtmlToVideoService {
     CancelToken? cancelToken,
   }) async {
     final token = _ref.read(authControllerProvider).asData?.value?.token;
-    if (token == null) {
-      throw HtmlToVideoException('Please sign in to convert HTML to video.');
-    }
-
     final dio = _ref.read(dioProvider);
     try {
       final response = await dio.post<List<int>>(
@@ -68,7 +64,9 @@ class HtmlToVideoService {
           'fps': request.fps,
         },
         options: Options(
-          headers: {'Authorization': 'Bearer $token'},
+          headers: {
+            if (token != null) 'Authorization': 'Bearer $token',
+          },
           responseType: ResponseType.bytes,
           sendTimeout: const Duration(minutes: 2),
           receiveTimeout: const Duration(minutes: 5),

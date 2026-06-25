@@ -32,6 +32,12 @@ set(CMAKE_CXX_FLAGS_PROFILE "${CMAKE_CXX_FLAGS_RELEASE}")
 # Use Unicode for all projects.
 add_definitions(-DUNICODE -D_UNICODE)
 
+# VS 2022 17.13+ / VS 2026 (MSVC 14.4x+) makes <experimental/coroutine> a hard
+# error (STL1011). Some Flutter plugins (audioplayers_windows, gal,
+# permission_handler_windows) still include it, so silence the deprecation for
+# all targets and subdirectories added below, including the generated plugins.
+add_definitions(-D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)
+
 # Compilation settings that should be applied to most targets.
 #
 # Be cautious about adding new options here, as plugins use this function by

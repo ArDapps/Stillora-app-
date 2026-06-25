@@ -6,12 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/auth/auth_controller.dart';
 import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_glow.dart';
 import '../../core/design/stillora_spacing.dart';
 import '../../core/design/stillora_surface.dart';
-import '../auth/registration_sheet.dart';
+import '../../core/widgets/desktop_shell.dart';
 import 'editor_state.dart';
 import 'voice_narration_screen.dart';
 
@@ -43,34 +42,19 @@ class _AddAudioScreenState extends ConsumerState<AddAudioScreen> {
     await context.push(VoiceNarrationScreen.routePath);
   }
 
-  /// Guests must sign in before recording. Opens the registration modal and, if
-  /// they sign in and tap "Start Recording", goes straight to the recorder.
-  Future<void> _unlockNarration() async {
-    final start = await showRegistrationSheet(context);
-    if (start == true && mounted) {
-      await _openRecorder();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final editor = ref.watch(editorControllerProvider);
     final controller = ref.read(editorControllerProvider.notifier);
-    final isSignedIn =
-        ref.watch(authControllerProvider).asData?.value != null;
     final hasAudio = editor.audioPath != null;
     final hasNarration = editor.audioIsNarration && hasAudio;
 
-    return Scaffold(
+    return SidebarScaffold(
+      desktopTitle: 'Add Soundtrack',
       appBar: AppBar(leading: const BackButton()),
       body: DecoratedBox(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xff0c0718), Color(0xff060611), Color(0xff030309)],
-            stops: [0.0, 0.5, 1.0],
-          ),
+          gradient: stilloraBackgroundGradient,
         ),
         child: SafeArea(
           child: Column(
@@ -160,10 +144,10 @@ class _AddAudioScreenState extends ConsumerState<AddAudioScreen> {
                     ),
                     const SizedBox(height: 24),
                     _VoiceNarrationSection(
-                      isSignedIn: isSignedIn,
+                      isSignedIn: true,
                       hasNarration: hasNarration,
                       onRecord: _openRecorder,
-                      onUnlock: _unlockNarration,
+                      onUnlock: _openRecorder,
                       onRemove: controller.removeAudio,
                     ),
                     if (hasAudio) ...[
@@ -186,7 +170,7 @@ class _AddAudioScreenState extends ConsumerState<AddAudioScreen> {
                       children: [
                         const Icon(
                           Icons.verified_user_rounded,
-                          color: Color(0xff22d3ee),
+                          color: StilloraColors.brandCyan,
                           size: 18,
                         ),
                         const SizedBox(width: 10),
@@ -452,7 +436,10 @@ class _Waveform extends StatelessWidget {
                   ? const LinearGradient(
                       begin: Alignment.bottomCenter,
                       end: Alignment.topCenter,
-                      colors: [Color(0xffd946ef), Color(0xff8b5cf6)],
+                      colors: [
+                        StilloraColors.brandMagenta,
+                        StilloraColors.accent,
+                      ],
                     )
                   : null,
               color: played

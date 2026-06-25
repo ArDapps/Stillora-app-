@@ -3,13 +3,16 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:stillora_video_engine/stillora_video_engine.dart' as engine;
 
 import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_spacing.dart';
 import '../../core/platform/media_actions.dart';
+import '../../core/widgets/seconds_input_field.dart';
 import '../../core/platform/platform_info.dart';
 import '../../core/widgets/render_panel.dart';
+import '../editor/editor_state.dart';
 import 'loop_images_controller.dart';
 
 /// "Loop images" — add many images, pick one size + one duration, and render a
@@ -65,7 +68,11 @@ class LoopImagesView extends ConsumerWidget {
     );
   }
 
-  List<Widget> _leftColumn(BuildContext context, WidgetRef ref, {required bool desktop}) {
+  List<Widget> _leftColumn(
+    BuildContext context,
+    WidgetRef ref, {
+    required bool desktop,
+  }) {
     final state = ref.watch(loopImagesControllerProvider);
     final controller = ref.read(loopImagesControllerProvider.notifier);
 
@@ -74,10 +81,10 @@ class LoopImagesView extends ConsumerWidget {
       const SizedBox(height: StilloraSpacing.sm),
       Text(
         'Loop images to videos',
-        style: Theme.of(context)
-            .textTheme
-            .displayMedium
-            ?.copyWith(fontWeight: FontWeight.w800, height: 1.05),
+        style: Theme.of(context).textTheme.displayMedium?.copyWith(
+          fontWeight: FontWeight.w800,
+          height: 1.05,
+        ),
       ),
       const SizedBox(height: StilloraSpacing.xs),
       const Text(
@@ -116,18 +123,78 @@ class LoopImagesView extends ConsumerWidget {
                 ),
                 const Spacer(),
                 const Text(
-                  'up to 60s',
+                  'type any duration',
                   style: TextStyle(color: StilloraColors.onSurfaceVariant),
                 ),
               ],
             ),
-            Slider(
-              value: state.durationSeconds.toDouble(),
-              min: 1,
-              max: 60,
-              divisions: 59,
-              label: '${state.durationSeconds} s',
-              onChanged: (v) => controller.setDuration(v.round()),
+            SecondsInputField(
+              seconds: state.durationSeconds,
+              onChanged: controller.setDuration,
+            ),
+            Wrap(
+              spacing: StilloraSpacing.xs,
+              runSpacing: StilloraSpacing.xs,
+              children: [
+                for (final option in const [
+                  (10, '10s'),
+                  (30, '30s'),
+                  (60, '1 min'),
+                  (300, '5 min'),
+                  (600, '10 min'),
+                  (1800, '30 min'),
+                ])
+                  ChoiceChip(
+                    label: Text(option.$2),
+                    selected: state.durationSeconds == option.$1,
+                    onSelected: (_) => controller.setDuration(option.$1),
+                  ),
+              ],
+            ),
+            const SizedBox(height: StilloraSpacing.xs),
+            Row(
+              children: [
+                IconButton.filledTonal(
+                  tooltip: 'Shorter',
+                  onPressed: () => controller.setDuration(
+                    state.durationSeconds -
+                        durationAdjustmentStep(state.durationSeconds),
+                  ),
+                  icon: const Icon(Icons.remove_rounded),
+                ),
+                const Spacer(),
+                Text(
+                  '${state.durationSeconds} s',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                const Spacer(),
+                IconButton.filledTonal(
+                  tooltip: 'Longer',
+                  onPressed: () => controller.setDuration(
+                    state.durationSeconds +
+                        durationAdjustmentStep(state.durationSeconds),
+                  ),
+                  icon: const Icon(Icons.add_rounded),
+                ),
+              ],
+            ),
+            TextFormField(
+              key: ValueKey('loop-duration-${state.durationSeconds}'),
+              initialValue: state.durationSeconds.toString(),
+              textAlign: TextAlign.center,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: const InputDecoration(
+                isDense: true,
+                suffixText: 'seconds',
+                helperText: 'Any positive duration for each output',
+              ),
+              onFieldSubmitted: (value) {
+                final seconds = int.tryParse(value);
+                if (seconds != null) {
+                  controller.setDuration(seconds);
+                }
+              },
             ),
           ],
         ),
@@ -147,7 +214,11 @@ class LoopImagesView extends ConsumerWidget {
     ];
   }
 
-  Widget _rightColumn(BuildContext context, WidgetRef ref, {required bool fill}) {
+  Widget _rightColumn(
+    BuildContext context,
+    WidgetRef ref, {
+    required bool fill,
+  }) {
     final state = ref.watch(loopImagesControllerProvider);
     final controller = ref.read(loopImagesControllerProvider.notifier);
 
@@ -155,8 +226,9 @@ class LoopImagesView extends ConsumerWidget {
     final convert = SizedBox(
       height: 56,
       child: FilledButton.icon(
-        onPressed:
-            state.items.isEmpty || state.isRunning ? null : controller.convertAll,
+        onPressed: state.items.isEmpty || state.isRunning
+            ? null
+            : controller.convertAll,
         icon: state.isRunning
             ? const SizedBox(
                 width: 18,
@@ -204,7 +276,10 @@ class LoopImagesView extends ConsumerWidget {
           const SizedBox(height: StilloraSpacing.xs),
           Text(
             '${state.doneCount} of ${state.items.length} saved to Library',
-            style: const TextStyle(color: StilloraColors.secondary, fontSize: 12),
+            style: const TextStyle(
+              color: StilloraColors.secondary,
+              fontSize: 12,
+            ),
           ),
         ],
       ],
@@ -258,8 +333,13 @@ class _ImagesPanel extends ConsumerWidget {
               RenderTagPill('${items.length}/$kLoopMaxImages images'),
               const Spacer(),
               if (state.isRunning)
-                const Text('Rendering…',
-                    style: TextStyle(color: renderAccent, fontWeight: FontWeight.w700)),
+                const Text(
+                  'Rendering…',
+                  style: TextStyle(
+                    color: renderAccent,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
             ],
           ),
           const SizedBox(height: StilloraSpacing.sm),
@@ -294,7 +374,11 @@ class _EmptyDrop extends StatelessWidget {
           child: const Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.add_photo_alternate_outlined, size: 34, color: renderAccent),
+              Icon(
+                Icons.add_photo_alternate_outlined,
+                size: 34,
+                color: renderAccent,
+              ),
               SizedBox(height: StilloraSpacing.xs),
               Text(
                 'Drop images or click to add',
@@ -306,7 +390,10 @@ class _EmptyDrop extends StatelessWidget {
               SizedBox(height: 4),
               Text(
                 'JPG · PNG · WebP — each becomes its own MP4',
-                style: TextStyle(color: StilloraColors.onSurfaceVariant, fontSize: 12),
+                style: TextStyle(
+                  color: StilloraColors.onSurfaceVariant,
+                  fontSize: 12,
+                ),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -325,8 +412,9 @@ class _LoopCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final running =
-        ref.watch(loopImagesControllerProvider.select((s) => s.isRunning));
+    final running = ref.watch(
+      loopImagesControllerProvider.select((s) => s.isRunning),
+    );
     return ClipRRect(
       borderRadius: BorderRadius.circular(14),
       child: DecoratedBox(
@@ -343,7 +431,11 @@ class _LoopCard extends ConsumerWidget {
                 fit: StackFit.expand,
                 children: [
                   Image.file(File(item.path), fit: BoxFit.cover),
-                  Positioned(left: 6, bottom: 6, child: _StatusBadge(item: item)),
+                  Positioned(
+                    left: 6,
+                    bottom: 6,
+                    child: _StatusBadge(item: item),
+                  ),
                   if (!running)
                     Positioned(
                       right: 4,
@@ -367,10 +459,14 @@ class _LoopCard extends ConsumerWidget {
                       item.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
-                  if (item.status == LoopItemStatus.done && item.resultPath != null)
+                  if (item.status == LoopItemStatus.done &&
+                      item.resultPath != null)
                     IconButton(
                       visualDensity: VisualDensity.compact,
                       iconSize: 18,
@@ -420,14 +516,22 @@ class _StatusBadge extends StatelessWidget {
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(999)),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (leading != null) ...[leading, const SizedBox(width: 5)],
-          Text(text,
-              style: const TextStyle(
-                  fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white)),
+          Text(
+            text,
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+            ),
+          ),
         ],
       ),
     );

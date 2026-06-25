@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Stillora uses the camera only if you choose to capture a photo or video to turn into an MP4.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Stillora uses your microphone only when you choose to record voice narration for your video.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

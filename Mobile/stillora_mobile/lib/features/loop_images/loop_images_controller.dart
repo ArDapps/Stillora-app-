@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:stillora_video_engine/stillora_video_engine.dart' as engine;
 
 import '../export/export_controller.dart';
+import '../editor/editor_state.dart';
 import '../gallery/gallery_controller.dart';
 import '../gallery/local_export_record.dart';
 
@@ -80,8 +81,10 @@ class LoopImagesState {
   int get doneCount =>
       items.where((i) => i.status == LoopItemStatus.done).length;
 
-  LoopSize get size =>
-      loopSizes.firstWhere((s) => s.id == sizeId, orElse: () => loopSizes.first);
+  LoopSize get size => loopSizes.firstWhere(
+    (s) => s.id == sizeId,
+    orElse: () => loopSizes.first,
+  );
 
   LoopImagesState copyWith({
     List<LoopItem>? items,
@@ -128,12 +131,16 @@ class LoopImagesController extends Notifier<LoopImagesState> {
     }
     final next = [...state.items, ...additions];
     state = state.copyWith(
-      items: next.length > kLoopMaxImages ? next.sublist(0, kLoopMaxImages) : next,
+      items: next.length > kLoopMaxImages
+          ? next.sublist(0, kLoopMaxImages)
+          : next,
     );
   }
 
   void remove(String id) {
-    state = state.copyWith(items: state.items.where((i) => i.id != id).toList());
+    state = state.copyWith(
+      items: state.items.where((i) => i.id != id).toList(),
+    );
   }
 
   void clear() {
@@ -143,7 +150,9 @@ class LoopImagesController extends Notifier<LoopImagesState> {
 
   void setSize(String id) => state = state.copyWith(sizeId: id);
 
-  void setDuration(int seconds) => state = state.copyWith(durationSeconds: seconds);
+  void setDuration(int seconds) => state = state.copyWith(
+    durationSeconds: normalizeDurationSeconds(seconds),
+  );
 
   void setResizeMode(engine.ResizeMode mode) =>
       state = state.copyWith(resizeMode: mode);
@@ -171,7 +180,10 @@ class LoopImagesController extends Notifier<LoopImagesState> {
     // Sequential — the engine is heavy; one render at a time is safest.
     for (final item in [...state.items]) {
       if (item.status == LoopItemStatus.done) continue;
-      _patch(item.id, (i) => i.copyWith(status: LoopItemStatus.rendering, error: null));
+      _patch(
+        item.id,
+        (i) => i.copyWith(status: LoopItemStatus.rendering, error: null),
+      );
       try {
         final result = await videoEngine.exportVideo(
           imagePath: item.path,
@@ -180,7 +192,9 @@ class LoopImagesController extends Notifier<LoopImagesState> {
           height: height,
           resizeMode: resize,
         );
-        await ref.read(galleryControllerProvider.notifier).addRecord(
+        await ref
+            .read(galleryControllerProvider.notifier)
+            .addRecord(
               LocalExportRecord(
                 id: DateTime.now().microsecondsSinceEpoch.toString(),
                 outputPath: result.outputPath,
@@ -193,10 +207,16 @@ class LoopImagesController extends Notifier<LoopImagesState> {
             );
         _patch(
           item.id,
-          (i) => i.copyWith(status: LoopItemStatus.done, resultPath: result.outputPath),
+          (i) => i.copyWith(
+            status: LoopItemStatus.done,
+            resultPath: result.outputPath,
+          ),
         );
       } catch (e) {
-        _patch(item.id, (i) => i.copyWith(status: LoopItemStatus.error, error: '$e'));
+        _patch(
+          item.id,
+          (i) => i.copyWith(status: LoopItemStatus.error, error: '$e'),
+        );
       }
     }
 

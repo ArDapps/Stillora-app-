@@ -92,7 +92,7 @@ class StilloraVideoEnginePlugin :
                 else -> listOf(imagePath)
             }.distinct()
         val audioPath = call.argument<String>("audioPath")
-        val duration = (call.argument<Int>("durationSeconds") ?: 10).coerceIn(1, 300)
+        val duration = (call.argument<Int>("durationSeconds") ?: 10).coerceAtLeast(1)
         val width = evenDimension(call.argument<Int>("width") ?: 1080)
         val height = evenDimension(call.argument<Int>("height") ?: 1920)
         val fill = (call.argument<String>("resizeMode") ?: "fit") == "fill"

@@ -9,10 +9,12 @@ import 'stillora_spacing.dart';
 class RenderTokens {
   const RenderTokens._();
 
-  static const accent = Color(0xff8b5cf6);
-  static const accentText = Color(0xffd8c9ff);
-  static const panel = Color(0xff101019);
-  static const panelBorder = Color(0x14ffffff);
+  // Now aliases onto the unified StilloraColors palette so the render flows and
+  // the rest of the app share one colour language.
+  static const accent = StilloraColors.accent;
+  static const accentText = StilloraColors.accentText;
+  static const panel = StilloraColors.panel;
+  static const panelBorder = StilloraColors.panelBorder;
 }
 
 /// A numbered panel: square number badge + title + optional trailing pill, with
@@ -39,7 +41,7 @@ class RenderStepCard extends StatelessWidget {
       padding: const EdgeInsets.all(StilloraSpacing.md),
       decoration: BoxDecoration(
         color: RenderTokens.panel,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(StilloraRadius.xl),
         border: Border.all(color: RenderTokens.panelBorder),
       ),
       child: Column(
@@ -92,7 +94,7 @@ class RenderNumberBadge extends StatelessWidget {
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: RenderTokens.accent.withValues(alpha: 0.18),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(StilloraRadius.sm),
         border: Border.all(color: RenderTokens.accent.withValues(alpha: 0.5)),
       ),
       child: Text(

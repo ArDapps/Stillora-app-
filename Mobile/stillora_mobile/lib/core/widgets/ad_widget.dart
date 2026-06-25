@@ -1,17 +1,25 @@
+import 'dart:math';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-const _adApiBase = 'https://md.loopara.app';
+import '../constants/app_constants.dart';
+import '../design/stillora_colors.dart';
+import '../design/stillora_spacing.dart';
+import '../platform/platform_info.dart';
 
-typedef _Campaign = ({String id, String title, String imageUrl});
-
-/// Fetches and displays a single sponsored ad for [placement].
-/// Silently hides itself if no campaign is active.
+/// Sponsored banner served by the Loopara ad network (public, no-auth,
+/// CORS-enabled API). Replaces the previous Google AdMob banner. The same
+/// [AdConfig.appKey] is sent for the fetch, the click URL and the impression so
+/// all traffic is attributed to this app.
+///
+/// If the pool is empty or any request fails it renders nothing — an ad error is
+/// never surfaced to the user. The [placement] is kept for call-site
+/// compatibility; the Loopara pool is always fetched with `placement=app`.
 class AdSlotWidget extends StatefulWidget {
-  const AdSlotWidget({super.key, required this.placement});
+  const AdSlotWidget({super.key, this.placement = ''});
 
-  /// e.g. 'HOME_BANNER' or 'USER_DASHBOARD_LEFT'
   final String placement;
 
   @override
@@ -19,97 +27,128 @@ class AdSlotWidget extends StatefulWidget {
 }
 
 class _AdSlotWidgetState extends State<AdSlotWidget> {
-  _Campaign? _campaign;
-  final _dio = Dio(BaseOptions(
-    connectTimeout: const Duration(seconds: 8),
-    receiveTimeout: const Duration(seconds: 8),
-  ));
+  static final _dio = Dio();
+  _Promo? _promo;
 
   @override
   void initState() {
     super.initState();
+    // Re-fetch the pool on every load; never cache ad IDs across sessions.
     _load();
-  }
-
-  @override
-  void dispose() {
-    _dio.close();
-    super.dispose();
   }
 
   Future<void> _load() async {
     try {
-      final res = await _dio
-          .get('$_adApiBase/api/campaigns?placement=${widget.placement}');
-      final campaigns = (res.data as Map<String, dynamic>)['campaigns'] as List?;
-      if (campaigns == null || campaigns.isEmpty) return;
-      final c = campaigns.first as Map<String, dynamic>;
-      final rawImageUrl = c['imageUrl'] as String;
-      final campaign = (
-        id: c['id'] as String,
-        title: c['title'] as String,
-        imageUrl: rawImageUrl.startsWith('/')
-            ? '$_adApiBase$rawImageUrl'
-            : rawImageUrl,
+      final res = await _dio.get<List<dynamic>>(
+        '${AdConfig.looparaBaseUrl}/api/promos',
+        queryParameters: {'key': AdConfig.looparaKey},
       );
+      final ads = res.data;
+      if (ads == null || ads.isEmpty) return;
+
+      // Pick one ad at random.
+      final raw = ads[Random().nextInt(ads.length)];
+      if (raw is! Map) return;
+      final promo = _Promo.fromMap(raw.cast<String, dynamic>());
+      if (promo == null) return;
+
       if (!mounted) return;
-      setState(() => _campaign = campaign);
-      _dio
-          .post('$_adApiBase/api/campaigns/${campaign.id}/impression')
-          .ignore();
-    } catch (_) {}
+      setState(() => _promo = promo);
+      _trackImpression(promo.id);
+    } catch (_) {
+      // Never surface ad errors to the user.
+    }
   }
 
-  Future<void> _onTap() async {
-    final campaign = _campaign;
-    if (campaign == null) return;
-    final url = Uri.parse('$_adApiBase/api/campaigns/${campaign.id}/click');
-    if (await canLaunchUrl(url)) {
-      launchUrl(url, mode: LaunchMode.externalApplication);
+  /// Report exactly one impression for the displayed ad.
+  Future<void> _trackImpression(String id) async {
+    try {
+      await _dio.post(
+        '${AdConfig.looparaBaseUrl}/api/promos/track',
+        data: {'id': id, 'type': 'impression', 'source': AdConfig.appKey},
+        options: Options(contentType: Headers.jsonContentType),
+      );
+    } catch (_) {
+      // Impression tracking is best-effort.
+    }
+  }
+
+  /// Open the tracking click endpoint, which records the click and 302-redirects
+  /// to the ad's real destination. Never open the raw `link` directly.
+  Future<void> _onTap(String id) async {
+    final uri = Uri.parse(
+      '${AdConfig.looparaBaseUrl}/api/promos/click'
+      '?id=${Uri.encodeQueryComponent(id)}'
+      '&source=${Uri.encodeQueryComponent(AdConfig.appKey)}',
+    );
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      // Ignore launch failures.
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final campaign = _campaign;
-    if (campaign == null) return const SizedBox.shrink();
+    final promo = _promo;
+    if (promo == null) return const SizedBox.shrink();
+
+    // Image paths come back relative (e.g. "/api/uploads/…"); resolve them
+    // against the Loopara base URL so the banner loads.
+    final imageUrl = promo.image.isEmpty
+        ? ''
+        : (promo.image.startsWith('http')
+            ? promo.image
+            : '${AdConfig.looparaBaseUrl}${promo.image}');
+
+    final isDesktop = useDesktopLayout(context);
+    // Desktop caps at the native 320x100 banner; mobile is a compact half-width
+    // bar. The image aspect-fills the box (BoxFit.cover), cropping as needed so
+    // there are never empty bars.
+    final bannerWidth = isDesktop
+        ? _bannerWidth
+        : MediaQuery.sizeOf(context).width / 2;
+    final bannerHeight = isDesktop ? _bannerHeight : 56.0;
 
     return GestureDetector(
-      onTap: _onTap,
-      child: Opacity(
-        opacity: 0.62,
-        child: Container(
-          height: 64,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x2e8b5cf6),
-                blurRadius: 14,
-                spreadRadius: 0,
-              ),
-            ],
-          ),
+      onTap: () => _onTap(promo.id),
+      child: Center(
+        child: SizedBox(
+          width: bannerWidth,
+          height: bannerHeight,
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(StilloraRadius.md),
             child: Stack(
               fit: StackFit.expand,
               children: [
-                Image.network(
-                  campaign.imageUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) =>
-                      const SizedBox.shrink(),
-                ),
+                if (imageUrl.isNotEmpty)
+                  Image.network(
+                    imageUrl,
+                    fit: BoxFit.cover,
+                    // If the image fails, fall back to the text banner.
+                    errorBuilder: (context, error, stack) =>
+                        _textBanner(context, promo),
+                    loadingBuilder: (context, child, progress) =>
+                        progress == null ? child : _textBanner(context, promo),
+                  )
+                else
+                  _textBanner(context, promo),
+                // "Sponsored" label.
                 Positioned(
-                  bottom: 4,
-                  right: 6,
-                  child: Text(
-                    'Sponsored',
-                    style: const TextStyle(
-                      fontSize: 9,
-                      color: Color(0x99ffffff),
-                      height: 1,
+                  bottom: 2,
+                  right: 4,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 1,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.35),
+                      borderRadius: BorderRadius.circular(StilloraRadius.sm),
+                    ),
+                    child: const Text(
+                      'Sponsored',
+                      style: TextStyle(fontSize: 9, color: Colors.white70),
                     ),
                   ),
                 ),
@@ -118,6 +157,61 @@ class _AdSlotWidgetState extends State<AdSlotWidget> {
           ),
         ),
       ),
+    );
+  }
+
+  // Standard "large banner" dimensions served by Loopara (IAB 320x100).
+  static const double _bannerWidth = 320;
+  static const double _bannerHeight = 100;
+
+  /// Styled text banner used when the ad has no image (or it fails to load).
+  Widget _textBanner(BuildContext context, _Promo promo) {
+    return Container(
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: StilloraSpacing.md),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            StilloraColors.accent.withValues(alpha: 0.30),
+            StilloraColors.secondary.withValues(alpha: 0.30),
+          ],
+        ),
+      ),
+      child: Text(
+        promo.name,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.center,
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: StilloraColors.onSurface,
+            ),
+      ),
+    );
+  }
+}
+
+class _Promo {
+  const _Promo({
+    required this.id,
+    required this.name,
+    required this.image,
+    required this.link,
+  });
+
+  final String id;
+  final String name;
+  final String image;
+  final String link;
+
+  static _Promo? fromMap(Map<String, dynamic> map) {
+    final id = map['id'];
+    if (id is! String || id.isEmpty) return null;
+    return _Promo(
+      id: id,
+      name: (map['name'] as String?) ?? '',
+      image: (map['image'] as String?) ?? '',
+      link: (map['link'] as String?) ?? '',
     );
   }
 }

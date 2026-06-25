@@ -7,14 +7,6 @@ const nextConfig: NextConfig = {
   // `pg` is a server-only Node package; keep it out of the bundler so its
   // optional native/dynamic requires resolve at runtime.
   serverExternalPackages: ["pg"],
-  async rewrites() {
-    return [
-      {
-        source: "/ad-api/:path*",
-        destination: "https://md.loopara.app/api/:path*",
-      },
-    ];
-  },
 };
 
 export default nextConfig;

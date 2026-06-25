@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_surface.dart';
+import '../../core/widgets/desktop_shell.dart';
 import 'editor_state.dart';
 import 'video_preset.dart';
 
@@ -18,16 +19,12 @@ class ChoosePresetScreen extends ConsumerWidget {
     final editor = ref.watch(editorControllerProvider);
     final controller = ref.read(editorControllerProvider.notifier);
 
-    return Scaffold(
+    return SidebarScaffold(
+      desktopTitle: 'Choose Format',
       appBar: AppBar(title: const Text('Choose Format')),
       body: DecoratedBox(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xff0c0718), Color(0xff060611), Color(0xff030309)],
-            stops: [0.0, 0.5, 1.0],
-          ),
+          gradient: stilloraBackgroundGradient,
         ),
         child: SafeArea(
           child: Column(

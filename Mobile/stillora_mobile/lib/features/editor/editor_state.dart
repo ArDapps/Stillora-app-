@@ -18,7 +18,7 @@ enum MediaKind { image, video }
 
 const defaultDurationSeconds = 10;
 const minDurationSeconds = 1;
-const maxDurationSeconds = 300;
+const defaultDurationSliderMaxSeconds = 300;
 const _unset = Object();
 
 const _videoExtensions = {
@@ -200,7 +200,30 @@ class EditorState extends Equatable {
 }
 
 int normalizeDurationSeconds(num seconds) {
-  return seconds.round().clamp(minDurationSeconds, maxDurationSeconds).toInt();
+  final rounded = seconds.round();
+  return rounded < minDurationSeconds ? minDurationSeconds : rounded;
+}
+
+/// Sliders are a quick-adjust tool, not a duration limit. Their range grows in
+/// five-minute steps whenever a typed value or audio track exceeds the default.
+double durationSliderMax(int seconds) {
+  final normalized = normalizeDurationSeconds(seconds);
+  if (normalized <= defaultDurationSliderMaxSeconds) {
+    return defaultDurationSliderMaxSeconds.toDouble();
+  }
+  return ((normalized + defaultDurationSliderMaxSeconds - 1) ~/
+          defaultDurationSliderMaxSeconds) *
+      defaultDurationSliderMaxSeconds.toDouble();
+}
+
+int durationAdjustmentStep(int seconds) {
+  if (seconds >= 600) {
+    return 60;
+  }
+  if (seconds >= 60) {
+    return 10;
+  }
+  return 1;
 }
 
 final editorControllerProvider =
@@ -313,7 +336,23 @@ class EditorController extends Notifier<EditorState> {
       return;
     }
     state = state.copyWith(media: [...state.media, ...additions]);
+    _refitMediaToAudio();
     _persist();
+  }
+
+  /// When a soundtrack/narration is attached, keep the exported video the same
+  /// length as the audio by spreading the audio duration evenly across every
+  /// clip. No-op when there's no audio or no media. Called whenever the media
+  /// set changes so the fit survives adding/removing clips.
+  void _refitMediaToAudio() {
+    final audioDuration = state.audioDurationSeconds;
+    if (audioDuration == null || state.media.isEmpty) return;
+    final durations = _distributeEvenly(state.media.length, audioDuration);
+    final next = [
+      for (var i = 0; i < state.media.length; i++)
+        state.media[i].copyWith(durationSeconds: durations[i]),
+    ];
+    state = state.copyWith(media: next, durationSeconds: audioDuration);
   }
 
   Future<List<String>> _pickMediaPaths() async {
@@ -371,10 +410,7 @@ class EditorController extends Notifier<EditorState> {
     final remainder = clamped - base * count;
     return [
       for (var i = 0; i < count; i++)
-        (base + (i < remainder ? 1 : 0)).clamp(
-          minDurationSeconds,
-          maxDurationSeconds,
-        ),
+        normalizeDurationSeconds(base + (i < remainder ? 1 : 0)),
     ];
   }
 
@@ -397,6 +433,7 @@ class EditorController extends Notifier<EditorState> {
       selected -= 1;
     }
     state = state.copyWith(media: next, selectedIndex: selected);
+    _refitMediaToAudio();
     _persist();
   }
 

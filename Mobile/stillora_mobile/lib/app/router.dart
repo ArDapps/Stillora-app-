@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../features/auth/login_screen.dart';
 import '../features/editor/add_audio_screen.dart';
 import '../features/editor/choose_preset_screen.dart';
 import '../features/editor/editor_screen.dart';
@@ -24,11 +23,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: SplashScreen.routePath,
         builder: (context, state) => const SplashScreen(),
-      ),
-      GoRoute(
-        path: LoginScreen.routePath,
-        builder: (context, state) =>
-            LoginScreen(nextPath: state.uri.queryParameters['next']),
       ),
       GoRoute(
         path: OnboardingScreen.routePath,

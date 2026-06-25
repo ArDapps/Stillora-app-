@@ -13,6 +13,7 @@ import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_glow.dart';
 import '../../core/design/stillora_spacing.dart';
 import '../../core/design/stillora_surface.dart';
+import '../../core/widgets/desktop_shell.dart';
 import 'editor_state.dart';
 
 enum _Phase { idle, permissionDenied, recording, paused, recorded }
@@ -265,16 +266,12 @@ class _VoiceNarrationScreenState extends ConsumerState<VoiceNarrationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return SidebarScaffold(
+      desktopTitle: 'Voice Narration',
       appBar: AppBar(title: const Text('Voice Narration')),
       body: DecoratedBox(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xff0c0718), Color(0xff060611), Color(0xff030309)],
-            stops: [0.0, 0.5, 1.0],
-          ),
+          gradient: stilloraBackgroundGradient,
         ),
         child: SafeArea(
           child: ListView(
@@ -473,7 +470,7 @@ class _PrivacyNote extends StatelessWidget {
           children: [
             const Icon(
               Icons.lock_rounded,
-              color: Color(0xff22d3ee),
+              color: StilloraColors.brandCyan,
               size: 20,
             ),
             const SizedBox(width: StilloraSpacing.sm),
@@ -565,7 +562,7 @@ class _MicCircle extends StatelessWidget {
                 gradient: stilloraBrandGradient,
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xffd946ef).withValues(
+                    color: StilloraColors.brandMagenta.withValues(
                       alpha: 0.25 + glow * 0.25 + voice * 0.4,
                     ),
                     blurRadius: 28 + glow * 18 + voice * 30,
