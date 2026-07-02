@@ -47,7 +47,8 @@ const sections = [
     title: "Retention and Deletion",
     body: [
       "We keep information only as long as needed to provide Stillora, maintain records, comply with legal obligations, resolve disputes, and secure the service.",
-      "Temporary uploaded media and rendered exports may be removed automatically. If you need account or project deletion, contact us using the information below.",
+      "Temporary uploaded media and rendered exports may be removed automatically. Signed-in users can delete their account from the Stillora mobile app by opening Settings and choosing Delete account.",
+      "If you cannot access the app, contact us using the information below and include the email address you used to sign in.",
     ],
   },
   {
