@@ -11,6 +11,7 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import '../api/api_client.dart';
 import '../constants/app_constants.dart';
+import 'desktop_google_auth.dart';
 import 'session.dart';
 import 'token_storage.dart';
 
@@ -67,9 +68,7 @@ class AuthRepository {
 
   Future<AuthSession> signInWithGoogle() async {
     if (Platform.isLinux || Platform.isWindows) {
-      throw const AuthFailure(
-        'Google sign-in is not supported on Linux or Windows desktop yet.',
-      );
+      return _signInWithGoogleDesktop();
     }
 
     final clientId = Platform.isMacOS
@@ -121,6 +120,47 @@ class AuthRepository {
       throw AuthFailure(_googleSignInMessage(error));
     } on PlatformException catch (error) {
       throw AuthFailure(error.message ?? 'Google sign-in failed.');
+    } on DioException catch (error) {
+      throw AuthFailure(
+        error.response?.data is Map
+            ? (error.response!.data as Map)['error'] as String? ??
+                  'Stillora could not verify your Google account.'
+            : 'Stillora could not verify your Google account.',
+      );
+    }
+  }
+
+  /// Linux/Windows Google sign-in via the installed-app loopback + PKCE flow,
+  /// since `google_sign_in` has no desktop implementation. The resulting Google
+  /// tokens go through the same `/api/auth/mobile` exchange as mobile.
+  Future<AuthSession> _signInWithGoogleDesktop() async {
+    try {
+      final desktopAuth = DesktopGoogleAuth(
+        clientId: AppConstants.googleDesktopClientId,
+        clientSecret: AppConstants.googleDesktopClientSecret,
+      );
+      final tokens = await desktopAuth.signIn();
+
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/api/auth/mobile',
+        data: {
+          if (tokens.idToken != null && tokens.idToken!.isNotEmpty)
+            'idToken': tokens.idToken,
+          'accessToken': tokens.accessToken,
+          'app': 'stillora',
+        },
+      );
+      final data = response.data ?? const <String, dynamic>{};
+      final token = data['token'] as String?;
+      final userJson = data['user'];
+      if (token == null || userJson is! Map<String, dynamic>) {
+        throw const AuthFailure('Google sign-in failed.');
+      }
+
+      await _tokenStorage.saveToken(token);
+      return AuthSession(token: token, user: SessionUser.fromJson(userJson));
+    } on AuthFailure {
+      rethrow;
     } on DioException catch (error) {
       throw AuthFailure(
         error.response?.data is Map

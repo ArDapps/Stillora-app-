@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../core/storage/app_preferences.dart';
+import 'desktop_media_probe.dart';
 import 'local_editor_media_store.dart';
 import 'video_preset.dart';
 import 'video_styles.dart';
@@ -680,6 +681,12 @@ class EditorController extends Notifier<EditorState> {
   }
 
   Future<int?> _readMediaDurationSeconds(String path) async {
+    // `video_player` has no Linux/Windows desktop implementation, so probing it
+    // there throws and the editor never learns the audio length. Use ffprobe on
+    // those platforms so "fit video to audio" works on desktop too.
+    if (Platform.isLinux || Platform.isWindows) {
+      return DesktopMediaProbe.durationSeconds(path);
+    }
     final controller = VideoPlayerController.file(File(path));
     try {
       await controller.initialize();

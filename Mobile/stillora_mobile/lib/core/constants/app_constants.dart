@@ -20,6 +20,20 @@ class AppConstants {
     defaultValue:
         '718272031198-jcl994t1b9ucib32k08hb3rc5v29ngur.apps.googleusercontent.com',
   );
+
+  /// Google Cloud "Desktop app" OAuth client used by the Linux/Windows
+  /// loopback + PKCE sign-in flow. Supply via
+  /// `--dart-define=GOOGLE_DESKTOP_CLIENT_ID=...` and
+  /// `--dart-define=GOOGLE_DESKTOP_CLIENT_SECRET=...` at build time. The same
+  /// client id must be listed in the backend's GOOGLE_NATIVE_CLIENT_IDS.
+  static const googleDesktopClientId = String.fromEnvironment(
+    'GOOGLE_DESKTOP_CLIENT_ID',
+    defaultValue: '',
+  );
+  static const googleDesktopClientSecret = String.fromEnvironment(
+    'GOOGLE_DESKTOP_CLIENT_SECRET',
+    defaultValue: '',
+  );
   /// Apple "Services ID" used for Sign in with Apple on non-Apple platforms
   /// (Android/web). On iOS/macOS the native flow uses the app's bundle id as the
   /// token audience, so this is only required for the Android web-redirect flow.
