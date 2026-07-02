@@ -5,6 +5,7 @@ import 'package:stillora_video_engine/stillora_video_engine.dart' as engine;
 
 import '../export/export_controller.dart';
 import '../editor/editor_state.dart';
+import '../editor/video_preset.dart';
 import '../gallery/gallery_controller.dart';
 import '../gallery/local_export_record.dart';
 
@@ -69,6 +70,7 @@ class LoopImagesState {
     this.sizeId = 'vertical',
     this.durationSeconds = 10,
     this.resizeMode = engine.ResizeMode.fill,
+    this.exportQuality = defaultExportQuality,
     this.isRunning = false,
   });
 
@@ -76,6 +78,7 @@ class LoopImagesState {
   final String sizeId;
   final int durationSeconds;
   final engine.ResizeMode resizeMode;
+  final ExportQuality exportQuality;
   final bool isRunning;
 
   int get doneCount =>
@@ -86,11 +89,25 @@ class LoopImagesState {
     orElse: () => loopSizes.first,
   );
 
+  /// The aspect ratio scaled to the chosen [exportQuality].
+  ({int width, int height}) get outputSize =>
+      scaleDimensionsToQuality(size.width, size.height, exportQuality);
+
+  /// Estimated size of EACH looped MP4 (one per image).
+  int get estimatedBytesPerVideo => estimateExportBytes(
+        width: outputSize.width,
+        height: outputSize.height,
+        durationSeconds: durationSeconds,
+        hasVideo: false,
+        hasAudio: false,
+      );
+
   LoopImagesState copyWith({
     List<LoopItem>? items,
     String? sizeId,
     int? durationSeconds,
     engine.ResizeMode? resizeMode,
+    ExportQuality? exportQuality,
     bool? isRunning,
   }) {
     return LoopImagesState(
@@ -98,6 +115,7 @@ class LoopImagesState {
       sizeId: sizeId ?? this.sizeId,
       durationSeconds: durationSeconds ?? this.durationSeconds,
       resizeMode: resizeMode ?? this.resizeMode,
+      exportQuality: exportQuality ?? this.exportQuality,
       isRunning: isRunning ?? this.isRunning,
     );
   }
@@ -157,6 +175,9 @@ class LoopImagesController extends Notifier<LoopImagesState> {
   void setResizeMode(engine.ResizeMode mode) =>
       state = state.copyWith(resizeMode: mode);
 
+  void setExportQuality(ExportQuality quality) =>
+      state = state.copyWith(exportQuality: quality);
+
   void _patch(String id, LoopItem Function(LoopItem) update) {
     state = state.copyWith(
       items: [
@@ -172,8 +193,10 @@ class LoopImagesController extends Notifier<LoopImagesState> {
 
     final videoEngine = ref.read(videoEngineProvider);
     final size = state.size;
-    final width = size.width;
-    final height = size.height;
+    // Aspect ratio from the size option, pixel size from the chosen quality.
+    final scaled = state.outputSize;
+    final width = scaled.width;
+    final height = scaled.height;
     final duration = state.durationSeconds;
     final resize = state.resizeMode;
 

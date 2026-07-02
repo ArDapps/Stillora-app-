@@ -53,6 +53,17 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
       workQueue.async { [weak self] in
         self?.runExport(args: args, result: result)
       }
+    case "removeSilence":
+      guard let args = call.arguments as? [String: Any] else {
+        result(
+          FlutterError(
+            code: "invalid_arguments", message: "Export arguments were missing.", details: nil))
+        return
+      }
+      isCancelled = false
+      workQueue.async { [weak self] in
+        self?.runRemoveSilence(args: args, result: result)
+      }
     case "cancelExport":
       isCancelled = true
       result(nil)
@@ -78,6 +89,7 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
     let mediaPaths = (args["mediaPaths"] as? [String]) ?? []
     let imagePaths = (args["imagePaths"] as? [String]) ?? []
     let clipDurations = (args["clipDurations"] as? [Int]) ?? []
+    let clipVolumes = (args["clipVolumes"] as? [NSNumber])?.map { $0.doubleValue } ?? []
     let audioPath = args["audioPath"] as? String
     let width = evenDimension(args["width"] as? Int ?? 1080)
     let height = evenDimension(args["height"] as? Int ?? 1920)
@@ -100,9 +112,12 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
       let clipSeconds = aligned ? clipDurations : nil
 
       if timelinePaths.count == 1, let path = timelinePaths.first, isVideoFile(path) {
+        // Volume of this clip's own soundtrack (0 = muted). Parallel to the
+        // timeline; defaults to full loudness when not supplied.
+        let volume = clipVolumes.first ?? 1.0
         try exportFromVideo(
-          sourceURL: URL(fileURLWithPath: path), audioPath: audioPath, width: width,
-          height: height, duration: totalDuration, fill: fill, outputURL: outputURL)
+          sourceURL: URL(fileURLWithPath: path), audioPath: audioPath, volume: volume,
+          width: width, height: height, duration: totalDuration, fill: fill, outputURL: outputURL)
       } else if timelinePaths.contains(where: { isVideoFile($0) }) {
         try exportFromTimeline(
           mediaPaths: timelinePaths, clipSeconds: clipSeconds, audioPath: audioPath, width: width,
@@ -221,10 +236,21 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
   ) throws {
     try? FileManager.default.removeItem(at: url)
     let writer = try AVAssetWriter(outputURL: url, fileType: .mp4)
+    // HEVC/H.265 when the device can encode it (~40-50% smaller than H.264 at
+    // the same quality); falls back to H.264 on older hardware. Controlled
+    // bitrate + a 2s keyframe interval keep files small, especially for static
+    // slideshows.
+    let useHEVC = AVAssetExportSession.allExportPresets()
+      .contains(AVAssetExportPresetHEVCHighestQuality)
     let settings: [String: Any] = [
-      AVVideoCodecKey: AVVideoCodecType.h264,
+      AVVideoCodecKey: useHEVC ? AVVideoCodecType.hevc : AVVideoCodecType.h264,
       AVVideoWidthKey: width,
       AVVideoHeightKey: height,
+      AVVideoCompressionPropertiesKey: [
+        AVVideoAverageBitRateKey:
+          Int(Double(width * height) * 30.0 * (useHEVC ? 0.06 : 0.10)),
+        AVVideoMaxKeyFrameIntervalKey: 60,
+      ],
     ]
     let input = AVAssetWriterInput(mediaType: .video, outputSettings: settings)
     input.expectsMediaDataInRealTime = false
@@ -366,10 +392,21 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
   ) throws {
     try? FileManager.default.removeItem(at: url)
     let writer = try AVAssetWriter(outputURL: url, fileType: .mp4)
+    // HEVC/H.265 when the device can encode it (~40-50% smaller than H.264 at
+    // the same quality); falls back to H.264 on older hardware. Controlled
+    // bitrate + a 2s keyframe interval keep files small, especially for static
+    // slideshows.
+    let useHEVC = AVAssetExportSession.allExportPresets()
+      .contains(AVAssetExportPresetHEVCHighestQuality)
     let settings: [String: Any] = [
-      AVVideoCodecKey: AVVideoCodecType.h264,
+      AVVideoCodecKey: useHEVC ? AVVideoCodecType.hevc : AVVideoCodecType.h264,
       AVVideoWidthKey: width,
       AVVideoHeightKey: height,
+      AVVideoCompressionPropertiesKey: [
+        AVVideoAverageBitRateKey:
+          Int(Double(width * height) * 30.0 * (useHEVC ? 0.06 : 0.10)),
+        AVVideoMaxKeyFrameIntervalKey: 60,
+      ],
     ]
     let input = AVAssetWriterInput(mediaType: .video, outputSettings: settings)
     input.expectsMediaDataInRealTime = false
@@ -433,8 +470,8 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
   // MARK: - Video source
 
   private func exportFromVideo(
-    sourceURL: URL, audioPath: String?, width: Int, height: Int, duration: Int, fill: Bool,
-    outputURL: URL
+    sourceURL: URL, audioPath: String?, volume: Double, width: Int, height: Int, duration: Int,
+    fill: Bool, outputURL: URL
   ) throws {
     emit(stage: "generatingVideo", percentage: 0.1, message: "Processing video")
     let asset = loadedAsset(sourceURL)
@@ -453,6 +490,10 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
     try videoTrack.insertTimeRange(
       CMTimeRange(start: .zero, duration: clipDuration), of: sourceVideoTrack, at: .zero)
 
+    // When the user mutes the clip we simply leave the source audio out. A
+    // partial volume keeps the track but scales it down via an audio mix.
+    let muted = volume <= 0
+    var audioMix: AVAudioMix?
     let externalAudio = (audioPath != nil) && FileManager.default.fileExists(atPath: audioPath!)
     if externalAudio {
       let audioAsset = loadedAsset(URL(fileURLWithPath: audioPath!))
@@ -464,12 +505,19 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
         try? audioTrack.insertTimeRange(
           CMTimeRange(start: .zero, duration: audioDuration), of: audioSource, at: .zero)
       }
-    } else if let sourceAudioTrack = asset.tracks(withMediaType: .audio).first,
+    } else if !muted, let sourceAudioTrack = asset.tracks(withMediaType: .audio).first,
       let audioTrack = composition.addMutableTrack(
         withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid)
     {
       try? audioTrack.insertTimeRange(
         CMTimeRange(start: .zero, duration: clipDuration), of: sourceAudioTrack, at: .zero)
+      if volume < 1.0 {
+        let params = AVMutableAudioMixInputParameters(track: audioTrack)
+        params.setVolume(Float(volume), at: .zero)
+        let mix = AVMutableAudioMix()
+        mix.inputParameters = [params]
+        audioMix = mix
+      }
     }
 
     let renderSize = CGSize(width: width, height: height)
@@ -507,6 +555,7 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
     export.outputURL = outputURL
     export.outputFileType = .mp4
     export.videoComposition = videoComposition
+    export.audioMix = audioMix
     export.shouldOptimizeForNetworkUse = true
 
     emit(stage: "mergingAudio", percentage: 0.7, message: "Rendering")
@@ -685,5 +734,264 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
     var payload: [String: Any] = ["stage": stage, "percentage": percentage]
     if let message = message { payload["message"] = message }
     DispatchQueue.main.async { sink(payload) }
+  }
+
+  // MARK: - Remove silence / speed (ported from the macOS engine)
+
+  /// Cuts silent gaps, optionally speeds up (time-scaled, pitch preserved), and
+  /// optionally loops under a new soundtrack. The Speed section calls this with a
+  /// huge `minSilenceMs` so nothing is cut — only speed/mute/loop are applied.
+  private func runRemoveSilence(args: [String: Any], result: @escaping FlutterResult) {
+    let videoPath = args["videoPath"] as? String ?? ""
+    let width = evenDimension(args["width"] as? Int ?? 1080)
+    let height = evenDimension(args["height"] as? Int ?? 1920)
+    let thresholdDb = args["thresholdDb"] as? Double ?? -35
+    let minSilenceSec = Double(args["minSilenceMs"] as? Int ?? 400) / 1000.0
+    let paddingSec = Double(args["paddingMs"] as? Int ?? 100) / 1000.0
+    let speed = max(1, args["speed"] as? Int ?? 1)
+    let muteAudio = args["muteAudio"] as? Bool ?? false
+    let newAudioPath = args["newAudioPath"] as? String
+    let hasNewAudio =
+      newAudioPath != nil && FileManager.default.fileExists(atPath: newAudioPath!)
+    let keepOriginalAudio = !(muteAudio || hasNewAudio)
+
+    do {
+      let outputURL = try makeOutputURL()
+      let cutURL = hasNewAudio ? try makeOutputURL() : outputURL
+      let asset = loadedAsset(URL(fileURLWithPath: videoPath))
+      guard let videoSrc = asset.tracks(withMediaType: .video).first else {
+        throw EngineError.missingSource
+      }
+      let totalDuration = CMTimeGetSeconds(asset.duration)
+
+      emit(stage: "preparingImage", percentage: 0.1, message: "Analyzing audio")
+      var ranges = keptRanges(
+        asset: asset, thresholdDb: thresholdDb, minSilenceSec: minSilenceSec,
+        paddingSec: paddingSec, totalDuration: totalDuration)
+      if ranges.isEmpty { ranges = [(0, totalDuration)] }
+
+      emit(stage: "generatingVideo", percentage: 0.4, message: "Processing")
+      let composition = AVMutableComposition()
+      guard
+        let vTrack = composition.addMutableTrack(
+          withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid)
+      else { throw EngineError.export }
+      let aSrc = keepOriginalAudio ? asset.tracks(withMediaType: .audio).first : nil
+      let aTrack = aSrc != nil
+        ? composition.addMutableTrack(
+          withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid)
+        : nil
+
+      var cursor = CMTime.zero
+      for (start, end) in ranges {
+        let dur = max(0, end - start)
+        if dur <= 0 { continue }
+        let range = CMTimeRange(
+          start: CMTime(seconds: start, preferredTimescale: 600),
+          duration: CMTime(seconds: dur, preferredTimescale: 600))
+        try? vTrack.insertTimeRange(range, of: videoSrc, at: cursor)
+        if let aSrc = aSrc, let aTrack = aTrack {
+          try? aTrack.insertTimeRange(range, of: aSrc, at: cursor)
+        }
+        cursor = CMTimeAdd(cursor, range.duration)
+      }
+
+      var finalDuration = cursor
+      if speed > 1 {
+        let scaled = CMTimeMultiplyByFloat64(cursor, multiplier: 1.0 / Double(speed))
+        let full = CMTimeRange(start: .zero, duration: cursor)
+        vTrack.scaleTimeRange(full, toDuration: scaled)
+        aTrack?.scaleTimeRange(full, toDuration: scaled)
+        finalDuration = scaled
+      }
+      let keptSeconds = max(1, Int(CMTimeGetSeconds(finalDuration).rounded()))
+
+      let renderSize = CGSize(width: width, height: height)
+      let naturalSize = videoSrc.naturalSize
+      let preferred = videoSrc.preferredTransform
+      let displayed = naturalSize.applying(preferred)
+      let dispW = abs(displayed.width)
+      let dispH = abs(displayed.height)
+      let scale = min(renderSize.width / dispW, renderSize.height / dispH)
+      let tx = (renderSize.width - dispW * scale) / 2
+      let ty = (renderSize.height - dispH * scale) / 2
+      var transform = preferred.concatenating(CGAffineTransform(scaleX: scale, y: scale))
+      transform = transform.concatenating(CGAffineTransform(translationX: tx, y: ty))
+
+      let layerInstruction = AVMutableVideoCompositionLayerInstruction(assetTrack: vTrack)
+      layerInstruction.setTransform(transform, at: .zero)
+      let instruction = AVMutableVideoCompositionInstruction()
+      instruction.timeRange = CMTimeRange(start: .zero, duration: finalDuration)
+      instruction.layerInstructions = [layerInstruction]
+      let videoComposition = AVMutableVideoComposition()
+      videoComposition.renderSize = renderSize
+      videoComposition.frameDuration = CMTime(value: 1, timescale: 30)
+      videoComposition.instructions = [instruction]
+
+      guard
+        let export = AVAssetExportSession(
+          asset: composition, presetName: AVAssetExportPresetHighestQuality)
+      else { throw EngineError.export }
+      try? FileManager.default.removeItem(at: cutURL)
+      export.outputURL = cutURL
+      export.outputFileType = .mp4
+      export.videoComposition = videoComposition
+      export.shouldOptimizeForNetworkUse = true
+      export.audioTimePitchAlgorithm = .spectral
+      emit(stage: "mergingAudio", percentage: 0.7, message: "Rendering")
+      try runExportSession(export)
+
+      var finalSeconds = keptSeconds
+      if hasNewAudio, let newAudioPath = newAudioPath {
+        emit(stage: "mergingAudio", percentage: 0.9, message: "Adding new audio")
+        finalSeconds = try loopVideoUnderAudio(
+          videoURL: cutURL, audioPath: newAudioPath, width: width, height: height,
+          outputURL: outputURL)
+        try? FileManager.default.removeItem(at: cutURL)
+      }
+
+      emit(stage: "done", percentage: 1.0, message: "Saved")
+      result([
+        "outputPath": outputURL.path, "width": width, "height": height,
+        "durationSeconds": finalSeconds,
+      ])
+    } catch EngineError.cancelled {
+      result(FlutterError(code: "cancelled", message: "Export was cancelled.", details: nil))
+    } catch EngineError.missingSource {
+      result(
+        FlutterError(
+          code: "missing_source", message: "Stillora could not read that video.", details: nil))
+    } catch {
+      result(
+        FlutterError(code: "export_failed", message: error.localizedDescription, details: nil))
+    }
+  }
+
+  /// Loops [videoURL] to cover [audioPath]'s length and muxes the audio in at
+  /// normal speed. Returns the output length in whole seconds.
+  private func loopVideoUnderAudio(
+    videoURL: URL, audioPath: String, width: Int, height: Int, outputURL: URL
+  ) throws -> Int {
+    let videoAsset = loadedAsset(videoURL)
+    let audioAsset = loadedAsset(URL(fileURLWithPath: audioPath))
+    guard let vSrc = videoAsset.tracks(withMediaType: .video).first else {
+      throw EngineError.missingSource
+    }
+    let target =
+      audioAsset.duration.seconds > 0 ? audioAsset.duration : videoAsset.duration
+
+    let composition = AVMutableComposition()
+    guard
+      let vTrack = composition.addMutableTrack(
+        withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid)
+    else { throw EngineError.export }
+    if videoAsset.duration.seconds > 0 {
+      var at = CMTime.zero
+      while at < target {
+        let piece = CMTimeMinimum(CMTimeSubtract(target, at), videoAsset.duration)
+        if piece.seconds <= 0 { break }
+        try? vTrack.insertTimeRange(
+          CMTimeRange(start: .zero, duration: piece), of: vSrc, at: at)
+        at = CMTimeAdd(at, piece)
+      }
+    }
+    if let aSrc = audioAsset.tracks(withMediaType: .audio).first,
+      let aTrack = composition.addMutableTrack(
+        withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid)
+    {
+      try? aTrack.insertTimeRange(
+        CMTimeRange(start: .zero, duration: CMTimeMinimum(target, audioAsset.duration)),
+        of: aSrc, at: .zero)
+    }
+
+    guard
+      let export = AVAssetExportSession(
+        asset: composition, presetName: AVAssetExportPresetHighestQuality)
+    else { throw EngineError.export }
+    try? FileManager.default.removeItem(at: outputURL)
+    export.outputURL = outputURL
+    export.outputFileType = .mp4
+    export.shouldOptimizeForNetworkUse = true
+    try runExportSession(export)
+    return max(1, Int(target.seconds.rounded()))
+  }
+
+  /// Returns the non-silent (kept) time ranges of an asset's audio, in seconds.
+  private func keptRanges(
+    asset: AVAsset, thresholdDb: Double, minSilenceSec: Double, paddingSec: Double,
+    totalDuration: Double
+  ) -> [(Double, Double)] {
+    guard let track = asset.tracks(withMediaType: .audio).first,
+      let reader = try? AVAssetReader(asset: asset)
+    else { return [] }
+    let sampleRate = 44100.0
+    let settings: [String: Any] = [
+      AVFormatIDKey: kAudioFormatLinearPCM,
+      AVLinearPCMBitDepthKey: 16,
+      AVLinearPCMIsFloatKey: false,
+      AVLinearPCMIsBigEndianKey: false,
+      AVNumberOfChannelsKey: 1,
+      AVSampleRateKey: sampleRate,
+    ]
+    let output = AVAssetReaderTrackOutput(track: track, outputSettings: settings)
+    guard reader.canAdd(output) else { return [] }
+    reader.add(output)
+    reader.startReading()
+
+    let windowSec = 0.03
+    let windowSamples = Int(sampleRate * windowSec)
+    var windowRms: [Double] = []
+    var carry: [Int16] = []
+
+    while reader.status == .reading, let buf = output.copyNextSampleBuffer() {
+      guard let block = CMSampleBufferGetDataBuffer(buf) else { continue }
+      var length = 0
+      var dataPointer: UnsafeMutablePointer<Int8>?
+      CMBlockBufferGetDataPointer(
+        block, atOffset: 0, lengthAtOffsetOut: nil, totalLengthOut: &length,
+        dataPointerOut: &dataPointer)
+      if let dp = dataPointer {
+        dp.withMemoryRebound(to: Int16.self, capacity: length / 2) { p in
+          for i in 0..<(length / 2) { carry.append(p[i]) }
+        }
+      }
+      while carry.count >= windowSamples {
+        var sum = 0.0
+        for i in 0..<windowSamples {
+          let v = Double(carry[i]) / 32768.0
+          sum += v * v
+        }
+        windowRms.append((sum / Double(windowSamples)).squareRoot())
+        carry.removeFirst(windowSamples)
+      }
+    }
+
+    let peak = windowRms.max() ?? 0
+    guard peak > 0 else { return [] }
+    let threshLinear = peak * pow(10.0, thresholdDb / 20.0)
+    let windowLoud = windowRms.map { $0 >= threshLinear }
+
+    var ranges: [(Double, Double)] = []
+    var i = 0
+    while i < windowLoud.count {
+      if windowLoud[i] {
+        var j = i
+        while j < windowLoud.count && windowLoud[j] { j += 1 }
+        ranges.append((Double(i) * windowSec, Double(j) * windowSec))
+        i = j
+      } else {
+        i += 1
+      }
+    }
+    var merged: [(Double, Double)] = []
+    for r in ranges {
+      if var last = merged.last, r.0 - last.1 < minSilenceSec {
+        last.1 = r.1
+        merged[merged.count - 1] = last
+      } else {
+        merged.append(r)
+      }
+    }
+    return merged.map { (max(0, $0.0 - paddingSec), min(totalDuration, $0.1 + paddingSec)) }
   }
 }

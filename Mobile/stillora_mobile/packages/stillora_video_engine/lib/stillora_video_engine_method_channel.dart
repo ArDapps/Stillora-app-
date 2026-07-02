@@ -27,6 +27,7 @@ class MethodChannelStilloraVideoEngine extends StilloraVideoEnginePlatform {
     List<String> mediaPaths = const [],
     List<String> imagePaths = const [],
     List<int> clipDurations = const [],
+    List<double> clipVolumes = const [],
     String? audioPath,
     required int durationSeconds,
     required int width,
@@ -41,6 +42,7 @@ class MethodChannelStilloraVideoEngine extends StilloraVideoEnginePlatform {
         'mediaPaths': mediaPaths.isEmpty ? [imagePath] : mediaPaths,
         'imagePaths': imagePaths.isEmpty ? [imagePath] : imagePaths,
         'clipDurations': clipDurations,
+        'clipVolumes': clipVolumes,
         'audioPath': audioPath,
         'durationSeconds': durationSeconds,
         'width': width,
@@ -57,6 +59,99 @@ class MethodChannelStilloraVideoEngine extends StilloraVideoEnginePlatform {
       );
     }
 
+    return ExportResult.fromMap(result);
+  }
+
+  @override
+  Future<ExportResult> exportReel({
+    required List<ReelLayerSpec> layers,
+    String? audioPath,
+    required int width,
+    required int height,
+    required int durationSeconds,
+    String effect = 'none',
+    String transition = 'none',
+    String mockup = 'none',
+  }) async {
+    final result = await methodChannel.invokeMapMethod<Object?, Object?>(
+      'exportReel',
+      {
+        'layers': [for (final layer in layers) layer.toMap()],
+        'audioPath': audioPath,
+        'width': width,
+        'height': height,
+        'durationSeconds': durationSeconds,
+        'effect': effect,
+        'transition': transition,
+        'mockup': mockup,
+      },
+    );
+    if (result == null) {
+      throw PlatformException(
+        code: 'export_failed',
+        message: 'The video engine did not return a reel export result.',
+      );
+    }
+    return ExportResult.fromMap(result);
+  }
+
+  @override
+  Future<ExportResult> exportWatermark({
+    required String videoPath,
+    required List<WatermarkLayerSpec> overlays,
+    required int width,
+    required int height,
+    required int durationSeconds,
+  }) async {
+    final result = await methodChannel.invokeMapMethod<Object?, Object?>(
+      'exportWatermark',
+      {
+        'videoPath': videoPath,
+        'overlays': [for (final o in overlays) o.toMap()],
+        'width': width,
+        'height': height,
+        'durationSeconds': durationSeconds,
+      },
+    );
+    if (result == null) {
+      throw PlatformException(
+        code: 'export_failed',
+        message: 'The video engine did not return a watermark export result.',
+      );
+    }
+    return ExportResult.fromMap(result);
+  }
+
+  @override
+  Future<ExportResult> removeSilence({
+    required String videoPath,
+    required int width,
+    required int height,
+    double thresholdDb = -35,
+    int minSilenceMs = 400,
+    int paddingMs = 100,
+    int speed = 1,
+    bool muteAudio = false,
+    String? newAudioPath,
+  }) async {
+    final result = await methodChannel
+        .invokeMapMethod<Object?, Object?>('removeSilence', {
+          'videoPath': videoPath,
+          'width': width,
+          'height': height,
+          'thresholdDb': thresholdDb,
+          'minSilenceMs': minSilenceMs,
+          'paddingMs': paddingMs,
+          'speed': speed,
+          'muteAudio': muteAudio,
+          'newAudioPath': newAudioPath,
+        });
+    if (result == null) {
+      throw PlatformException(
+        code: 'export_failed',
+        message: 'The video engine did not return a result.',
+      );
+    }
     return ExportResult.fromMap(result);
   }
 

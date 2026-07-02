@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
@@ -20,6 +21,7 @@ import 'add_audio_screen.dart';
 import 'choose_preset_screen.dart';
 import 'editor_state.dart';
 import 'pre_export_preview_screen.dart';
+import 'video_styles.dart';
 import 'upload_media_screen.dart';
 import 'video_preset.dart';
 
@@ -202,6 +204,8 @@ class _MobileEditorFlow extends StatelessWidget {
           onTap: () => context.push(ChoosePresetScreen.routePath),
         ),
         const SizedBox(height: StilloraSpacing.sm),
+        _StyleCard(editor: editor, controller: controller),
+        const SizedBox(height: StilloraSpacing.sm),
         _PrivacyCard(isSignedIn: session != null),
         const SizedBox(height: StilloraSpacing.sm),
         StilloraPrimaryButton(
@@ -270,6 +274,60 @@ class _StepRow extends StatelessWidget {
           const Icon(
             Icons.chevron_right_rounded,
             color: StilloraColors.onSurfaceVariant,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Effect + transition pickers shown on the main Create screen so styles are
+/// discoverable without opening the format sub-screen. Mirrors the same
+/// controls in ChoosePresetScreen (both drive the shared editor state).
+class _StyleCard extends StatelessWidget {
+  const _StyleCard({required this.editor, required this.controller});
+
+  final EditorState editor;
+  final EditorController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return StilloraGlassCard(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.auto_awesome_rounded,
+                  size: 20, color: StilloraColors.primary),
+              const SizedBox(width: 8),
+              Text(
+                'Style & effects',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          StylePickerRow<ClipEffect>(
+            title: 'Effect',
+            values: ClipEffect.values,
+            selected: editor.effect,
+            labelOf: (e) => e.label,
+            iconOf: (e) => e.icon,
+            onSelected: controller.setEffect,
+          ),
+          const SizedBox(height: 14),
+          StylePickerRow<FrameTransition>(
+            title: 'Transition',
+            values: FrameTransition.values,
+            selected: editor.transition,
+            labelOf: (t) => t.label,
+            iconOf: (t) => t.icon,
+            onSelected: controller.setTransition,
           ),
         ],
       ),
@@ -353,10 +411,7 @@ class _MobilePreviewPanel extends StatelessWidget {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(StilloraRadius.full),
-                      child: _PreviewMedia(
-                        media: editor.selectedMedia,
-                        resizeMode: editor.resizeMode,
-                      ),
+                      child: _PreviewStage(editor: editor),
                     ),
                   ),
                 ),
@@ -446,6 +501,8 @@ class _DesktopEditorWorkspace extends StatelessWidget {
                 compact: compact,
               ),
               const SizedBox(height: 10),
+              _StyleCard(editor: editor, controller: controller),
+              const SizedBox(height: 10),
               _DesktopExportPanel(
                 editor: editor,
                 isSignedIn: session != null,
@@ -511,6 +568,8 @@ class _DesktopEditorWorkspace extends StatelessWidget {
                           controller: controller,
                           compact: compact,
                         ),
+                        const SizedBox(height: 10),
+                        _StyleCard(editor: editor, controller: controller),
                       ],
                     ),
                   ),
@@ -779,7 +838,6 @@ class _PreviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final media = editor.selectedMedia;
     final fitLabel = editor.resizeMode == ResizeMode.fit ? 'Fit' : 'Fill';
 
     return StilloraGlowCard(
@@ -832,10 +890,7 @@ class _PreviewCard extends StatelessWidget {
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(StilloraRadius.full),
-                    child: _PreviewMedia(
-                      media: media,
-                      resizeMode: editor.resizeMode,
-                    ),
+                    child: _PreviewStage(editor: editor),
                   ),
                 ),
               ),
@@ -924,6 +979,20 @@ class _DesktopExportPanel extends StatelessWidget {
             icon: Icons.aspect_ratio_rounded,
             label: 'Preset',
             value: '${editor.preset.label} · ${editor.preset.ratioLabel}',
+            compact: compact,
+          ),
+          _DesktopExportStat(
+            icon: Icons.high_quality_rounded,
+            label: 'Quality',
+            value:
+                '${editor.exportQuality.label} · '
+                '${editor.outputResolution.width}×${editor.outputResolution.height}',
+            compact: compact,
+          ),
+          _DesktopExportStat(
+            icon: Icons.sd_storage_rounded,
+            label: 'Est. size',
+            value: '≈ ${formatFileSize(editor.estimatedExportBytes)}',
             compact: compact,
           ),
           _DesktopExportStat(
@@ -1091,6 +1160,138 @@ class _PreviewMedia extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Chooses how to render the preview: an auto-playing [SlideshowPreview] that
+/// animates the transition between each image asset when there are multiple
+/// images, otherwise the static [_PreviewMedia] wrapped in [StyledMedia].
+class _PreviewStage extends StatelessWidget {
+  const _PreviewStage({required this.editor});
+
+  final EditorState editor;
+
+  @override
+  Widget build(BuildContext context) {
+    if (editor.exportsImageSlideshow && editor.media.length > 1) {
+      return SlideshowPreview(
+        media: editor.media,
+        transition: editor.transition,
+        effect: editor.effect,
+        resizeMode: editor.resizeMode,
+      );
+    }
+    return StyledMedia(
+      effect: editor.effect,
+      transition: editor.transition,
+      child: _PreviewMedia(
+        media: editor.selectedMedia,
+        resizeMode: editor.resizeMode,
+      ),
+    );
+  }
+}
+
+/// Auto-advancing preview of a multi-image slideshow. Each clip is shown for its
+/// own duration and the selected [transition] plays on every asset-to-asset
+/// handoff, so the preview reflects how the exported video moves between images.
+class SlideshowPreview extends StatefulWidget {
+  const SlideshowPreview({
+    super.key,
+    required this.media,
+    required this.transition,
+    required this.effect,
+    required this.resizeMode,
+  });
+
+  final List<MediaItem> media;
+  final FrameTransition transition;
+  final ClipEffect effect;
+  final ResizeMode resizeMode;
+
+  @override
+  State<SlideshowPreview> createState() => _SlideshowPreviewState();
+}
+
+class _SlideshowPreviewState extends State<SlideshowPreview> {
+  int _index = 0;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _schedule();
+  }
+
+  @override
+  void didUpdateWidget(covariant SlideshowPreview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Restart cycling when the clip list changes (count/order/paths or timing).
+    if (!_sameClips(oldWidget.media, widget.media)) {
+      _index = _index.clamp(0, widget.media.length - 1);
+      _schedule();
+    }
+  }
+
+  bool _sameClips(List<MediaItem> a, List<MediaItem> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i].path != b[i].path ||
+          a[i].durationSeconds != b[i].durationSeconds) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  void _schedule() {
+    _timer?.cancel();
+    if (widget.media.length < 2) return;
+    final index = _index.clamp(0, widget.media.length - 1);
+    final secs = widget.media[index].durationSeconds.clamp(1, 60);
+    _timer = Timer(Duration(seconds: secs), _advance);
+  }
+
+  void _advance() {
+    if (!mounted || widget.media.isEmpty) return;
+    setState(() => _index = (_index + 1) % widget.media.length);
+    _schedule();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.media.isEmpty) {
+      return _PreviewMedia(media: null, resizeMode: widget.resizeMode);
+    }
+    final index = _index.clamp(0, widget.media.length - 1);
+    final item = widget.media[index];
+    return AnimatedSwitcher(
+      duration: frameTransitionDuration(widget.transition),
+      switchInCurve: Curves.easeOut,
+      switchOutCurve: Curves.easeIn,
+      transitionBuilder: (child, animation) =>
+          frameTransitionBuilder(widget.transition, child, animation),
+      layoutBuilder: (currentChild, previousChildren) => Stack(
+        fit: StackFit.expand,
+        children: [
+          ...previousChildren,
+          ?currentChild,
+        ],
+      ),
+      child: KeyedSubtree(
+        key: ValueKey('slide_$index@${item.path}'),
+        child: EffectAnimator(
+          effect: widget.effect,
+          child: _PreviewMedia(media: item, resizeMode: widget.resizeMode),
+        ),
       ),
     );
   }
@@ -1336,7 +1537,9 @@ class _MediaTimeline extends StatelessWidget {
         clipNumber: index + 1,
         isVideo: item.kind == MediaKind.video,
         initialSeconds: item.durationSeconds,
+        initialVolume: item.volume,
         onChanged: (seconds) => controller.setClipDuration(index, seconds),
+        onVolumeChanged: (volume) => controller.setClipVolume(index, volume),
       ),
     );
   }
@@ -1349,13 +1552,17 @@ class _ClipDurationSheet extends StatefulWidget {
     required this.clipNumber,
     required this.isVideo,
     required this.initialSeconds,
+    required this.initialVolume,
     required this.onChanged,
+    required this.onVolumeChanged,
   });
 
   final int clipNumber;
   final bool isVideo;
   final int initialSeconds;
+  final double initialVolume;
   final ValueChanged<int> onChanged;
+  final ValueChanged<double> onVolumeChanged;
 
   @override
   State<_ClipDurationSheet> createState() => _ClipDurationSheetState();
@@ -1363,6 +1570,7 @@ class _ClipDurationSheet extends StatefulWidget {
 
 class _ClipDurationSheetState extends State<_ClipDurationSheet> {
   late int _seconds = widget.initialSeconds;
+  late double _volume = widget.initialVolume;
   late final TextEditingController _controller =
       TextEditingController(text: widget.initialSeconds.toString());
 
@@ -1372,6 +1580,12 @@ class _ClipDurationSheetState extends State<_ClipDurationSheet> {
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  void _setVolume(double volume) {
+    final clamped = normalizeClipVolume(volume);
+    setState(() => _volume = clamped);
+    widget.onVolumeChanged(clamped);
   }
 
   /// Applies a new duration. [syncField] keeps the text box in step when the
@@ -1464,6 +1678,45 @@ class _ClipDurationSheetState extends State<_ClipDurationSheet> {
               ),
             ],
           ),
+          if (widget.isVideo) ...[
+            const SizedBox(height: StilloraSpacing.md),
+            Row(
+              children: [
+                IconButton.filledTonal(
+                  tooltip: _volume <= 0 ? 'Unmute' : 'Mute',
+                  onPressed: () => _setVolume(_volume <= 0 ? 1.0 : 0.0),
+                  icon: Icon(
+                    _volume <= 0
+                        ? Icons.volume_off_rounded
+                        : Icons.volume_up_rounded,
+                  ),
+                ),
+                const SizedBox(width: StilloraSpacing.xs),
+                Expanded(
+                  child: Text(
+                    _volume <= 0
+                        ? 'Muted'
+                        : 'Volume ${(_volume * 100).round()}%',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ),
+              ],
+            ),
+            Slider(
+              value: _volume,
+              min: 0,
+              max: 1,
+              divisions: 20,
+              label: _volume <= 0 ? 'Muted' : '${(_volume * 100).round()}%',
+              onChanged: _setVolume,
+            ),
+            Text(
+              'Controls this video clip’s own sound in the export.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: StilloraColors.onSurfaceVariant,
+              ),
+            ),
+          ],
           const SizedBox(height: StilloraSpacing.sm),
           StilloraPrimaryButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -1572,6 +1825,16 @@ class _MediaThumb extends StatelessWidget {
                   bottom: 4,
                   child: Icon(
                     Icons.videocam_rounded,
+                    size: 16,
+                    color: StilloraColors.onSurface,
+                  ),
+                ),
+              if (item.kind == MediaKind.video && item.isMuted)
+                const Positioned(
+                  right: 4,
+                  top: 4,
+                  child: Icon(
+                    Icons.volume_off_rounded,
                     size: 16,
                     color: StilloraColors.onSurface,
                   ),
@@ -1838,6 +2101,24 @@ class _PresetCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: StilloraSpacing.sm),
+          Text('Quality', style: Theme.of(context).textTheme.labelMedium),
+          const SizedBox(height: StilloraSpacing.xs),
+          RenderPillSegmented(
+            options: [for (final q in ExportQuality.values) q.label],
+            selectedIndex: ExportQuality.values.indexOf(editor.exportQuality),
+            onSelected: (i) =>
+                controller.setExportQuality(ExportQuality.values[i]),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${editor.outputResolution.width} × ${editor.outputResolution.height}'
+            '  ·  ≈ ${formatFileSize(editor.estimatedExportBytes)}'
+            '  ·  ${editor.exportQuality.note}',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: StilloraColors.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: StilloraSpacing.sm),
           Text(
             editor.media.length > 1 ? 'Total duration' : 'Duration',
             style: Theme.of(context).textTheme.labelMedium,
@@ -2096,7 +2377,7 @@ class _PrivacyCard extends StatelessWidget {
             child: Text(
               isSignedIn
                   ? 'Ready to convert. Media files stay on your phone.'
-                  : 'Explore freely. Register only when you convert.',
+                  : 'No account needed. Media files stay on this phone.',
               style: (compact
                   ? Theme.of(context).textTheme.bodySmall
                   : Theme.of(context).textTheme.bodyMedium),

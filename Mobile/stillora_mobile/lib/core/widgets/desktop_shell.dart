@@ -17,6 +17,12 @@ const kHomeRoute = '/home';
 /// before navigating back to the home shell.
 final homeTabProvider = StateProvider<int>((ref) => 0);
 
+/// Whether the desktop sidebar is collapsed to an icon-only rail (macOS style).
+final sidebarCollapsedProvider = StateProvider<bool>((ref) => false);
+
+/// Sidebar widths for the expanded vs. collapsed (icon-only) states.
+const double _sidebarCollapsedWidth = 76;
+
 // Display order for the desktop sidebar. `index` is the underlying home tab
 // (matches app_tabs_screen views), so the list can be reordered for display
 // without changing which screen each item opens. Library sits directly before
@@ -29,6 +35,30 @@ const _navItems = [
     selectedIcon: Icons.add_photo_alternate_rounded,
   ),
   (
+    index: 6,
+    label: 'Watermark',
+    icon: Icons.branding_watermark_outlined,
+    selectedIcon: Icons.branding_watermark_rounded,
+  ),
+  (
+    index: 5,
+    label: 'Remove Silence',
+    icon: Icons.content_cut_outlined,
+    selectedIcon: Icons.content_cut_rounded,
+  ),
+  (
+    index: 7,
+    label: 'Speed',
+    icon: Icons.fast_forward_outlined,
+    selectedIcon: Icons.fast_forward_rounded,
+  ),
+  (
+    index: 8,
+    label: 'Convert',
+    icon: Icons.swap_horiz_outlined,
+    selectedIcon: Icons.swap_horiz_rounded,
+  ),
+  (
     index: 4,
     label: 'Loop images',
     icon: Icons.repeat_rounded,
@@ -36,7 +66,7 @@ const _navItems = [
   ),
   (
     index: 2,
-    label: 'HTML → Video',
+    label: 'HTML',
     icon: Icons.html_outlined,
     selectedIcon: Icons.html_rounded,
   ),
@@ -82,6 +112,9 @@ class DesktopShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final collapsed = ref.watch(sidebarCollapsedProvider);
+    void toggleSidebar() =>
+        ref.read(sidebarCollapsedProvider.notifier).state = !collapsed;
     return Scaffold(
       body: DecoratedBox(
         decoration: const BoxDecoration(
@@ -97,23 +130,38 @@ class DesktopShell extends ConsumerWidget {
             children: [
               // Sidebar sits on its own slightly-raised glass surface so the
               // navigation reads as desktop chrome, not a stretched phone.
-              Container(
-                width: StilloraSpacing.desktopSidebarWidth,
+              // Collapses to an icon-only rail (macOS style).
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                width: collapsed
+                    ? _sidebarCollapsedWidth
+                    : StilloraSpacing.desktopSidebarWidth,
                 decoration: BoxDecoration(
-                  color: StilloraColors.surfaceContainerLow.withValues(alpha: 0.55),
+                  color: StilloraColors.surfaceContainerLow.withValues(
+                    alpha: 0.55,
+                  ),
                   border: const Border(
                     right: BorderSide(color: StilloraColors.glassStroke),
                   ),
                 ),
-                child: _DesktopSidebar(
-                  activeIndex: activeIndex,
-                  onSelect: (index) => _select(context, ref, index),
+                child: ClipRect(
+                  child: _DesktopSidebar(
+                    activeIndex: activeIndex,
+                    collapsed: collapsed,
+                    onToggle: toggleSidebar,
+                    onSelect: (index) => _select(context, ref, index),
+                  ),
                 ),
               ),
               Expanded(
                 child: Column(
                   children: [
-                    _DesktopTopBar(title: title, trailing: trailing),
+                    _DesktopTopBar(
+                      title: title,
+                      trailing: trailing,
+                      onToggleSidebar: toggleSidebar,
+                    ),
                     Expanded(
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(
@@ -123,7 +171,9 @@ class DesktopShell extends ConsumerWidget {
                           StilloraSpacing.md,
                         ),
                         child: ClipRRect(
-                          borderRadius: BorderRadius.circular(StilloraRadius.xl),
+                          borderRadius: BorderRadius.circular(
+                            StilloraRadius.xl,
+                          ),
                           child: child,
                         ),
                       ),
@@ -171,73 +221,114 @@ class SidebarScaffold extends StatelessWidget {
 }
 
 class _DesktopSidebar extends ConsumerWidget {
-  const _DesktopSidebar({required this.activeIndex, required this.onSelect});
+  const _DesktopSidebar({
+    required this.activeIndex,
+    required this.onSelect,
+    required this.collapsed,
+    required this.onToggle,
+  });
 
   final int activeIndex;
   final ValueChanged<int> onSelect;
+  final bool collapsed;
+  final VoidCallback onToggle;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final hPad = collapsed ? StilloraSpacing.base : StilloraSpacing.snug;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        StilloraSpacing.snug,
+      padding: EdgeInsets.fromLTRB(
+        hPad,
         StilloraSpacing.sm,
-        StilloraSpacing.snug,
+        hPad,
         StilloraSpacing.snug,
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: collapsed
+            ? CrossAxisAlignment.center
+            : CrossAxisAlignment.start,
         children: [
-          // Brand lockup.
-          Padding(
-            padding: const EdgeInsets.only(left: StilloraSpacing.base),
-            child: Row(
+          // Brand + collapse toggle.
+          if (collapsed)
+            Column(
               children: [
-                const StilloraMark(size: 30),
-                const SizedBox(width: StilloraSpacing.xs),
-                Expanded(
-                  child: Text(
-                    'Stillora',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: -0.2,
-                        ),
-                  ),
+                const StilloraMark(size: 28),
+                const SizedBox(height: StilloraSpacing.base),
+                _GlassIconButton(
+                  icon: Icons.keyboard_double_arrow_right_rounded,
+                  tooltip: 'Expand sidebar',
+                  onTap: onToggle,
                 ),
               ],
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.only(left: StilloraSpacing.base),
+              child: Row(
+                children: [
+                  const StilloraMark(size: 30),
+                  const SizedBox(width: StilloraSpacing.xs),
+                  Expanded(
+                    child: Text(
+                      'Stillora',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                  ),
+                  _GlassIconButton(
+                    icon: Icons.keyboard_double_arrow_left_rounded,
+                    tooltip: 'Collapse sidebar',
+                    onTap: onToggle,
+                  ),
+                ],
+              ),
             ),
-          ),
           const SizedBox(height: StilloraSpacing.md),
-          const _SidebarLabel('Workspace'),
-          const SizedBox(height: StilloraSpacing.xs),
+          if (!collapsed) ...[
+            const _SidebarLabel('Workspace'),
+            const SizedBox(height: StilloraSpacing.xs),
+          ],
           for (final item in _navItems)
             _DesktopNavItem(
               selected: item.index == activeIndex,
               icon: item.icon,
               selectedIcon: item.selectedIcon,
               label: item.label,
+              collapsed: collapsed,
               onTap: () => onSelect(item.index),
             ),
           const Spacer(),
-          const AdSlotWidget(placement: 'USER_DASHBOARD_LEFT'),
-          const SizedBox(height: StilloraSpacing.snug),
-          Row(
-            children: [
-              const Icon(Icons.shield_rounded,
-                  color: StilloraColors.secondary, size: 15),
-              const SizedBox(width: StilloraSpacing.base + 2),
-              Expanded(
-                child: Text(
-                  'Files stay on this computer.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: StilloraColors.onSurfaceVariant,
-                      ),
+          if (!collapsed) ...[
+            const AdSlotWidget(placement: 'USER_DASHBOARD_LEFT'),
+            const SizedBox(height: StilloraSpacing.snug),
+            Row(
+              children: [
+                const Icon(
+                  Icons.shield_rounded,
+                  color: StilloraColors.secondary,
+                  size: 15,
                 ),
-              ),
-            ],
-          ),
+                const SizedBox(width: StilloraSpacing.base + 2),
+                Expanded(
+                  child: Text(
+                    'Files stay on this computer.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: StilloraColors.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ] else
+            const Icon(
+              Icons.shield_rounded,
+              color: StilloraColors.secondary,
+              size: 16,
+            ),
         ],
       ),
     );
@@ -255,11 +346,11 @@ class _SidebarLabel extends StatelessWidget {
       child: Text(
         text.toUpperCase(),
         style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: StilloraColors.onSurfaceVariant,
-              letterSpacing: 1.4,
-              fontWeight: FontWeight.w800,
-              fontSize: 11,
-            ),
+          color: StilloraColors.onSurfaceVariant,
+          letterSpacing: 1.4,
+          fontWeight: FontWeight.w800,
+          fontSize: 11,
+        ),
       ),
     );
   }
@@ -272,6 +363,7 @@ class _DesktopNavItem extends StatefulWidget {
     required this.selectedIcon,
     required this.label,
     required this.onTap,
+    this.collapsed = false,
   });
 
   final bool selected;
@@ -279,6 +371,7 @@ class _DesktopNavItem extends StatefulWidget {
   final IconData selectedIcon;
   final String label;
   final VoidCallback onTap;
+  final bool collapsed;
 
   @override
   State<_DesktopNavItem> createState() => _DesktopNavItemState();
@@ -294,7 +387,9 @@ class _DesktopNavItemState extends State<_DesktopNavItem> {
     // stay muted, brightening only on hover.
     final fg = selected
         ? Colors.white
-        : (_hovered ? StilloraColors.onSurface : StilloraColors.onSurfaceVariant);
+        : (_hovered
+              ? StilloraColors.onSurface
+              : StilloraColors.onSurfaceVariant);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: StilloraSpacing.base),
@@ -322,8 +417,8 @@ class _DesktopNavItemState extends State<_DesktopNavItem> {
                 color: selected
                     ? null
                     : (_hovered
-                        ? StilloraColors.onSurface.withValues(alpha: 0.06)
-                        : Colors.transparent),
+                          ? StilloraColors.onSurface.withValues(alpha: 0.06)
+                          : Colors.transparent),
                 borderRadius: BorderRadius.circular(StilloraRadius.md),
                 boxShadow: selected
                     ? [
@@ -337,29 +432,43 @@ class _DesktopNavItemState extends State<_DesktopNavItem> {
               ),
               child: SizedBox(
                 height: StilloraSpacing.desktopNavItemHeight,
-                child: Row(
-                  children: [
-                    const SizedBox(width: StilloraSpacing.base + 2),
-                    Icon(
-                      selected ? widget.selectedIcon : widget.icon,
-                      size: 19,
-                      color: fg,
-                    ),
-                    const SizedBox(width: StilloraSpacing.xs + 2),
-                    Expanded(
-                      child: Text(
-                        widget.label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                              fontWeight:
-                                  selected ? FontWeight.w800 : FontWeight.w600,
-                              color: fg,
+                child: widget.collapsed
+                    ? Tooltip(
+                        message: widget.label,
+                        waitDuration: const Duration(milliseconds: 400),
+                        child: Center(
+                          child: Icon(
+                            selected ? widget.selectedIcon : widget.icon,
+                            size: 20,
+                            color: fg,
+                          ),
+                        ),
+                      )
+                    : Row(
+                        children: [
+                          const SizedBox(width: StilloraSpacing.base + 2),
+                          Icon(
+                            selected ? widget.selectedIcon : widget.icon,
+                            size: 19,
+                            color: fg,
+                          ),
+                          const SizedBox(width: StilloraSpacing.xs + 2),
+                          Expanded(
+                            child: Text(
+                              widget.label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.labelLarge
+                                  ?.copyWith(
+                                    fontWeight: selected
+                                        ? FontWeight.w800
+                                        : FontWeight.w600,
+                                    color: fg,
+                                  ),
                             ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
               ),
             ),
           ),
@@ -373,17 +482,26 @@ class _DesktopNavItemState extends State<_DesktopNavItem> {
 /// header so the chrome feels intentional rather than a bare app-bar.
 const _sectionSubtitles = {
   'Create': 'Turn images into video, on this device',
+  'Watermark': 'Add a logo or overlay onto a video',
   'Library': 'Every render you\'ve made',
-  'HTML → Video': 'Capture any web page as a clip',
+  'HTML': 'Capture any web page as a clip',
+  'Remove Silence': 'Auto-cut the quiet gaps from a video',
+  'Speed': 'Speed up a video 1x–4x, mute or add audio',
+  'Convert': 'Batch-convert HEIC & others to JPEG/PNG',
   'Loop images': 'Batch loops & slideshows',
   'Info': 'Account & subscription',
 };
 
 class _DesktopTopBar extends StatelessWidget {
-  const _DesktopTopBar({required this.title, required this.trailing});
+  const _DesktopTopBar({
+    required this.title,
+    required this.trailing,
+    this.onToggleSidebar,
+  });
 
   final String? title;
   final Widget? trailing;
+  final VoidCallback? onToggleSidebar;
 
   @override
   Widget build(BuildContext context) {
@@ -392,13 +510,19 @@ class _DesktopTopBar extends StatelessWidget {
     return Container(
       height: StilloraSpacing.desktopTopBarHeight + 8,
       decoration: const BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: StilloraColors.glassStroke),
-        ),
+        border: Border(bottom: BorderSide(color: StilloraColors.glassStroke)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: StilloraSpacing.md),
       child: Row(
         children: [
+          if (onToggleSidebar != null) ...[
+            _GlassIconButton(
+              icon: Icons.view_sidebar_outlined,
+              tooltip: 'Toggle sidebar',
+              onTap: onToggleSidebar!,
+            ),
+            const SizedBox(width: StilloraSpacing.snug),
+          ],
           if (canPop) ...[
             _GlassIconButton(
               icon: Icons.arrow_back_rounded,
@@ -416,10 +540,10 @@ class _DesktopTopBar extends StatelessWidget {
                   title ?? '',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -0.2),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.2,
+                  ),
                 ),
                 if (subtitle != null)
                   Text(
@@ -427,8 +551,8 @@ class _DesktopTopBar extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: StilloraColors.onSurfaceVariant,
-                        ),
+                      color: StilloraColors.onSurfaceVariant,
+                    ),
                   ),
               ],
             ),

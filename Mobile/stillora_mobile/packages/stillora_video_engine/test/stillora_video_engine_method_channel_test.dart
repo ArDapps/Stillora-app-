@@ -1,6 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stillora_video_engine/stillora_video_engine_method_channel.dart';
+import 'package:stillora_video_engine/stillora_video_engine.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -19,6 +19,16 @@ void main() {
                 (methodCall.arguments as Map<Object?, Object?>?) ?? {};
             return {
               'outputPath': '/tmp/export.mp4',
+              'width': 1080,
+              'height': 1920,
+              'durationSeconds': 10,
+            };
+          }
+          if (methodCall.method == 'exportReel') {
+            exportArguments =
+                (methodCall.arguments as Map<Object?, Object?>?) ?? {};
+            return {
+              'outputPath': '/tmp/reel.mp4',
               'width': 1080,
               'height': 1920,
               'durationSeconds': 10,
@@ -86,5 +96,25 @@ void main() {
       '/tmp/image-a.jpg',
       '/tmp/image-b.png',
     ]);
+  });
+
+  test('exportReel forwards mockup choice', () async {
+    await platform.exportReel(
+      layers: const [
+        ReelLayerSpec(
+          path: '/tmp/app-demo.mp4',
+          isImage: false,
+          x: 0,
+          y: 0,
+          scale: 1,
+        ),
+      ],
+      durationSeconds: 10,
+      width: 1080,
+      height: 1920,
+      mockup: 'iphoneTitanium',
+    );
+
+    expect(exportArguments['mockup'], 'iphoneTitanium');
   });
 }

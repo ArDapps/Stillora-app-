@@ -10,6 +10,7 @@ import 'package:video_player/video_player.dart';
 import '../../core/storage/app_preferences.dart';
 import 'local_editor_media_store.dart';
 import 'video_preset.dart';
+import 'video_styles.dart';
 
 enum ResizeMode { fit, fill }
 
@@ -42,20 +43,28 @@ MediaKind mediaKindForPath(String path) {
   return _videoExtensions.contains(ext) ? MediaKind.video : MediaKind.image;
 }
 
+/// Default per-clip audio volume (full source loudness). 0 = muted.
+const defaultClipVolume = 1.0;
+
+double normalizeClipVolume(double volume) => volume.clamp(0.0, 1.0);
+
 class MediaItem extends Equatable {
   const MediaItem({
     required this.path,
     required this.kind,
     this.durationSeconds = defaultDurationSeconds,
+    this.volume = defaultClipVolume,
   });
 
   factory MediaItem.fromPath(
     String path, {
     int durationSeconds = defaultDurationSeconds,
+    double volume = defaultClipVolume,
   }) => MediaItem(
     path: path,
     kind: mediaKindForPath(path),
     durationSeconds: normalizeDurationSeconds(durationSeconds),
+    volume: normalizeClipVolume(volume),
   );
 
   final String path;
@@ -64,21 +73,29 @@ class MediaItem extends Equatable {
   /// How many seconds this clip occupies in the exported timeline.
   final int durationSeconds;
 
+  /// Loudness of this clip's own soundtrack in the export, 0..1. Only video
+  /// clips carry audio; 0 mutes the clip. Applied on platforms that keep the
+  /// source video's audio (iOS/macOS single-video export).
+  final double volume;
+
+  bool get isMuted => volume <= 0;
+
   String get name {
     final slash = path.lastIndexOf(RegExp(r'[/\\]'));
     return slash == -1 ? path : path.substring(slash + 1);
   }
 
-  MediaItem copyWith({int? durationSeconds}) => MediaItem(
+  MediaItem copyWith({int? durationSeconds, double? volume}) => MediaItem(
     path: path,
     kind: kind,
     durationSeconds: normalizeDurationSeconds(
       durationSeconds ?? this.durationSeconds,
     ),
+    volume: normalizeClipVolume(volume ?? this.volume),
   );
 
   @override
-  List<Object?> get props => [path, kind, durationSeconds];
+  List<Object?> get props => [path, kind, durationSeconds, volume];
 }
 
 class EditorState extends Equatable {
@@ -91,12 +108,19 @@ class EditorState extends Equatable {
     this.preset = defaultVideoPreset,
     this.durationSeconds = defaultDurationSeconds,
     this.resizeMode = ResizeMode.fit,
+    this.exportQuality = defaultExportQuality,
+    this.effect = ClipEffect.none,
+    this.transition = FrameTransition.none,
   });
 
   final List<MediaItem> media;
   final int selectedIndex;
   final String? audioPath;
   final int? audioDurationSeconds;
+
+  /// Preview style applied to the Create output (preview-only).
+  final ClipEffect effect;
+  final FrameTransition transition;
 
   /// True when the attached audio came from the Voice Narration recorder rather
   /// than a picked soundtrack file. Only affects how the editor labels it.
@@ -105,6 +129,21 @@ class EditorState extends Equatable {
   final VideoPreset preset;
   final int durationSeconds;
   final ResizeMode resizeMode;
+  final ExportQuality exportQuality;
+
+  /// Final encode dimensions: the preset's aspect ratio scaled to the chosen
+  /// [exportQuality].
+  ({int width, int height}) get outputResolution =>
+      scaledResolution(preset, exportQuality);
+
+  /// Rough estimate of the exported file size in bytes for the Create flow.
+  int get estimatedExportBytes => estimateExportBytes(
+        width: outputResolution.width,
+        height: outputResolution.height,
+        durationSeconds: totalDurationSeconds,
+        hasVideo: hasVideos,
+        hasAudio: audioPath != null,
+      );
 
   MediaItem? get selectedMedia =>
       media.isEmpty ? null : media[selectedIndex.clamp(0, media.length - 1)];
@@ -142,6 +181,9 @@ class EditorState extends Equatable {
     for (final item in media) item.durationSeconds,
   ];
 
+  /// Per-clip audio volumes (0..1) in timeline order. Parallel to [mediaPaths].
+  List<double> get clipVolumes => [for (final item in media) item.volume];
+
   /// Total length of the exported video. With media this is the sum of every
   /// clip's duration; with no media it falls back to the baseline
   /// [durationSeconds] used by the duration controls.
@@ -159,6 +201,9 @@ class EditorState extends Equatable {
     VideoPreset? preset,
     int? durationSeconds,
     ResizeMode? resizeMode,
+    ExportQuality? exportQuality,
+    ClipEffect? effect,
+    FrameTransition? transition,
   }) {
     final int? nextAudioDurationSeconds;
     if (clearAudio) {
@@ -182,6 +227,9 @@ class EditorState extends Equatable {
         durationSeconds ?? this.durationSeconds,
       ),
       resizeMode: resizeMode ?? this.resizeMode,
+      exportQuality: exportQuality ?? this.exportQuality,
+      effect: effect ?? this.effect,
+      transition: transition ?? this.transition,
     );
   }
 
@@ -195,7 +243,41 @@ class EditorState extends Equatable {
     preset,
     durationSeconds,
     resizeMode,
+    exportQuality,
+    effect,
+    transition,
   ];
+}
+
+/// Rough estimate of an exported MP4's size in bytes. Calibrated against real
+/// exports: static slideshows compress far below the bitrate cap (low bpp),
+/// while moving video footage runs much higher. Actual size also depends on the
+/// codec the device uses (HEVC vs H.264). Shared by every export section.
+int estimateExportBytes({
+  required int width,
+  required int height,
+  required int durationSeconds,
+  required bool hasVideo,
+  required bool hasAudio,
+  int fps = 30,
+}) {
+  final bpp = hasVideo ? 0.08 : 0.02;
+  final videoBits = width * height * fps * bpp * durationSeconds;
+  final audioBits = hasAudio ? 128000 * durationSeconds : 0;
+  return ((videoBits + audioBits) / 8).round();
+}
+
+/// Human-readable file size (e.g. "1.5 MB", "320 KB", "1.2 GB").
+String formatFileSize(int bytes) {
+  const kb = 1024;
+  const mb = kb * 1024;
+  const gb = mb * 1024;
+  if (bytes >= gb) return '${(bytes / gb).toStringAsFixed(1)} GB';
+  if (bytes >= mb) {
+    final mbValue = bytes / mb;
+    return '${mbValue.toStringAsFixed(mbValue >= 10 ? 0 : 1)} MB';
+  }
+  return '${(bytes / kb).round()} KB';
 }
 
 int normalizeDurationSeconds(num seconds) {
@@ -252,6 +334,7 @@ class EditorController extends Notifier<EditorState> {
             MediaItem.fromPath(
               item['path'] as String,
               durationSeconds: (item['d'] as int?) ?? defaultDurationSeconds,
+              volume: (item['vol'] as num?)?.toDouble() ?? defaultClipVolume,
             ),
       ];
       final audioPath = data['audioPath'] as String?;
@@ -274,6 +357,11 @@ class EditorController extends Notifier<EditorState> {
         resizeMode: data['resizeMode'] == 'fill'
             ? ResizeMode.fill
             : ResizeMode.fit,
+        exportQuality: exportQualityByName(
+          data['exportQuality'] as String? ?? defaultExportQuality.name,
+        ),
+        effect: clipEffectByName(data['effect'] as String?),
+        transition: frameTransitionByName(data['transition'] as String?),
       );
     } catch (_) {
       return null;
@@ -287,7 +375,7 @@ class EditorController extends Notifier<EditorState> {
       prefs.saveEditorSession({
         'media': [
           for (final item in state.media)
-            {'path': item.path, 'd': item.durationSeconds},
+            {'path': item.path, 'd': item.durationSeconds, 'vol': item.volume},
         ],
         'audioPath': state.audioPath,
         'audioDurationSeconds': state.audioDurationSeconds,
@@ -295,6 +383,9 @@ class EditorController extends Notifier<EditorState> {
         'presetId': state.preset.id,
         'durationSeconds': state.durationSeconds,
         'resizeMode': state.resizeMode == ResizeMode.fill ? 'fill' : 'fit',
+        'exportQuality': state.exportQuality.name,
+        'effect': state.effect.name,
+        'transition': state.transition.name,
       }),
     );
   }
@@ -386,6 +477,17 @@ class EditorController extends Notifier<EditorState> {
     next[index] = next[index].copyWith(
       durationSeconds: normalizeDurationSeconds(seconds),
     );
+    state = state.copyWith(media: next);
+    _persist();
+  }
+
+  /// Sets a single video clip's audio volume (0..1; 0 mutes it).
+  void setClipVolume(int index, double volume) {
+    if (index < 0 || index >= state.media.length) {
+      return;
+    }
+    final next = [...state.media];
+    next[index] = next[index].copyWith(volume: normalizeClipVolume(volume));
     state = state.copyWith(media: next);
     _persist();
   }
@@ -521,6 +623,7 @@ class EditorController extends Notifier<EditorState> {
         MediaItem.fromPath(
           mediaPaths[i],
           durationSeconds: state.media[i].durationSeconds,
+          volume: state.media[i].volume,
         ),
     ];
     state = state.copyWith(media: nextMedia, audioPath: audioPath);
@@ -558,6 +661,21 @@ class EditorController extends Notifier<EditorState> {
 
   void setResizeMode(ResizeMode resizeMode) {
     state = state.copyWith(resizeMode: resizeMode);
+    _persist();
+  }
+
+  void setExportQuality(ExportQuality quality) {
+    state = state.copyWith(exportQuality: quality);
+    _persist();
+  }
+
+  void setEffect(ClipEffect effect) {
+    state = state.copyWith(effect: effect);
+    _persist();
+  }
+
+  void setTransition(FrameTransition transition) {
+    state = state.copyWith(transition: transition);
     _persist();
   }
 

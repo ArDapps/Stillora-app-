@@ -9,10 +9,12 @@ import 'package:stillora_video_engine/stillora_video_engine.dart' as engine;
 import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_spacing.dart';
 import '../../core/platform/media_actions.dart';
+import '../../core/widgets/ad_widget.dart';
 import '../../core/widgets/seconds_input_field.dart';
 import '../../core/platform/platform_info.dart';
 import '../../core/widgets/render_panel.dart';
 import '../editor/editor_state.dart';
+import '../editor/video_preset.dart';
 import 'loop_images_controller.dart';
 
 /// "Loop images" — add many images, pick one size + one duration, and render a
@@ -96,11 +98,35 @@ class LoopImagesView extends ConsumerWidget {
       RenderStepCard(
         number: '1',
         title: 'Output size',
-        trailing: RenderTagPill('${state.size.width}×${state.size.height}'),
+        trailing: RenderTagPill(
+          '${state.outputSize.width}×${state.outputSize.height}',
+        ),
         footer: 'Reels · TikTok · Stories · YouTube',
-        child: _FormatGrid(
-          selectedId: state.sizeId,
-          onSelected: controller.setSize,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _FormatGrid(
+              selectedId: state.sizeId,
+              onSelected: controller.setSize,
+            ),
+            const SizedBox(height: StilloraSpacing.sm),
+            Text('Quality', style: Theme.of(context).textTheme.labelMedium),
+            const SizedBox(height: StilloraSpacing.xs),
+            RenderPillSegmented(
+              options: [for (final q in ExportQuality.values) q.label],
+              selectedIndex: ExportQuality.values.indexOf(state.exportQuality),
+              onSelected: (i) =>
+                  controller.setExportQuality(ExportQuality.values[i]),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${state.outputSize.width} × ${state.outputSize.height}'
+              '  ·  ≈ ${formatFileSize(state.estimatedBytesPerVideo)} each',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: StilloraColors.onSurfaceVariant,
+              ),
+            ),
+          ],
         ),
       ),
       const SizedBox(height: StilloraSpacing.sm),
@@ -282,6 +308,8 @@ class LoopImagesView extends ConsumerWidget {
             ),
           ),
         ],
+        const SizedBox(height: 16),
+        const AdSlotWidget(placement: 'USER_DASHBOARD_LEFT'),
       ],
     );
   }

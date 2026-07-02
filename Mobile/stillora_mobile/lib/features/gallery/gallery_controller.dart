@@ -81,6 +81,33 @@ class GalleryController extends AsyncNotifier<List<LocalExportRecord>> {
     await _persist(next);
   }
 
+  /// Removes several records at once (multi-select delete in the Library).
+  Future<void> removeRecords(Set<String> ids) async {
+    if (ids.isEmpty) return;
+    final current = state.value ?? await _load();
+    final removed = <LocalExportRecord>[];
+    final next = <LocalExportRecord>[];
+    for (final record in current) {
+      if (ids.contains(record.id)) {
+        removed.add(record);
+      } else {
+        next.add(record);
+      }
+    }
+    state = AsyncData(next);
+    for (final record in removed) {
+      try {
+        final file = File(record.outputPath);
+        if (file.existsSync()) {
+          file.deleteSync();
+        }
+      } catch (_) {
+        // Ignore filesystem errors when deleting.
+      }
+    }
+    await _persist(next);
+  }
+
   Future<void> refresh() async {
     state = AsyncData(await _load());
   }

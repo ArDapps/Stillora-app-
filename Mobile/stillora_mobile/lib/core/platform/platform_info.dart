@@ -33,6 +33,15 @@ bool get isDesktopPlatform {
   };
 }
 
+/// True on iOS specifically (not macOS). The Speed section works here because
+/// its `removeSilence` engine is implemented in the iOS plugin.
+bool get isIosPlatform {
+  if (kIsWeb) {
+    return false;
+  }
+  return defaultTargetPlatform == TargetPlatform.iOS;
+}
+
 bool get useFfmpegDesktopExport {
   if (kIsWeb) {
     return false;

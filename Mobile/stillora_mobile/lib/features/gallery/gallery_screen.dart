@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_spacing.dart';
+import '../../core/widgets/ad_widget.dart';
 import '../../core/widgets/video_thumbnail.dart';
 import 'gallery_controller.dart';
 import 'gallery_video_screen.dart';
@@ -22,11 +23,80 @@ class GalleryScreen extends StatelessWidget {
   }
 }
 
-class GalleryView extends ConsumerWidget {
+class GalleryView extends ConsumerStatefulWidget {
   const GalleryView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<GalleryView> createState() => _GalleryViewState();
+}
+
+class _GalleryViewState extends ConsumerState<GalleryView> {
+  final Set<String> _selected = {};
+  bool _selecting = false;
+
+  void _enterSelection(String id) {
+    setState(() {
+      _selecting = true;
+      _selected.add(id);
+    });
+  }
+
+  void _toggle(String id) {
+    setState(() {
+      if (!_selected.remove(id)) _selected.add(id);
+      if (_selected.isEmpty) _selecting = false;
+    });
+  }
+
+  void _cancel() {
+    setState(() {
+      _selecting = false;
+      _selected.clear();
+    });
+  }
+
+  void _selectAll(List<LocalExportRecord> items) {
+    setState(() {
+      if (_selected.length == items.length) {
+        _selected.clear();
+        _selecting = false;
+      } else {
+        _selected
+          ..clear()
+          ..addAll(items.map((e) => e.id));
+        _selecting = true;
+      }
+    });
+  }
+
+  Future<void> _deleteSelected() async {
+    final count = _selected.length;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Delete $count ${count == 1 ? 'video' : 'videos'}?'),
+        content: const Text('This permanently removes them from this device.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await ref
+        .read(galleryControllerProvider.notifier)
+        .removeRecords(_selected.toSet());
+    if (mounted) _cancel();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final records = ref.watch(galleryControllerProvider);
 
     return SafeArea(
@@ -35,37 +105,152 @@ class GalleryView extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) => const _GalleryEmpty(),
         data: (items) {
-          if (items.isEmpty) {
-            return const _GalleryEmpty();
-          }
-          return LayoutBuilder(
-            builder: (context, constraints) {
-              // Wide windows get a desktop grid of poster cards; phones keep the
-              // compact list.
-              if (constraints.maxWidth >= 640) {
-                return _GalleryGrid(items: items);
-              }
-              return ListView.separated(
-                padding: const EdgeInsets.all(StilloraSpacing.sm),
-                itemCount: items.length,
-                separatorBuilder: (_, _) =>
-                    const SizedBox(height: StilloraSpacing.xs),
-                itemBuilder: (context, index) =>
-                    _GalleryTile(record: items[index]),
-              );
-            },
+          if (items.isEmpty) return const _GalleryEmpty();
+          return Column(
+            children: [
+              _SelectionBar(
+                selecting: _selecting,
+                selectedCount: _selected.length,
+                totalCount: items.length,
+                onStart: () => setState(() => _selecting = true),
+                onCancel: _cancel,
+                onSelectAll: () => _selectAll(items),
+                onDelete: _selected.isEmpty ? null : _deleteSelected,
+              ),
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final wide = constraints.maxWidth >= 640;
+                    if (wide) {
+                      return _GalleryGrid(
+                        items: items,
+                        selecting: _selecting,
+                        selected: _selected,
+                        onTap: _onTap,
+                        onLongPress: _enterSelection,
+                      );
+                    }
+                    return ListView(
+                      padding: const EdgeInsets.all(StilloraSpacing.sm),
+                      children: [
+                        for (final record in items) ...[
+                          _GalleryTile(
+                            record: record,
+                            selecting: _selecting,
+                            selected: _selected.contains(record.id),
+                            onTap: () => _onTap(record),
+                            onLongPress: () => _enterSelection(record.id),
+                          ),
+                          const SizedBox(height: StilloraSpacing.xs),
+                        ],
+                        const SizedBox(height: 16),
+                        const AdSlotWidget(placement: 'USER_DASHBOARD_LEFT'),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ],
           );
         },
       ),
+    );
+  }
+
+  void _onTap(LocalExportRecord record) {
+    if (_selecting) {
+      _toggle(record.id);
+      return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => GalleryVideoScreen(record: record),
+      ),
+    );
+  }
+}
+
+class _SelectionBar extends StatelessWidget {
+  const _SelectionBar({
+    required this.selecting,
+    required this.selectedCount,
+    required this.totalCount,
+    required this.onStart,
+    required this.onCancel,
+    required this.onSelectAll,
+    required this.onDelete,
+  });
+
+  final bool selecting;
+  final int selectedCount;
+  final int totalCount;
+  final VoidCallback onStart;
+  final VoidCallback onCancel;
+  final VoidCallback onSelectAll;
+  final VoidCallback? onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        StilloraSpacing.sm,
+        StilloraSpacing.xs,
+        StilloraSpacing.sm,
+        0,
+      ),
+      child: selecting
+          ? Row(
+              children: [
+                TextButton(onPressed: onCancel, child: const Text('Cancel')),
+                const Spacer(),
+                Text(
+                  '$selectedCount selected',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: StilloraColors.onSurfaceVariant,
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: onSelectAll,
+                  icon: const Icon(Icons.select_all_rounded, size: 18),
+                  label: Text(
+                    selectedCount == totalCount ? 'None' : 'All',
+                  ),
+                ),
+                IconButton(
+                  onPressed: onDelete,
+                  icon: const Icon(Icons.delete_outline_rounded),
+                  tooltip: 'Delete selected',
+                  color: StilloraColors.error,
+                ),
+              ],
+            )
+          : Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: onStart,
+                icon: const Icon(Icons.checklist_rounded, size: 18),
+                label: const Text('Select'),
+              ),
+            ),
     );
   }
 }
 
 /// Responsive poster-card grid used on desktop / wide windows.
 class _GalleryGrid extends StatelessWidget {
-  const _GalleryGrid({required this.items});
+  const _GalleryGrid({
+    required this.items,
+    required this.selecting,
+    required this.selected,
+    required this.onTap,
+    required this.onLongPress,
+  });
 
   final List<LocalExportRecord> items;
+  final bool selecting;
+  final Set<String> selected;
+  final void Function(LocalExportRecord) onTap;
+  final void Function(String id) onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -86,9 +271,18 @@ class _GalleryGrid extends StatelessWidget {
             spacing: StilloraSpacing.sm,
             runSpacing: StilloraSpacing.sm,
             children: [
-              for (final record in items) _GalleryCard(record: record),
+              for (final record in items)
+                _GalleryCard(
+                  record: record,
+                  selecting: selecting,
+                  selected: selected.contains(record.id),
+                  onTap: () => onTap(record),
+                  onLongPress: () => onLongPress(record.id),
+                ),
             ],
           ),
+          const SizedBox(height: 16),
+          const AdSlotWidget(placement: 'USER_DASHBOARD_LEFT'),
         ],
       ),
     );
@@ -96,12 +290,22 @@ class _GalleryGrid extends StatelessWidget {
 }
 
 class _GalleryCard extends StatelessWidget {
-  const _GalleryCard({required this.record});
+  const _GalleryCard({
+    required this.record,
+    required this.selecting,
+    required this.selected,
+    required this.onTap,
+    required this.onLongPress,
+  });
 
   static const _w = 236.0;
   static const _thumbH = 133.0; // 16:9
 
   final LocalExportRecord record;
+  final bool selecting;
+  final bool selected;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -116,19 +320,26 @@ class _GalleryCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(StilloraRadius.card),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute<void>(
-              builder: (_) => GalleryVideoScreen(record: record),
-            ),
-          ),
+          onTap: onTap,
+          onLongPress: onLongPress,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              VideoThumbnail(
-                path: record.outputPath,
-                width: _w,
-                height: _thumbH,
-                radius: 0,
+              Stack(
+                children: [
+                  VideoThumbnail(
+                    path: record.outputPath,
+                    width: _w,
+                    height: _thumbH,
+                    radius: 0,
+                  ),
+                  if (selecting)
+                    Positioned(
+                      top: 6,
+                      left: 6,
+                      child: _SelectMark(selected: selected),
+                    ),
+                ],
               ),
               Padding(
                 padding: const EdgeInsets.all(StilloraSpacing.snug),
@@ -162,9 +373,19 @@ class _GalleryCard extends StatelessWidget {
 }
 
 class _GalleryTile extends StatelessWidget {
-  const _GalleryTile({required this.record});
+  const _GalleryTile({
+    required this.record,
+    required this.selecting,
+    required this.selected,
+    required this.onTap,
+    required this.onLongPress,
+  });
 
   final LocalExportRecord record;
+  final bool selecting;
+  final bool selected;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -174,20 +395,45 @@ class _GalleryTile extends StatelessWidget {
 
     return Card(
       child: ListTile(
-        leading: VideoThumbnail(
-          path: record.outputPath,
-          width: 56,
-          height: 56,
-          radius: StilloraRadius.full,
-        ),
+        selected: selected,
+        leading: selecting
+            ? _SelectMark(selected: selected)
+            : VideoThumbnail(
+                path: record.outputPath,
+                width: 56,
+                height: 56,
+                radius: StilloraRadius.full,
+              ),
         title: Text('${record.preset} · ${record.width}×${record.height}'),
         subtitle: Text('${record.durationSeconds}s · $dateLabel'),
-        trailing: const Icon(Icons.chevron_right_rounded),
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => GalleryVideoScreen(record: record),
-          ),
-        ),
+        trailing: selecting
+            ? null
+            : const Icon(Icons.chevron_right_rounded),
+        onTap: onTap,
+        onLongPress: onLongPress,
+      ),
+    );
+  }
+}
+
+class _SelectMark extends StatelessWidget {
+  const _SelectMark({required this.selected});
+
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: selected ? StilloraColors.primary : Colors.black54,
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 1.5),
+      ),
+      padding: const EdgeInsets.all(2),
+      child: Icon(
+        selected ? Icons.check_rounded : Icons.circle_outlined,
+        size: 16,
+        color: Colors.white,
       ),
     );
   }

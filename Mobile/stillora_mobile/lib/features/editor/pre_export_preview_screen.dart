@@ -92,7 +92,20 @@ class PreExportPreviewScreen extends ConsumerWidget {
                           _SummaryRow(
                             icon: Icons.photo_size_select_actual_outlined,
                             label: 'Resolution',
-                            value: editor.preset.ratioLabel,
+                            value:
+                                '${editor.preset.ratioLabel} · '
+                                '${editor.outputResolution.width}×${editor.outputResolution.height}',
+                          ),
+                          _SummaryRow(
+                            icon: Icons.high_quality_outlined,
+                            label: 'Quality',
+                            value: editor.exportQuality.label,
+                          ),
+                          _SummaryRow(
+                            icon: Icons.sd_storage_outlined,
+                            label: 'Est. size',
+                            value:
+                                '≈ ${formatFileSize(editor.estimatedExportBytes)}',
                           ),
                           _SummaryRow(
                             icon: Icons.insert_drive_file_outlined,

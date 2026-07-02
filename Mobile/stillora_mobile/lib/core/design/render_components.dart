@@ -273,41 +273,66 @@ class RenderPillSegmented extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: StilloraColors.surfaceDim,
-        borderRadius: BorderRadius.circular(StilloraRadius.full),
-        border: Border.all(color: RenderTokens.panelBorder),
-      ),
-      child: Row(
-        children: [
-          for (var i = 0; i < options.length; i++)
-            Expanded(
-              child: GestureDetector(
-                onTap: () => onSelected(i),
-                child: Container(
-                  height: 40,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: i == selectedIndex
-                        ? RenderTokens.accent
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(StilloraRadius.full),
-                  ),
-                  child: Text(
-                    options[i],
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: i == selectedIndex
-                          ? Colors.white
-                          : StilloraColors.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-              ),
+    // Distinct button chips (separated, rounded-rect) rather than a single
+    // sliding-pill track — reads as buttons, not a slider. The selected chip
+    // carries the solid violet accent; the rest match the charcoal card look.
+    return Row(
+      children: [
+        for (var i = 0; i < options.length; i++) ...[
+          if (i > 0) const SizedBox(width: StilloraSpacing.xs),
+          Expanded(
+            child: _SegChip(
+              label: options[i],
+              selected: i == selectedIndex,
+              onTap: () => onSelected(i),
             ),
+          ),
         ],
+      ],
+    );
+  }
+}
+
+class _SegChip extends StatelessWidget {
+  const _SegChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selected
+          ? RenderTokens.accent
+          : StilloraColors.surfaceContainerHigh,
+      borderRadius: BorderRadius.circular(StilloraRadius.sm),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(StilloraRadius.sm),
+        child: Container(
+          height: 44,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(StilloraRadius.sm),
+            border: Border.all(
+              color: selected
+                  ? RenderTokens.accent
+                  : RenderTokens.panelBorder,
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              color: selected ? Colors.white : StilloraColors.onSurfaceVariant,
+            ),
+          ),
+        ),
       ),
     );
   }

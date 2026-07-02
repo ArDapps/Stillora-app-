@@ -8,8 +8,11 @@ import 'package:video_player/video_player.dart';
 import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_spacing.dart';
 import '../../core/platform/media_actions.dart';
+import '../../core/widgets/ad_widget.dart';
 import '../../core/widgets/seconds_input_field.dart';
 import '../../core/platform/platform_info.dart';
+import '../editor/editor_state.dart';
+import '../editor/video_preset.dart';
 import 'html_to_video_controller.dart';
 import 'html_to_video_service.dart';
 
@@ -57,8 +60,13 @@ class _HtmlToVideoViewState extends ConsumerState<HtmlToVideoView> {
   String? _pickedFileName;
   String? _pickedHtml;
   _SizeOption _size = _sizeOptions.first;
+  ExportQuality _quality = defaultExportQuality;
   int _durationSeconds = 10;
   int _fps = 30;
+
+  /// The picked aspect ratio scaled to the chosen quality tier.
+  ({int width, int height}) get _outputSize =>
+      scaleDimensionsToQuality(_size.width, _size.height, _quality);
 
   String? _validationError;
   VideoPlayerController? _player;
@@ -137,8 +145,8 @@ class _HtmlToVideoViewState extends ConsumerState<HtmlToVideoView> {
           HtmlToVideoRequest(
             html: html,
             url: url,
-            width: _size.width,
-            height: _size.height,
+            width: _outputSize.width,
+            height: _outputSize.height,
             durationMs: _durationSeconds * 1000,
             fps: _fps,
           ),
@@ -263,6 +271,8 @@ class _HtmlToVideoViewState extends ConsumerState<HtmlToVideoView> {
             const SizedBox(height: StilloraSpacing.sm),
             _resultActions(),
           ],
+          const SizedBox(height: 16),
+          const AdSlotWidget(placement: 'USER_DASHBOARD_LEFT'),
         ],
       ),
     );
@@ -350,12 +360,34 @@ class _HtmlToVideoViewState extends ConsumerState<HtmlToVideoView> {
       _StepCard(
         number: '2',
         title: 'Output size',
-        trailing: _TagPill('${_size.width}×${_size.height}'),
+        trailing: _TagPill('${_outputSize.width}×${_outputSize.height}'),
         footer: 'Reels · TikTok · Stories · YouTube',
-        child: _FormatGrid(
-          options: _sizeOptions,
-          selected: _size,
-          onSelected: (option) => setState(() => _size = option),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _FormatGrid(
+              options: _sizeOptions,
+              selected: _size,
+              onSelected: (option) => setState(() => _size = option),
+            ),
+            const SizedBox(height: StilloraSpacing.sm),
+            Text('Quality', style: Theme.of(context).textTheme.labelMedium),
+            const SizedBox(height: StilloraSpacing.xs),
+            _PillSegmented(
+              options: [for (final q in ExportQuality.values) q.label],
+              selectedIndex: ExportQuality.values.indexOf(_quality),
+              onSelected: (i) =>
+                  setState(() => _quality = ExportQuality.values[i]),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${_outputSize.width} × ${_outputSize.height}'
+              '  ·  ≈ ${formatFileSize(estimateExportBytes(width: _outputSize.width, height: _outputSize.height, durationSeconds: _durationSeconds, hasVideo: true, hasAudio: false, fps: _fps))}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: StilloraColors.onSurfaceVariant,
+              ),
+            ),
+          ],
         ),
       ),
       const SizedBox(height: StilloraSpacing.sm),
@@ -400,6 +432,8 @@ class _HtmlToVideoViewState extends ConsumerState<HtmlToVideoView> {
           const SizedBox(height: StilloraSpacing.sm),
           _resultActions(),
         ],
+        const SizedBox(height: 16),
+        const AdSlotWidget(placement: 'USER_DASHBOARD_LEFT'),
       ],
     );
   }

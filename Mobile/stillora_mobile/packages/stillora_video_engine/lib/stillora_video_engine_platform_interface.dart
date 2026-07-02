@@ -34,6 +34,7 @@ abstract class StilloraVideoEnginePlatform extends PlatformInterface {
     List<String> mediaPaths = const [],
     List<String> imagePaths = const [],
     List<int> clipDurations = const [],
+    List<double> clipVolumes = const [],
     String? audioPath,
     required int durationSeconds,
     required int width,
@@ -42,6 +43,43 @@ abstract class StilloraVideoEnginePlatform extends PlatformInterface {
     VideoEffect effect = VideoEffect.none,
   }) {
     throw UnimplementedError('exportVideo has not been implemented.');
+  }
+
+  Future<ExportResult> exportReel({
+    required List<ReelLayerSpec> layers,
+    String? audioPath,
+    required int width,
+    required int height,
+    required int durationSeconds,
+    String effect = 'none',
+    String transition = 'none',
+    String mockup = 'none',
+  }) {
+    throw UnimplementedError('exportReel has not been implemented.');
+  }
+
+  Future<ExportResult> exportWatermark({
+    required String videoPath,
+    required List<WatermarkLayerSpec> overlays,
+    required int width,
+    required int height,
+    required int durationSeconds,
+  }) {
+    throw UnimplementedError('exportWatermark has not been implemented.');
+  }
+
+  Future<ExportResult> removeSilence({
+    required String videoPath,
+    required int width,
+    required int height,
+    double thresholdDb = -35,
+    int minSilenceMs = 400,
+    int paddingMs = 100,
+    int speed = 1,
+    bool muteAudio = false,
+    String? newAudioPath,
+  }) {
+    throw UnimplementedError('removeSilence has not been implemented.');
   }
 
   Future<void> cancelExport() {

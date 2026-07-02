@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
@@ -9,6 +10,7 @@ import '../../core/api/api_client.dart';
 import '../../core/auth/auth_controller.dart';
 import '../../core/platform/platform_info.dart';
 import '../editor/editor_state.dart';
+import '../editor/video_styles.dart';
 import '../gallery/gallery_controller.dart';
 import '../gallery/local_export_record.dart';
 import 'desktop_ffmpeg_video_engine.dart';
@@ -52,23 +54,55 @@ class ExportController extends AsyncNotifier<engine.ExportResult?> {
           .read(editorControllerProvider.notifier)
           .prepareForExport();
       preparedEditor = exportEditor;
-      return videoEngine.exportVideo(
+      final base = await videoEngine.exportVideo(
         imagePath: exportEditor.imagePath!,
         mediaPaths: exportEditor.mediaPaths,
         imagePaths: exportEditor.imagePaths,
         clipDurations: exportEditor.clipDurations,
+        clipVolumes: exportEditor.clipVolumes,
         audioPath: exportEditor.audioPath,
         durationSeconds: exportEditor.totalDurationSeconds,
-        width: exportEditor.preset.width == 0
-            ? 1080
-            : exportEditor.preset.width,
-        height: exportEditor.preset.height == 0
-            ? 1080
-            : exportEditor.preset.height,
+        // Aspect ratio comes from the preset; pixel size from the chosen
+        // quality (720p / 1080p / 2K / 4K) so users can trade file size for
+        // sharpness.
+        width: exportEditor.outputResolution.width,
+        height: exportEditor.outputResolution.height,
         resizeMode: exportEditor.resizeMode == ResizeMode.fit
             ? engine.ResizeMode.fit
             : engine.ResizeMode.fill,
       );
+
+      // When a style is set, run a second pass that bakes the glow/fade onto the
+      // finished video (the base output becomes a single full-frame layer).
+      // Skipped gracefully where the platform engine can't composite.
+      final styled = exportEditor.effect != ClipEffect.none ||
+          exportEditor.transition != FrameTransition.none;
+      if (!styled) return base;
+      try {
+        final result = await videoEngine.exportReel(
+          layers: [
+            engine.ReelLayerSpec(
+              path: base.outputPath,
+              isImage: false,
+              x: 0,
+              y: 0,
+              scale: 1.0,
+            ),
+          ],
+          audioPath: base.outputPath,
+          width: base.width,
+          height: base.height,
+          durationSeconds: base.durationSeconds,
+          effect: exportEditor.effect.name,
+          transition: exportEditor.transition.name,
+        );
+        try {
+          File(base.outputPath).deleteSync();
+        } catch (_) {}
+        return result;
+      } on MissingPluginException {
+        return base;
+      }
     });
 
     // A user-initiated cancel resolves to a benign idle state, not an error.

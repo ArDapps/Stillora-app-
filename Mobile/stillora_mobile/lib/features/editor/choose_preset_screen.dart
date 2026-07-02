@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/design/render_components.dart';
 import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_surface.dart';
 import '../../core/widgets/desktop_shell.dart';
 import 'editor_state.dart';
 import 'video_preset.dart';
+import 'video_styles.dart';
 
 class ChoosePresetScreen extends ConsumerWidget {
   const ChoosePresetScreen({super.key});
@@ -116,22 +118,60 @@ class ChoosePresetScreen extends ConsumerWidget {
                       style: Theme.of(context).textTheme.labelMedium,
                     ),
                     const SizedBox(height: 8),
-                    SegmentedButton<ResizeMode>(
-                      segments: const [
-                        ButtonSegment(
-                          value: ResizeMode.fit,
-                          icon: Icon(Icons.fit_screen_rounded),
-                          label: Text('Fit'),
-                        ),
-                        ButtonSegment(
-                          value: ResizeMode.fill,
-                          icon: Icon(Icons.fullscreen_rounded),
-                          label: Text('Fill'),
-                        ),
-                      ],
-                      selected: {editor.resizeMode},
-                      onSelectionChanged: (value) =>
-                          controller.setResizeMode(value.first),
+                    RenderPillSegmented(
+                      options: const ['Fit', 'Fill'],
+                      selectedIndex: editor.resizeMode == ResizeMode.fit ? 0 : 1,
+                      onSelected: (i) => controller.setResizeMode(
+                        i == 0 ? ResizeMode.fit : ResizeMode.fill,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Quality',
+                      style: Theme.of(context).textTheme.labelMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    RenderPillSegmented(
+                      options: [for (final q in ExportQuality.values) q.label],
+                      selectedIndex:
+                          ExportQuality.values.indexOf(editor.exportQuality),
+                      onSelected: (i) =>
+                          controller.setExportQuality(ExportQuality.values[i]),
+                    ),
+                    const SizedBox(height: 8),
+                    Builder(
+                      builder: (context) {
+                        final res = scaledResolution(
+                          editor.preset,
+                          editor.exportQuality,
+                        );
+                        return Text(
+                          '${res.width} × ${res.height}'
+                          '  ·  ≈ ${formatFileSize(editor.estimatedExportBytes)}'
+                          '  ·  ${editor.exportQuality.note}',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: StilloraColors.onSurfaceVariant,
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    StylePickerRow<ClipEffect>(
+                      title: 'Effect',
+                      values: ClipEffect.values,
+                      selected: editor.effect,
+                      labelOf: (e) => e.label,
+                      iconOf: (e) => e.icon,
+                      onSelected: controller.setEffect,
+                    ),
+                    const SizedBox(height: 16),
+                    StylePickerRow<FrameTransition>(
+                      title: 'Transition',
+                      values: FrameTransition.values,
+                      selected: editor.transition,
+                      labelOf: (t) => t.label,
+                      iconOf: (t) => t.icon,
+                      onSelected: controller.setTransition,
                     ),
                   ],
                 ),

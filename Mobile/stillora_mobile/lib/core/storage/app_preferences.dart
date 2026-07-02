@@ -99,4 +99,23 @@ class AppPreferences {
       _preferences.setString(_sessionKey, jsonEncode(data));
 
   Future<void> clearEditorSession() => _preferences.remove(_sessionKey);
+
+  // ── Reel session (standalone Reel composition, separate from Create) ───────
+
+  static const _reelSessionKey = 'stillora.reel.session.v1';
+
+  Map<String, dynamic>? get savedReelSession {
+    final raw = _preferences.getString(_reelSessionKey);
+    if (raw == null) return null;
+    try {
+      return (jsonDecode(raw) as Map).cast<String, dynamic>();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> saveReelSession(Map<String, dynamic> data) =>
+      _preferences.setString(_reelSessionKey, jsonEncode(data));
+
+  Future<void> clearReelSession() => _preferences.remove(_reelSessionKey);
 }

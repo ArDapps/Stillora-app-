@@ -26,6 +26,10 @@ class DesktopFfmpegVideoEngine implements engine.StilloraVideoEngine {
     List<String> mediaPaths = const [],
     List<String> imagePaths = const [],
     List<int> clipDurations = const [],
+    // Desktop segments are always rendered with `-an` (no source audio), so a
+    // per-clip volume is a no-op here — clips are silent unless a soundtrack is
+    // attached. Accepted to satisfy the shared engine interface.
+    List<double> clipVolumes = const [],
     String? audioPath,
     required int durationSeconds,
     required int width,
@@ -102,6 +106,430 @@ class DesktopFfmpegVideoEngine implements engine.StilloraVideoEngine {
     }
   }
 
+  /// Composites a Reel: a black canvas with every layer scaled to its width
+  /// fraction and overlaid at its normalised top-left, shorter videos looped to
+  /// [durationSeconds], plus optional audio. Renders the real multi-layer design
+  /// (positions/sizes/loop) — animated effects/transitions are not baked in.
+  @override
+  Future<engine.ExportResult> exportReel({
+    required List<engine.ReelLayerSpec> layers,
+    String? audioPath,
+    required int width,
+    required int height,
+    required int durationSeconds,
+    String effect = 'none',
+    String transition = 'none',
+    String mockup = 'none',
+  }) async {
+    await _resolveFfmpeg();
+    _cancelled = false;
+    final dur = durationSeconds < 1 ? 1 : durationSeconds;
+    final exportRoot = await _exportRoot();
+    final stamp = DateTime.now().microsecondsSinceEpoch.toString();
+    final outputPath = _join(exportRoot.path, 'stillora-reel-$stamp.mp4');
+    final hasAudio = audioPath != null && audioPath.isNotEmpty;
+
+    _emit(engine.ExportStage.preparingImage, 0.05, 'Preparing reel');
+
+    final args = <String>['-y'];
+    // Input 0: black background canvas.
+    args.addAll([
+      '-f',
+      'lavfi',
+      '-t',
+      '$dur',
+      '-i',
+      'color=c=black:s=${width}x$height:r=30',
+    ]);
+    // Inputs 1..N: the layers (z-order).
+    for (final layer in layers) {
+      if (layer.isImage) {
+        args.addAll(['-loop', '1', '-t', '$dur', '-i', layer.path]);
+      } else {
+        args.addAll(['-stream_loop', '-1', '-t', '$dur', '-i', layer.path]);
+      }
+    }
+    if (hasAudio) {
+      args.addAll(['-stream_loop', '-1', '-t', '$dur', '-i', audioPath]);
+    }
+
+    // Build the overlay filter graph.
+    final filters = <String>[];
+    for (var i = 0; i < layers.length; i++) {
+      final w = (layers[i].scale * width).round().clamp(2, width * 4);
+      filters.add('[${i + 1}:v]scale=w=$w:h=-2:flags=bicubic[s$i]');
+    }
+    var prev = '[0:v]';
+    for (var i = 0; i < layers.length; i++) {
+      final x = (layers[i].x * width).round();
+      final y = (layers[i].y * height).round();
+      final out = '[o$i]';
+      // 3D objects (and any layer with a window) are gated to their voice span.
+      final start = layers[i].start;
+      final end = layers[i].end;
+      final enable = (start != null || end != null)
+          ? ":enable='between(t,"
+                "${(start ?? 0).clamp(0, dur).toStringAsFixed(2)},"
+                "${(end ?? dur).clamp(0, dur).toStringAsFixed(2)})'"
+          : '';
+      filters.add('$prev[s$i]overlay=x=$x:y=$y$enable$out');
+      prev = out;
+    }
+
+    // Bakeable styles: glow (bloom) and fade transition. Other effects
+    // (float/shake/Ken Burns) and transitions (swipe/zoom) stay preview-only.
+    if (effect == 'glow') {
+      filters.add('${prev}split[gA][gB]');
+      filters.add('[gB]gblur=sigma=16[gBb]');
+      filters.add('[gA][gBb]blend=all_mode=screen[gl]');
+      prev = '[gl]';
+    }
+    if (transition == 'fade') {
+      final fadeOutStart = (dur - 0.6) < 0 ? 0.0 : dur - 0.6;
+      filters.add(
+        '${prev}fade=t=in:st=0:d=0.5,'
+        'fade=t=out:st=${fadeOutStart.toStringAsFixed(2)}:d=0.5[fx]',
+      );
+      prev = '[fx]';
+    }
+    filters.add('${prev}format=yuv420p[vout]');
+
+    args.addAll(['-filter_complex', filters.join(';'), '-map', '[vout]']);
+    if (hasAudio) {
+      args.addAll(['-map', '${layers.length + 1}:a:0', '-c:a', 'aac']);
+    }
+    args.addAll([
+      '-t',
+      '$dur',
+      '-r',
+      '30',
+      '-c:v',
+      'libx264',
+      '-pix_fmt',
+      'yuv420p',
+      '-movflags',
+      '+faststart',
+      outputPath,
+    ]);
+
+    _emit(engine.ExportStage.generatingVideo, 0.4, 'Compositing layers');
+    await _runFfmpeg(args);
+    _emit(engine.ExportStage.done, 1, 'Reel export complete');
+    return engine.ExportResult(
+      outputPath: outputPath,
+      width: width,
+      height: height,
+      durationSeconds: dur,
+    );
+  }
+
+  /// Burns each overlay onto the base [videoPath] only within its time window
+  /// (`enable='between(t,start,end)'`), keeping the base video's own audio.
+  /// Output matches the source resolution and duration.
+  @override
+  Future<engine.ExportResult> exportWatermark({
+    required String videoPath,
+    required List<engine.WatermarkLayerSpec> overlays,
+    required int width,
+    required int height,
+    required int durationSeconds,
+  }) async {
+    await _resolveFfmpeg();
+    _cancelled = false;
+    final dur = durationSeconds < 1 ? 1 : durationSeconds;
+    final exportRoot = await _exportRoot();
+    final stamp = DateTime.now().microsecondsSinceEpoch.toString();
+    final outputPath = _join(exportRoot.path, 'stillora-watermark-$stamp.mp4');
+
+    _emit(engine.ExportStage.preparingImage, 0.05, 'Preparing watermark');
+
+    // Input 0: the base video (full length, its own audio).
+    final args = <String>['-y', '-i', videoPath];
+    // Inputs 1..N: the overlays, looped to cover their window.
+    for (final o in overlays) {
+      if (o.isImage) {
+        args.addAll(['-loop', '1', '-t', '$dur', '-i', o.path]);
+      } else {
+        args.addAll(['-stream_loop', '-1', '-t', '$dur', '-i', o.path]);
+      }
+    }
+
+    final filters = <String>[];
+    for (var i = 0; i < overlays.length; i++) {
+      var w = (overlays[i].scale * width).round();
+      if (w.isOdd) w += 1;
+      w = w.clamp(2, width * 4);
+      filters.add('[${i + 1}:v]scale=w=$w:h=-2:flags=bicubic[s$i]');
+    }
+    var prev = '[0:v]';
+    for (var i = 0; i < overlays.length; i++) {
+      final x = (overlays[i].x * width).round();
+      final y = (overlays[i].y * height).round();
+      final start = overlays[i].start.clamp(0.0, dur.toDouble());
+      final end = overlays[i].end.clamp(start, dur.toDouble());
+      final out = '[o$i]';
+      filters.add(
+        "$prev[s$i]overlay=x=$x:y=$y:"
+        "enable='between(t,${start.toStringAsFixed(2)},${end.toStringAsFixed(2)})'$out",
+      );
+      prev = out;
+    }
+    filters.add('${prev}format=yuv420p[vout]');
+
+    args.addAll(['-filter_complex', filters.join(';'), '-map', '[vout]']);
+    // Keep the base video's audio when it has any (the `?` makes it optional).
+    args.addAll(['-map', '0:a:0?', '-c:a', 'aac']);
+    args.addAll([
+      '-t',
+      '$dur',
+      '-r',
+      '30',
+      '-c:v',
+      'libx264',
+      '-pix_fmt',
+      'yuv420p',
+      '-movflags',
+      '+faststart',
+      outputPath,
+    ]);
+
+    _emit(engine.ExportStage.generatingVideo, 0.4, 'Compositing watermark');
+    await _runFfmpeg(args);
+    _emit(engine.ExportStage.done, 1, 'Watermark export complete');
+    return engine.ExportResult(
+      outputPath: outputPath,
+      width: width,
+      height: height,
+      durationSeconds: dur,
+    );
+  }
+
+  @override
+  Future<engine.ExportResult> removeSilence({
+    required String videoPath,
+    required int width,
+    required int height,
+    double thresholdDb = -35,
+    int minSilenceMs = 400,
+    int paddingMs = 100,
+    int speed = 1,
+    bool muteAudio = false,
+    String? newAudioPath,
+  }) async {
+    await _resolveFfmpeg();
+    _cancelled = false;
+    final exportRoot = await _exportRoot();
+    final stamp = DateTime.now().microsecondsSinceEpoch.toString();
+    final workDir = Directory(_join(exportRoot.path, 'work-$stamp'));
+    await workDir.create(recursive: true);
+    final outputPath = _join(exportRoot.path, 'stillora-$stamp.mp4');
+
+    final hasNewAudio =
+        newAudioPath != null &&
+        newAudioPath.isNotEmpty &&
+        File(newAudioPath).existsSync();
+    // The cut clip is silent whenever we mute or are swapping in a new track.
+    final stripAudio = muteAudio || hasNewAudio;
+
+    try {
+      _emit(engine.ExportStage.preparingImage, 0.1, 'Analyzing audio');
+      // 1. Detect silence + total duration from ffmpeg stderr.
+      final log = await _runFfmpegCapture([
+        '-i',
+        videoPath,
+        '-af',
+        'silencedetect=noise=${thresholdDb}dB:d=${(minSilenceMs / 1000).toStringAsFixed(2)}',
+        '-f',
+        'null',
+        '-',
+      ]);
+      final duration = _parseDuration(log);
+      final keep = _keptRangesFromLog(log, duration, paddingMs / 1000.0);
+
+      _emit(engine.ExportStage.generatingVideo, 0.35, 'Cutting silence');
+      final filter = _videoFilter(width, height, engine.ResizeMode.fit);
+      final segments = <String>[];
+      for (var i = 0; i < keep.length; i++) {
+        if (_cancelled) {
+          throw PlatformException(
+            code: 'export_cancelled',
+            message: 'Cancelled.',
+          );
+        }
+        final seg = _join(workDir.path, 'seg-$i.mp4');
+        await _runFfmpeg([
+          '-y',
+          '-ss', '${keep[i].$1}',
+          '-to', '${keep[i].$2}',
+          '-i', videoPath,
+          '-vf', filter,
+          '-r', '30',
+          '-c:v', 'libx264',
+          '-pix_fmt', 'yuv420p',
+          // Drop audio in the segments when muting / replacing the soundtrack.
+          ...stripAudio ? ['-an'] : ['-c:a', 'aac'],
+          '-movflags', '+faststart',
+          seg,
+        ]);
+        segments.add(seg);
+        _emit(
+          engine.ExportStage.generatingVideo,
+          0.35 + (i + 1) / keep.length * 0.5,
+          'Segment ${i + 1} of ${keep.length}',
+        );
+      }
+
+      // Destination of the cut (+ optionally sped) clip. With a replacement
+      // soundtrack we render it to a temp first, then loop it under the audio.
+      final cutFinal = hasNewAudio
+          ? _join(workDir.path, 'cut.mp4')
+          : outputPath;
+      final preSpeedPath = speed > 1
+          ? _join(workDir.path, 'concat.mp4')
+          : cutFinal;
+      if (segments.isEmpty) {
+        await File(videoPath).copy(preSpeedPath);
+      } else {
+        await _concatSegments(segments, preSpeedPath, workDir);
+      }
+
+      var kept = keep.fold<double>(0, (s, r) => s + (r.$2 - r.$1));
+      if (speed > 1) {
+        _emit(engine.ExportStage.savingVideo, 0.9, 'Speeding up ${speed}x');
+        await _runFfmpeg([
+          '-y',
+          '-i', preSpeedPath,
+          '-filter_complex',
+          // Speed the video; only speed the audio when keeping the original.
+          stripAudio
+              ? '[0:v]setpts=PTS/$speed[v]'
+              : '[0:v]setpts=PTS/$speed[v];[0:a]${_atempoChain(speed)}[a]',
+          '-map', '[v]',
+          ...stripAudio ? ['-an'] : ['-map', '[a]', '-c:a', 'aac'],
+          '-c:v', 'libx264',
+          '-pix_fmt', 'yuv420p',
+          '-movflags', '+faststart',
+          cutFinal,
+        ]);
+        kept = kept / speed;
+      }
+
+      // Replacement soundtrack: loop the (silent) cut clip to the new audio's
+      // length and mux the audio in at normal speed.
+      if (hasNewAudio) {
+        _emit(engine.ExportStage.mergingAudio, 0.92, 'Adding new audio');
+        final audioLog = await _runFfmpegCapture([
+          '-i',
+          newAudioPath,
+          '-f',
+          'null',
+          '-',
+        ]);
+        final audioDur = _parseDuration(audioLog);
+        await _runFfmpeg([
+          '-y',
+          '-stream_loop',
+          '-1',
+          '-i',
+          cutFinal,
+          '-i',
+          newAudioPath,
+          if (audioDur > 0) ...['-t', audioDur.toStringAsFixed(3)],
+          '-map',
+          '0:v:0',
+          '-map',
+          '1:a:0',
+          '-c:v',
+          'libx264',
+          '-pix_fmt',
+          'yuv420p',
+          '-c:a',
+          'aac',
+          if (audioDur <= 0) '-shortest',
+          '-movflags',
+          '+faststart',
+          outputPath,
+        ]);
+        kept = audioDur > 0 ? audioDur : kept;
+      }
+
+      _emit(engine.ExportStage.done, 1, 'Done');
+      return engine.ExportResult(
+        outputPath: outputPath,
+        width: width,
+        height: height,
+        durationSeconds: kept < 1 ? 1 : kept.round(),
+      );
+    } finally {
+      await workDir.delete(recursive: true).catchError((_) => workDir);
+    }
+  }
+
+  /// Complement of the detected silent intervals over [0, duration], padded and
+  /// dropping tiny fragments.
+  List<(double, double)> _keptRangesFromLog(
+    String log,
+    double duration,
+    double paddingSec,
+  ) {
+    final starts = RegExp(
+      r'silence_start:\s*([\d.]+)',
+    ).allMatches(log).map((m) => double.parse(m.group(1)!)).toList();
+    final ends = RegExp(
+      r'silence_end:\s*([\d.]+)',
+    ).allMatches(log).map((m) => double.parse(m.group(1)!)).toList();
+    // Build kept ranges = gaps between silences.
+    final kept = <(double, double)>[];
+    var cursor = 0.0;
+    for (var i = 0; i < starts.length; i++) {
+      final sStart = starts[i];
+      if (sStart > cursor) kept.add((cursor, sStart));
+      cursor = i < ends.length ? ends[i] : duration;
+    }
+    if (cursor < duration) kept.add((cursor, duration));
+    // pad + clamp + drop fragments < 0.1s
+    return [
+      for (final r in kept)
+        if (r.$2 - r.$1 > 0.1)
+          (
+            (r.$1 - paddingSec).clamp(0, duration),
+            (r.$2 + paddingSec).clamp(0, duration),
+          ),
+    ];
+  }
+
+  /// atempo only accepts 0.5..2.0, so chain factors to reach the target speed.
+  String _atempoChain(int speed) {
+    switch (speed) {
+      case 2:
+        return 'atempo=2.0';
+      case 3:
+        return 'atempo=1.5,atempo=2.0';
+      case 4:
+        return 'atempo=2.0,atempo=2.0';
+      default:
+        return 'atempo=1.0';
+    }
+  }
+
+  double _parseDuration(String log) {
+    final m = RegExp(r'Duration:\s*(\d+):(\d+):([\d.]+)').firstMatch(log);
+    if (m == null) return 0;
+    return int.parse(m.group(1)!) * 3600 +
+        int.parse(m.group(2)!) * 60 +
+        double.parse(m.group(3)!);
+  }
+
+  Future<String> _runFfmpegCapture(List<String> args) async {
+    final process = await Process.start(await _resolveFfmpeg(), args);
+    _currentProcess = process;
+    final stderr = await process.stderr.transform(utf8.decoder).join();
+    await process.stdout.drain<void>();
+    await process.exitCode;
+    _currentProcess = null;
+    return stderr;
+  }
+
   @override
   Future<void> cancelExport() async {
     _cancelled = true;
@@ -138,7 +566,12 @@ class DesktopFfmpegVideoEngine implements engine.StilloraVideoEngine {
       ..._bundledFfmpegCandidates(),
       ...Platform.isWindows
           ? const ['ffmpeg.exe', 'ffmpeg']
-          : const ['ffmpeg', '/usr/bin/ffmpeg'],
+          : const [
+              'ffmpeg',
+              '/opt/homebrew/bin/ffmpeg', // Apple-silicon Homebrew
+              '/usr/local/bin/ffmpeg', // Intel Homebrew
+              '/usr/bin/ffmpeg',
+            ],
     ];
 
     for (final candidate in candidates) {

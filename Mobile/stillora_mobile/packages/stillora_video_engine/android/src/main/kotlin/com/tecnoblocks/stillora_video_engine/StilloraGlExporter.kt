@@ -3,6 +3,7 @@ package com.tecnoblocks.stillora_video_engine
 import android.graphics.Bitmap
 import android.media.MediaCodec
 import android.media.MediaCodecInfo
+import android.media.MediaCodecList
 import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
 import android.media.MediaMuxer
@@ -26,6 +27,24 @@ internal class StilloraGlExporter(
     private val isCancelled: () -> Boolean,
     private val onProgress: (Double) -> Unit,
 ) {
+    // Prefer HEVC/H.265 when the device has a HARDWARE encoder for it (much
+    // smaller files at the same quality). Google's software HEVC encoder
+    // (c2.android.* / OMX.google.*) stalls with a GL surface input, so we skip
+    // it and fall back to H.264/AVC — whose hardware encoder is universal.
+    private fun videoMime(): String {
+        val hevc = MediaFormat.MIMETYPE_VIDEO_HEVC
+        val hasHardwareHevc =
+            MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos.any { info ->
+                if (!info.isEncoder) return@any false
+                if (!info.supportedTypes.any { it.equals(hevc, ignoreCase = true) }) {
+                    return@any false
+                }
+                val name = info.name.lowercase()
+                !name.startsWith("c2.android.") && !name.startsWith("omx.google.")
+            }
+        return if (hasHardwareHevc) hevc else MediaFormat.MIMETYPE_VIDEO_AVC
+    }
+
     fun encodeStillImage(
         bitmap: Bitmap,
         width: Int,
@@ -46,18 +65,34 @@ internal class StilloraGlExporter(
         require(bitmaps.isNotEmpty()) { "At least one bitmap is required." }
 
         val fps = 30
-        val bitRate = (width * height * fps * 0.12).toInt().coerceAtLeast(2_000_000)
+        // HEVC needs far fewer bits than H.264 for the same quality, so it gets
+        // a lower bits-per-pixel target.
+        val mime = videoMime()
+        val bitRate =
+            (width * height * fps *
+                if (mime == MediaFormat.MIMETYPE_VIDEO_HEVC) 0.06 else 0.10)
+                .toInt()
+                .coerceAtLeast(1_200_000)
 
-        val format = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, width, height)
+        val format = MediaFormat.createVideoFormat(mime, width, height)
         format.setInteger(
             MediaFormat.KEY_COLOR_FORMAT,
             MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface,
         )
         format.setInteger(MediaFormat.KEY_BIT_RATE, bitRate)
+        // Variable bitrate: static slideshow frames cost almost nothing instead
+        // of being padded to the full bitrate, so files shrink dramatically with
+        // no visible quality loss.
+        format.setInteger(
+            MediaFormat.KEY_BITRATE_MODE,
+            MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_VBR,
+        )
         format.setInteger(MediaFormat.KEY_FRAME_RATE, fps)
-        format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1)
+        // One keyframe every 2s (was every 1s) — far fewer full frames, much
+        // smaller output, still seekable.
+        format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 2)
 
-        val encoder = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
+        val encoder = MediaCodec.createEncoderByType(mime)
         encoder.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
         val inputSurface = encoder.createInputSurface()
         val egl = EglCore(inputSurface)
@@ -139,18 +174,34 @@ internal class StilloraGlExporter(
         } ?: throw IllegalArgumentException("The selected media could not be rendered.")
 
         val fps = 30
-        val bitRate = (width * height * fps * 0.12).toInt().coerceAtLeast(2_000_000)
+        // HEVC needs far fewer bits than H.264 for the same quality, so it gets
+        // a lower bits-per-pixel target.
+        val mime = videoMime()
+        val bitRate =
+            (width * height * fps *
+                if (mime == MediaFormat.MIMETYPE_VIDEO_HEVC) 0.06 else 0.10)
+                .toInt()
+                .coerceAtLeast(1_200_000)
 
-        val format = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, width, height)
+        val format = MediaFormat.createVideoFormat(mime, width, height)
         format.setInteger(
             MediaFormat.KEY_COLOR_FORMAT,
             MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface,
         )
         format.setInteger(MediaFormat.KEY_BIT_RATE, bitRate)
+        // Variable bitrate: static slideshow frames cost almost nothing instead
+        // of being padded to the full bitrate, so files shrink dramatically with
+        // no visible quality loss.
+        format.setInteger(
+            MediaFormat.KEY_BITRATE_MODE,
+            MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_VBR,
+        )
         format.setInteger(MediaFormat.KEY_FRAME_RATE, fps)
-        format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1)
+        // One keyframe every 2s (was every 1s) — far fewer full frames, much
+        // smaller output, still seekable.
+        format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 2)
 
-        val encoder = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
+        val encoder = MediaCodec.createEncoderByType(mime)
         encoder.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
         val inputSurface = encoder.createInputSurface()
         val egl = EglCore(inputSurface)

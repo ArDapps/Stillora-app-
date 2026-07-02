@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/design/stillora_spacing.dart';
+import '../../core/widgets/ad_widget.dart';
 import '../../core/widgets/stillora_mark.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -50,6 +51,8 @@ class ProfileView extends ConsumerWidget {
           ),
           const SizedBox(height: StilloraSpacing.lg),
           const _PolicyLinks(),
+          const SizedBox(height: 16),
+          const AdSlotWidget(placement: 'USER_DASHBOARD_LEFT'),
         ],
       ),
     );

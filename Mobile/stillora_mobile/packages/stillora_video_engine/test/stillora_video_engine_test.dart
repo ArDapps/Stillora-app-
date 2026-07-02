@@ -17,6 +17,7 @@ class MockStilloraVideoEnginePlatform
     List<String> mediaPaths = const [],
     List<String> imagePaths = const [],
     List<int> clipDurations = const [],
+    List<double> clipVolumes = const [],
     String? audioPath,
     required int durationSeconds,
     required int width,
@@ -29,6 +30,61 @@ class MockStilloraVideoEnginePlatform
       width: width,
       height: height,
       durationSeconds: durationSeconds,
+    );
+  }
+
+  @override
+  Future<ExportResult> exportReel({
+    required List<ReelLayerSpec> layers,
+    String? audioPath,
+    required int width,
+    required int height,
+    required int durationSeconds,
+    String effect = 'none',
+    String transition = 'none',
+    String mockup = 'none',
+  }) async {
+    return ExportResult(
+      outputPath: '/tmp/stillora-reel.mp4',
+      width: width,
+      height: height,
+      durationSeconds: durationSeconds,
+    );
+  }
+
+  @override
+  Future<ExportResult> exportWatermark({
+    required String videoPath,
+    required List<WatermarkLayerSpec> overlays,
+    required int width,
+    required int height,
+    required int durationSeconds,
+  }) async {
+    return ExportResult(
+      outputPath: '/tmp/stillora-watermark.mp4',
+      width: width,
+      height: height,
+      durationSeconds: durationSeconds,
+    );
+  }
+
+  @override
+  Future<ExportResult> removeSilence({
+    required String videoPath,
+    required int width,
+    required int height,
+    double thresholdDb = -35,
+    int minSilenceMs = 400,
+    int paddingMs = 100,
+    int speed = 1,
+    bool muteAudio = false,
+    String? newAudioPath,
+  }) async {
+    return ExportResult(
+      outputPath: '/tmp/stillora-trimmed.mp4',
+      width: width,
+      height: height,
+      durationSeconds: 0,
     );
   }
 
