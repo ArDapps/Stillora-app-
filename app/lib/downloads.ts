@@ -1,7 +1,7 @@
 import path from "node:path";
 import {
+  ANDROID_DOWNLOAD_URL,
   APP_STORE_URL,
-  GOOGLE_PLAY_URL,
   MACOS_DOWNLOAD_URL,
   WINDOWS_DOWNLOAD_URL,
 } from "./site";
@@ -24,7 +24,7 @@ export function isDownloadPlatform(value: string): value is DownloadPlatform {
 /** Public URL used when a platform has no admin-configured download. */
 export const DEFAULT_DOWNLOAD_URL: Record<DownloadPlatform, string> = {
   ios: APP_STORE_URL,
-  android: GOOGLE_PLAY_URL,
+  android: ANDROID_DOWNLOAD_URL,
   macos: MACOS_DOWNLOAD_URL,
   windows: WINDOWS_DOWNLOAD_URL,
 };

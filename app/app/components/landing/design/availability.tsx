@@ -58,7 +58,7 @@ export function Availability({ links }: { links?: DownloadLinks }) {
             <AList items={["Full editor on the go", "Native camera upload", "Direct share to apps", "Offline export"]} />
             <div className="a-foot store-stack">
               <AppStoreLink id="dl-app-store" data="ios" kind="apple" top="Download on the" bottom="App Store" url={links?.ios} />
-              <AppStoreLink id="dl-google-play" data="android" kind="play" top="Get it on" bottom="Google Play" url={links?.android} />
+              <AppStoreLink id="dl-google-play" data="android" kind="play" top="Download the" bottom="Android APK" url={links?.android} />
             </div>
           </article>
 

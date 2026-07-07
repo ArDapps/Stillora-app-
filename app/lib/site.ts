@@ -31,3 +31,8 @@ export const APP_STORE_URL =
 export const MACOS_DOWNLOAD_URL = APP_STORE_URL;
 export const GOOGLE_PLAY_URL = "";
 export const WINDOWS_DOWNLOAD_URL = "/downloads/stillora-windows.zip";
+/**
+ * Android ships as a directly-installable APK served from this site's own
+ * `public/downloads` folder until the Google Play listing is live.
+ */
+export const ANDROID_DOWNLOAD_URL = "/downloads/stillora-android.apk";
