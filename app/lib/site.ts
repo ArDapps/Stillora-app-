@@ -24,9 +24,10 @@ export const APP_STORE_URL =
 /**
  * Platform download targets used by the landing download buttons.
  * iOS and macOS both ship from the universal App Store listing above.
- * Google Play and Windows are not live yet — leave empty until the store /
- * installer URLs exist, and the UI renders them as "Soon".
+ * Windows ships as a zipped desktop build served from this site's own
+ * `public/downloads` folder, so the download stays on our domain.
+ * Google Play is not live yet — leave empty and the UI renders it as "Soon".
  */
 export const MACOS_DOWNLOAD_URL = APP_STORE_URL;
 export const GOOGLE_PLAY_URL = "";
-export const WINDOWS_DOWNLOAD_URL = "";
+export const WINDOWS_DOWNLOAD_URL = "/downloads/stillora-windows.zip";
