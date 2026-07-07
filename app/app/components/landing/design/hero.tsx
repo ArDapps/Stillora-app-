@@ -73,36 +73,54 @@ export function DesignHero() {
           </div>
         </div>
 
-        <div className="mock-stage reveal">
-          <div className="mock-glow" aria-hidden="true" />
-          <div className="phone" role="img" aria-label="Stillora app showing a photo being exported as a vertical MP4 with platform format options">
-            <div className="phone-notch" />
-            <div className="screen">
-              <div className="photo" />
-              <div className="topbar"><span>Stillora</span><span>9:16</span></div>
-              <div className="playhead">
-                <svg width="20" height="20" viewBox="0 0 16 16" fill="none"><path d="M5 3l8 5-8 5V3z" fill="#fff" /></svg>
-              </div>
-              <div className="chips">
-                <span className="on">Reels</span><span>Shorts</span><span>TikTok</span><span>Video</span>
-              </div>
-              <div className="exporting">
-                <div className="row"><b><span className="spinner" />Exporting MP4…</b><span>72%</span></div>
-                <div className="ptrack"><div className="pfill" /></div>
-              </div>
+        {/* Real product shots: web editor + mobile app in a floating cluster */}
+        <div className="hero-stage reveal" aria-label="Stillora running on the web and on mobile">
+          <span className="stage-glow" aria-hidden="true" />
+
+          <figure className="device-browser">
+            <div className="browser-bar">
+              <span className="bd" /><span className="bd" /><span className="bd" />
+              <span className="browser-url">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true"><rect x="3" y="11" width="18" height="10" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                stillora.app/editor
+              </span>
             </div>
-          </div>
-          <div className="float-card fc-left">
-            <span className="fc-ic" style={{ background: "rgba(250,204,21,.16)", color: "#facc15" }}>
-              <svg width="17" height="17" viewBox="0 0 18 18" fill="none"><path d="M3 7v4M6 5v8M9 3v12M12 6v6M15 8v2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              className="browser-shot"
+              src="/marketing/stillora-showcase-app.png"
+              alt="Stillora web editor — output presets on the left and a live 9:16 MP4 preview"
+              width={3250}
+              height={1626}
+              fetchPriority="high"
+              decoding="async"
+            />
+            <span className="shine" aria-hidden="true" />
+          </figure>
+
+          <figure className="device-phone">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/marketing/phone-export.png"
+              alt="Stillora mobile app — ready-to-export screen with video preview and an Export MP4 button"
+              width={858}
+              height={1640}
+              decoding="async"
+            />
+          </figure>
+
+          <div className="stage-badge sb-1">
+            <span className="sb-ic" style={{ background: "rgba(34,197,94,.16)", color: "#86efac" }}>
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 8.5l3.2 3.2L13 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </span>
-            <div><div className="fc-t">Audio mixed in</div><div className="fc-s">AAC · synced</div></div>
+            <div><div className="sb-t">No watermark</div><div className="sb-s">1080p · MP4</div></div>
           </div>
-          <div className="float-card fc-right">
-            <span className="fc-ic" style={{ background: "rgba(34,197,94,.16)", color: "#86efac" }}>
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8.5l3.2 3.2L13 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+
+          <div className="stage-badge sb-2">
+            <span className="sb-ic" style={{ background: "rgba(250,204,21,.16)", color: "#facc15" }}>
+              <svg width="15" height="15" viewBox="0 0 18 18" fill="none"><path d="M9 1.5l2.1 4.6 5 .5-3.8 3.4 1.1 4.9L9 12.9 4.6 15.4l1.1-4.9L1.9 6.6l5-.5z" fill="currentColor" /></svg>
             </span>
-            <div><div className="fc-t">No watermark</div><div className="fc-s">1080 × 1920</div></div>
+            <div><div className="sb-t">Exports in seconds</div><div className="sb-s">Web · iOS · Android</div></div>
           </div>
         </div>
       </div>
