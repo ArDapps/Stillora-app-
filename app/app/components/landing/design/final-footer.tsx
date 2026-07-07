@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { EDITOR_PATH, TECNOBLOCKS_URL } from "@/lib/site";
+import type { DownloadLinks } from "@/lib/downloads";
 import { BrandMark } from "./nav";
 import { AppStoreLink } from "./store";
 
@@ -11,7 +12,7 @@ function Ck() {
   );
 }
 
-export function FinalCta() {
+export function FinalCta({ links }: { links?: DownloadLinks }) {
   const perks = [
     "100% free — no credit card ever",
     "No watermark on any export",
@@ -29,7 +30,7 @@ export function FinalCta() {
               <p>Mix images, video clips, and audio tracks into platform-ready MP4s. Available now on web, desktop, and mobile.</p>
               <div className="final-actions">
                 <Link href={EDITOR_PATH} className="btn btn-gold btn-lg">Start Free</Link>
-                <AppStoreLink id="dl-app-store-cta" data="ios" kind="apple" top="Download on the" bottom="App Store" />
+                <AppStoreLink id="dl-app-store-cta" data="ios" kind="apple" top="Download on the" bottom="App Store" url={links?.ios} />
               </div>
             </div>
             <ul className="check-list">

@@ -32,14 +32,17 @@ export function AppStoreLink({
   kind,
   top,
   bottom,
+  url: urlOverride,
 }: {
   id: string;
   data: "ios" | "android" | "macos" | "windows";
   kind: Kind;
   top: string;
   bottom: string;
+  /** Admin-managed URL. Falls back to the compile-time default when undefined. */
+  url?: string;
 }) {
-  const url = HREF[id] || "";
+  const url = urlOverride !== undefined ? urlOverride : HREF[id] || "";
   const live = url.length > 0;
 
   return (

@@ -12,8 +12,9 @@ import {
 import { Availability, FeatureGrid } from "./landing/design/availability";
 import { Faq, Testimonials } from "./landing/design/proof";
 import { DesignFooter, FinalCta } from "./landing/design/final-footer";
+import type { DownloadLinks } from "@/lib/downloads";
 
-export function LandingHome() {
+export function LandingHome({ links }: { links?: DownloadLinks }) {
   return (
     <>
       <DesignAura />
@@ -26,11 +27,11 @@ export function LandingHome() {
         <Steps />
         <Presets />
         <PlatformCards />
-        <Availability />
+        <Availability links={links} />
         <FeatureGrid />
         <Testimonials />
         <Faq />
-        <FinalCta />
+        <FinalCta links={links} />
       </main>
       <DesignFooter />
     </>

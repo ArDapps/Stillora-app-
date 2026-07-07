@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { EDITOR_PATH } from "@/lib/site";
+import type { DownloadLinks } from "@/lib/downloads";
 import { AppStoreLink } from "./store";
 
 function Tick() {
@@ -30,7 +31,7 @@ function SecHead({ eyebrow, title, body }: { eyebrow: string; title: string; bod
   );
 }
 
-export function Availability() {
+export function Availability({ links }: { links?: DownloadLinks }) {
   return (
     <section className="section-pad" id="platforms" style={{ paddingTop: 0 }}>
       <div className="wrap">
@@ -56,8 +57,8 @@ export function Availability() {
             <div className="a-platforms">iOS, Android &amp; tablet</div>
             <AList items={["Full editor on the go", "Native camera upload", "Direct share to apps", "Offline export"]} />
             <div className="a-foot store-stack">
-              <AppStoreLink id="dl-app-store" data="ios" kind="apple" top="Download on the" bottom="App Store" />
-              <AppStoreLink id="dl-google-play" data="android" kind="play" top="Get it on" bottom="Google Play" />
+              <AppStoreLink id="dl-app-store" data="ios" kind="apple" top="Download on the" bottom="App Store" url={links?.ios} />
+              <AppStoreLink id="dl-google-play" data="android" kind="play" top="Get it on" bottom="Google Play" url={links?.android} />
             </div>
           </article>
 
@@ -67,8 +68,8 @@ export function Availability() {
             <div className="a-platforms">Mac, Windows and Linux</div>
             <AList items={["Batch processing", "Local file access", "Faster FFmpeg encoding", "Pro-grade controls"]} />
             <div className="a-foot store-stack">
-              <AppStoreLink id="dl-macos" data="macos" kind="apple" top="Download for" bottom="macOS" />
-              <AppStoreLink id="dl-windows" data="windows" kind="windows" top="Download for" bottom="Windows" />
+              <AppStoreLink id="dl-macos" data="macos" kind="apple" top="Download for" bottom="macOS" url={links?.macos} />
+              <AppStoreLink id="dl-windows" data="windows" kind="windows" top="Download for" bottom="Windows" url={links?.windows} />
             </div>
           </article>
         </div>

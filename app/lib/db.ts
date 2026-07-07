@@ -47,6 +47,18 @@ export function ensureSchema(): Promise<void> {
 
       CREATE INDEX IF NOT EXISTS admin_exports_created_at_idx ON admin_exports (created_at DESC);
       CREATE INDEX IF NOT EXISTS admin_exports_user_sub_idx ON admin_exports (user_sub);
+
+      CREATE TABLE IF NOT EXISTS download_links (
+        platform     TEXT PRIMARY KEY,
+        kind         TEXT NOT NULL,
+        external_url TEXT NOT NULL DEFAULT '',
+        file_name    TEXT NOT NULL DEFAULT '',
+        file_path    TEXT NOT NULL DEFAULT '',
+        content_type TEXT NOT NULL DEFAULT '',
+        size_bytes   BIGINT NOT NULL DEFAULT 0,
+        version      TEXT NOT NULL DEFAULT '',
+        updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
     `)
     .then(() => undefined)
     .catch((error) => {
