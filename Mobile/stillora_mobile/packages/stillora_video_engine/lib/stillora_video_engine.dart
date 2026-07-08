@@ -24,6 +24,18 @@ abstract interface class StilloraVideoEngine {
     VideoEffect effect = VideoEffect.none,
   });
 
+  /// Renders an animated HTML document (or URL) to an MP4 entirely on-device
+  /// (desktop). Optional [audioPath] is muxed onto the result.
+  Future<ExportResult> renderHtml({
+    String? html,
+    String? url,
+    required int width,
+    required int height,
+    required int durationMs,
+    int fps = 30,
+    String? audioPath,
+  });
+
   /// Composites a Reel: every layer drawn at its position/size over a black
   /// canvas, shorter videos looped to [durationSeconds], plus optional audio.
   /// When [mockup] is not `none`, the first video layer is rendered inside an
@@ -109,6 +121,27 @@ class PlatformStilloraVideoEngine implements StilloraVideoEngine {
       height: height,
       resizeMode: resizeMode,
       effect: effect,
+    );
+  }
+
+  @override
+  Future<ExportResult> renderHtml({
+    String? html,
+    String? url,
+    required int width,
+    required int height,
+    required int durationMs,
+    int fps = 30,
+    String? audioPath,
+  }) {
+    return _platform.renderHtml(
+      html: html,
+      url: url,
+      width: width,
+      height: height,
+      durationMs: durationMs,
+      fps: fps,
+      audioPath: audioPath,
     );
   }
 

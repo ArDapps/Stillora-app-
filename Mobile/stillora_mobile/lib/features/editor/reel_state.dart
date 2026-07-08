@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:equatable/equatable.dart';
 import 'package:file_picker/file_picker.dart';
+import '../../core/platform/import_directory.dart';
 import 'package:flutter/services.dart' show MissingPluginException;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -373,7 +374,7 @@ class ReelController extends Notifier<ReelState> {
 
   Future<List<String>> _pickRawMediaPaths() async {
     if (Platform.isMacOS || Platform.isLinux || Platform.isWindows) {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await pickImportFiles(
         allowMultiple: false,
         type: FileType.custom,
         allowedExtensions: _reelMediaExtensions,
@@ -390,7 +391,7 @@ class ReelController extends Notifier<ReelState> {
 
   Future<List<String>> _pickRawVideoPaths() async {
     if (Platform.isMacOS || Platform.isLinux || Platform.isWindows) {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await pickImportFiles(
         allowMultiple: false,
         type: FileType.custom,
         allowedExtensions: _reelVideoExtensions.toList(),

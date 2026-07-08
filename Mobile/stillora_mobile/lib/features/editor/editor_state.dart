@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:equatable/equatable.dart';
 import 'package:file_picker/file_picker.dart';
+import '../../core/platform/import_directory.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
@@ -453,7 +454,7 @@ class EditorController extends Notifier<EditorState> {
 
   Future<List<String>> _pickRawMediaPaths() async {
     if (Platform.isMacOS || Platform.isLinux || Platform.isWindows) {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await pickImportFiles(
         allowMultiple: true,
         type: FileType.custom,
         allowedExtensions: _desktopMediaExtensions,

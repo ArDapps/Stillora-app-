@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:equatable/equatable.dart';
 import 'package:file_picker/file_picker.dart';
+import '../../core/platform/import_directory.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:stillora_video_engine/stillora_video_engine.dart' as engine;
@@ -223,7 +224,7 @@ class SilenceController extends Notifier<SilenceState> {
 
   Future<String?> _pickVideoPath() async {
     if (Platform.isMacOS || Platform.isLinux || Platform.isWindows) {
-      final result = await FilePicker.platform.pickFiles(type: FileType.video);
+      final result = await pickImportFiles(type: FileType.video);
       return result?.files.single.path;
     }
     final picked = await ImagePicker().pickVideo(source: ImageSource.gallery);
@@ -231,7 +232,7 @@ class SilenceController extends Notifier<SilenceState> {
   }
 
   Future<String?> _pickAudioPath() async {
-    final result = await FilePicker.platform.pickFiles(
+    final result = await pickImportFiles(
       type: FileType.custom,
       allowedExtensions: const ['mp3', 'm4a', 'aac', 'wav'],
     );

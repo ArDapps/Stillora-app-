@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
+import '../../core/platform/import_directory.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
@@ -52,7 +53,7 @@ class EditorView extends ConsumerWidget {
   const EditorView({super.key});
 
   Future<void> _pickAudio(WidgetRef ref) async {
-    final result = await FilePicker.platform.pickFiles(
+    final result = await pickImportFiles(
       type: FileType.custom,
       allowedExtensions: _supportedAudioExtensions,
     );

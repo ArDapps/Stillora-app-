@@ -4,9 +4,13 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
   },
-  // `pg` is a server-only Node package; keep it out of the bundler so its
-  // optional native/dynamic requires resolve at runtime.
-  serverExternalPackages: ["pg"],
+  // Server-only Node packages that must NOT be bundled, so their optional
+  // native/dynamic requires (and shipped binaries) resolve at runtime:
+  //  - `pg`: optional native/dynamic requires.
+  //  - `puppeteer`: reads its own package files + spawns the system Chromium;
+  //    bundling breaks module load, which 500s /api/convert/html.
+  //  - `ffmpeg-static`: ships a binary whose path breaks when bundled.
+  serverExternalPackages: ["pg", "puppeteer", "ffmpeg-static"],
 };
 
 export default nextConfig;

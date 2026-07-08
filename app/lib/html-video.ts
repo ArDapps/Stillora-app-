@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
@@ -33,6 +33,22 @@ export const MIN_DURATION_MS = 200;
 export const MAX_DURATION_MS = 60_000;
 /** Hard cap on captured frames so a request can't pin a CPU indefinitely. */
 export const MAX_FRAMES = 1800;
+/**
+ * Wall-clock budget for a single render. Kept below the typical reverse-proxy
+ * read timeout (~60s) so an over-long render returns a clear JSON error instead
+ * of the proxy killing the connection with an HTML 504 (which the apps surface
+ * as the unhelpful generic "check your connection" message). Tune to match the
+ * front proxy's `proxy_read_timeout` / equivalent.
+ */
+export const MAX_RENDER_MS = 50_000;
+/** Max time to wait for Chromium to launch before failing fast (vs. hanging). */
+const BROWSER_LAUNCH_TIMEOUT_MS = 30_000;
+
+/** Largest accepted HTML document. Self-unpacking / bundled exports inline
+ * their fonts, images and runtime as base64, so they can be tens of MB. */
+export const MAX_HTML_BYTES = 30_000_000;
+/** Largest accepted audio track (base64-decoded). */
+export const MAX_AUDIO_BYTES = 30_000_000;
 
 export type RenderInput = {
   html?: unknown;
@@ -41,6 +57,9 @@ export type RenderInput = {
   height?: unknown;
   durationMs?: unknown;
   fps?: unknown;
+  /** Optional soundtrack / voice-over, base64-encoded (any ffmpeg-decodable
+   * container: mp3, m4a, aac, wav, …). Muxed onto the rendered video. */
+  audio?: unknown;
 };
 
 export type RenderOptions = {
@@ -50,6 +69,8 @@ export type RenderOptions = {
   height: number;
   durationMs: number;
   fps: number;
+  /** Decoded audio bytes to mux onto the output, if provided. */
+  audio?: Buffer;
 };
 
 function toEven(value: number) {
@@ -70,10 +91,28 @@ export function normalizeOptions(body: RenderInput): RenderOptions {
   if (!html && !url) {
     throw new RenderError("Provide `html` markup or a `url` to render.", 400);
   }
-  if (html && html.length > 5_000_000) {
-    throw new RenderError("HTML document is too large (max 5 MB).", 413);
+  if (html && html.length > MAX_HTML_BYTES) {
+    throw new RenderError(
+      `HTML document is too large (max ${Math.round(MAX_HTML_BYTES / 1e6)} MB).`,
+      413,
+    );
   }
   if (url) assertSafeUrl(url);
+
+  // Optional audio track, sent base64-encoded.
+  let audio: Buffer | undefined;
+  if (typeof body.audio === "string" && body.audio.length > 0) {
+    audio = Buffer.from(body.audio, "base64");
+    if (audio.byteLength === 0) {
+      throw new RenderError("Audio track could not be decoded.", 400);
+    }
+    if (audio.byteLength > MAX_AUDIO_BYTES) {
+      throw new RenderError(
+        `Audio track is too large (max ${Math.round(MAX_AUDIO_BYTES / 1e6)} MB).`,
+        413,
+      );
+    }
+  }
 
   // H.264 + yuv420p requires even dimensions.
   const width = toEven(clampInt(body.width, MIN_DIMENSION, MAX_DIMENSION, 1080));
@@ -93,7 +132,7 @@ export function normalizeOptions(body: RenderInput): RenderOptions {
     );
   }
 
-  return { html, url, width, height, durationMs, fps };
+  return { html, url, width, height, durationMs, fps, audio };
 }
 
 /** Blocks non-http(s) schemes and obvious private/loopback hosts (SSRF guard). */
@@ -147,8 +186,8 @@ async function getBrowser(): Promise<Browser> {
     browserPromise = null;
   }
   if (!browserPromise) {
-    browserPromise = puppeteer
-      .launch({
+    browserPromise = withTimeout(
+      puppeteer.launch({
         headless: true,
         args: [
           "--no-sandbox",
@@ -159,11 +198,14 @@ async function getBrowser(): Promise<Browser> {
           "--force-color-profile=srgb",
         ],
         executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-      })
-      .catch((error) => {
-        browserPromise = null;
-        throw error;
-      });
+      }),
+      BROWSER_LAUNCH_TIMEOUT_MS,
+      "Chromium took too long to start. Please try again.",
+    ).catch((error) => {
+      // Never cache a failed/timed-out launch — the next request retries fresh.
+      browserPromise = null;
+      throw error;
+    });
   }
   return browserPromise;
 }
@@ -251,11 +293,38 @@ function delay(ms: number) {
   return new Promise<void>((resolve) => setTimeout(resolve, ms));
 }
 
+/** Rejects with a RenderError if [promise] doesn't settle within [ms]. */
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string) {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new RenderError(message, 504)), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
 /** Renders the animation to an MP4 and returns the encoded bytes. */
 export async function renderHtmlToMp4(options: RenderOptions): Promise<Buffer> {
   const { width, height, fps, durationMs } = options;
   const frameCount = Math.max(1, Math.round((durationMs / 1000) * fps));
   const frameBudgetMs = 1000 / fps;
+
+  const deadline = Date.now() + MAX_RENDER_MS;
+  const checkDeadline = () => {
+    if (Date.now() > deadline) {
+      throw new RenderError(
+        "The render took too long. Try a shorter duration, a lower fps, or a smaller size.",
+        504,
+      );
+    }
+  };
 
   const browser = await getBrowser();
   const page = await browser.newPage();
@@ -293,12 +362,19 @@ export async function renderHtmlToMp4(options: RenderOptions): Promise<Buffer> {
     await client.send("Emulation.setVirtualTimePolicy", { policy: "pause" });
 
     for (let frame = 0; frame < frameCount; frame += 1) {
+      // Bail out with a clear error before the front proxy would kill the
+      // connection (which the apps show as the generic connection error).
+      checkDeadline();
       const filePath = path.join(
         workDir,
-        `frame_${String(frame + 1).padStart(5, "0")}.png`,
+        `frame_${String(frame + 1).padStart(5, "0")}.jpg`,
       );
+      // JPEG is far cheaper to encode than PNG; the output is re-encoded to
+      // H.264 (yuv420p) anyway, so the high-quality JPEG is visually lossless.
       await page.screenshot({
-        path: filePath as `${string}.png`,
+        path: filePath as `${string}.jpeg`,
+        type: "jpeg",
+        quality: 92,
         clip: { x: 0, y: 0, width, height },
         captureBeyondViewport: false,
         optimizeForSpeed: true,
@@ -306,8 +382,15 @@ export async function renderHtmlToMp4(options: RenderOptions): Promise<Buffer> {
       await advanceVirtualTime(client, frameBudgetMs);
     }
 
+    // Write the optional soundtrack next to the frames so ffmpeg can mux it.
+    let audioPath: string | undefined;
+    if (options.audio && options.audio.byteLength > 0) {
+      audioPath = path.join(workDir, "audio.input");
+      await writeFile(audioPath, options.audio);
+    }
+
     const outputPath = path.join(workDir, "out.mp4");
-    await encodeFrames(workDir, outputPath, fps);
+    await encodeFrames(workDir, outputPath, fps, audioPath);
     return await readFile(outputPath);
   } finally {
     await page.close().catch(() => {});
@@ -316,23 +399,46 @@ export async function renderHtmlToMp4(options: RenderOptions): Promise<Buffer> {
   }
 }
 
-function encodeFrames(workDir: string, outputPath: string, fps: number) {
+function encodeFrames(
+  workDir: string,
+  outputPath: string,
+  fps: number,
+  audioPath?: string,
+) {
   const args = [
     "-y",
     "-framerate",
     String(fps),
     "-i",
-    path.join(workDir, "frame_%05d.png"),
+    path.join(workDir, "frame_%05d.jpg"),
+  ];
+  // Second input: the optional soundtrack. `-shortest` ends the mux at the
+  // shorter of {video, audio} so a long track can't pad the clip with silence.
+  if (audioPath) {
+    args.push("-i", audioPath);
+  }
+  args.push(
     "-c:v",
     "libx264",
     "-preset",
     "veryfast",
     "-pix_fmt",
     "yuv420p",
-    "-movflags",
-    "+faststart",
-    outputPath,
-  ];
+  );
+  if (audioPath) {
+    args.push(
+      "-map",
+      "0:v:0",
+      "-map",
+      "1:a:0",
+      "-c:a",
+      "aac",
+      "-b:a",
+      "192k",
+      "-shortest",
+    );
+  }
+  args.push("-movflags", "+faststart", outputPath);
   return runFfmpeg(getFfmpegPath(), args);
 }
 

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
+import '../../core/platform/import_directory.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
@@ -23,7 +24,7 @@ class LoopImagesView extends ConsumerWidget {
   const LoopImagesView({super.key});
 
   Future<void> _pick(WidgetRef ref) async {
-    final result = await FilePicker.platform.pickFiles(
+    final result = await pickImportFiles(
       allowMultiple: true,
       type: FileType.image,
     );

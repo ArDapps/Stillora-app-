@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:file_picker/file_picker.dart';
+import '../../core/platform/import_directory.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
@@ -19,7 +20,7 @@ class ReelView extends ConsumerWidget {
   const ReelView({super.key});
 
   Future<void> _pickAudio(WidgetRef ref) async {
-    final result = await FilePicker.platform.pickFiles(
+    final result = await pickImportFiles(
       type: FileType.custom,
       allowedExtensions: _reelAudioExtensions,
     );

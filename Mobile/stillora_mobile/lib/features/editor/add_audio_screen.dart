@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:file_picker/file_picker.dart';
+import '../../core/platform/import_directory.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -27,7 +28,7 @@ class _AddAudioScreenState extends ConsumerState<AddAudioScreen> {
   double _volume = 0.8;
 
   Future<void> _pickAudio() async {
-    final result = await FilePicker.platform.pickFiles(
+    final result = await pickImportFiles(
       type: FileType.custom,
       allowedExtensions:
           Platform.isAndroid ? ['m4a', 'aac'] : ['mp3', 'm4a', 'aac', 'wav'],

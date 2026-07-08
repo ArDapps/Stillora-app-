@@ -45,6 +45,19 @@ abstract class StilloraVideoEnginePlatform extends PlatformInterface {
     throw UnimplementedError('exportVideo has not been implemented.');
   }
 
+  /// Renders an animated HTML document (or URL) to an MP4 on-device.
+  Future<ExportResult> renderHtml({
+    String? html,
+    String? url,
+    required int width,
+    required int height,
+    required int durationMs,
+    int fps = 30,
+    String? audioPath,
+  }) {
+    throw UnimplementedError('renderHtml has not been implemented.');
+  }
+
   Future<ExportResult> exportReel({
     required List<ReelLayerSpec> layers,
     String? audioPath,

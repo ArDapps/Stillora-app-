@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:gal/gal.dart';
 import 'package:share_plus/share_plus.dart';
 
+import 'import_directory.dart';
+
 /// Outcome of a save attempt, so the UI can show the right message instead of
 /// failing silently. `cancelled` is when the user dismissed a save dialog.
 enum SaveOutcome { saved, missingFile, permissionDenied, failed, cancelled }
@@ -95,7 +97,10 @@ class MediaActions {
         type: FileType.custom,
         allowedExtensions: const ['mp4'],
         bytes: bytes,
+        initialDirectory: await lastImportDirectory(),
       );
+      // Reopen future pickers where the user last saved.
+      await rememberImportPath(destination);
       if (destination == null) {
         return SaveOutcome.cancelled;
       }

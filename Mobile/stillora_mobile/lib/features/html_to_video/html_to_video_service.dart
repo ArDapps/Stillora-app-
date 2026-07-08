@@ -2,11 +2,13 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/auth/auth_controller.dart';
+import '../export/export_controller.dart' show videoEngineProvider;
 
 /// A user-facing failure while converting HTML to video.
 class HtmlToVideoException implements Exception {
@@ -24,6 +26,7 @@ class HtmlToVideoRequest {
     required this.height,
     required this.durationMs,
     required this.fps,
+    this.audioPath,
   });
 
   final String? html;
@@ -32,6 +35,9 @@ class HtmlToVideoRequest {
   final int height;
   final int durationMs;
   final int fps;
+
+  /// Optional soundtrack / voice-over file muxed onto the rendered video.
+  final String? audioPath;
 }
 
 final htmlToVideoServiceProvider = Provider<HtmlToVideoService>(
@@ -49,8 +55,47 @@ class HtmlToVideoService {
     HtmlToVideoRequest request, {
     CancelToken? cancelToken,
   }) async {
+    // macOS renders locally with the native engine — no server round-trip.
+    if (Platform.isMacOS) {
+      return _convertLocally(request);
+    }
+    return _convertViaServer(request, cancelToken: cancelToken);
+  }
+
+  /// On-device render (desktop). Returns the written MP4 file.
+  Future<File> _convertLocally(HtmlToVideoRequest request) async {
+    try {
+      final result = await _ref.read(videoEngineProvider).renderHtml(
+            html: request.html,
+            url: request.url,
+            width: request.width,
+            height: request.height,
+            durationMs: request.durationMs,
+            fps: request.fps,
+            audioPath: request.audioPath,
+          );
+      return File(result.outputPath);
+    } on PlatformException catch (error) {
+      throw HtmlToVideoException(
+        error.message ?? 'Could not render the HTML on this device.',
+      );
+    }
+  }
+
+  Future<File> _convertViaServer(
+    HtmlToVideoRequest request, {
+    CancelToken? cancelToken,
+  }) async {
     final token = _ref.read(authControllerProvider).asData?.value?.token;
     final dio = _ref.read(dioProvider);
+
+    // Read + base64-encode the optional soundtrack so it rides in the JSON body.
+    String? audioBase64;
+    if (request.audioPath != null) {
+      final bytes = await File(request.audioPath!).readAsBytes();
+      if (bytes.isNotEmpty) audioBase64 = base64Encode(bytes);
+    }
+
     try {
       final response = await dio.post<List<int>>(
         '/api/convert/html',
@@ -62,6 +107,7 @@ class HtmlToVideoService {
           'height': request.height,
           'durationMs': request.durationMs,
           'fps': request.fps,
+          'audio': ?audioBase64,
         },
         options: Options(
           headers: {
@@ -109,6 +155,24 @@ class HtmlToVideoService {
     if (error.type == DioExceptionType.receiveTimeout ||
         error.type == DioExceptionType.sendTimeout) {
       return 'The render took too long. Try a shorter duration or lower fps.';
+    }
+
+    // No usable JSON body: surface the real HTTP status so gateway timeouts
+    // (502/503/504 → an HTML error page, common for heavy pages behind a
+    // reverse proxy) are distinguishable from an unreachable server.
+    final status = error.response?.statusCode;
+    if (status == 502 || status == 503 || status == 504) {
+      return 'The server took too long to render this page (error $status). '
+          'Try a shorter duration, a lower fps, a smaller size, or a simpler '
+          'page.';
+    }
+    if (status != null) {
+      return 'The server couldn’t render this page (error $status). '
+          'Please try again.';
+    }
+    if (error.type == DioExceptionType.connectionError ||
+        error.type == DioExceptionType.connectionTimeout) {
+      return 'Couldn’t reach the server. Check your connection and try again.';
     }
     return 'Could not convert the HTML. Check your connection and try again.';
   }

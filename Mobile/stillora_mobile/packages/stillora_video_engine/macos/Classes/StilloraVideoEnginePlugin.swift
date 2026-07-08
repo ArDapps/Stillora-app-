@@ -1,9 +1,11 @@
 import AVFoundation
+import Cocoa
 import CoreGraphics
 import CoreImage
 import CoreVideo
 import FlutterMacOS
 import ImageIO
+import WebKit
 
 /// macOS implementation of the Stillora video engine, built entirely on
 /// AVFoundation / CoreGraphics so it is Mac App Store sandbox compatible (no
@@ -13,6 +15,8 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
   private var progressSink: FlutterEventSink?
   private var isCancelled = false
   private let workQueue = DispatchQueue(label: "app.stillora.video_engine", qos: .userInitiated)
+  /// Keeps the offscreen HTML→video web view alive for the duration of a render.
+  var htmlCapturer: HtmlFrameCapturer?
 
   // MARK: - Registration
 
@@ -92,6 +96,19 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
       isCancelled = false
       workQueue.async { [weak self] in
         self?.runRemoveSilence(args: args, result: result)
+      }
+    case "renderHtml":
+      guard let args = call.arguments as? [String: Any] else {
+        result(
+          FlutterError(
+            code: "invalid_arguments", message: "HTML render arguments were missing.",
+            details: nil))
+        return
+      }
+      isCancelled = false
+      // WKWebView must be driven on the main thread.
+      DispatchQueue.main.async { [weak self] in
+        self?.renderHtml(args: args, result: result)
       }
     case "cancelExport":
       isCancelled = true
@@ -1671,5 +1688,256 @@ final class ReelCompositor: NSObject, AVVideoCompositing {
 
     ciContext.render(acc, to: output, bounds: frame, colorSpace: colorSpace)
     request.finish(withComposedVideoFrame: output)
+  }
+}
+
+// MARK: - HTML → Video (local, on-device)
+
+extension StilloraVideoEnginePlugin {
+  /// Renders an animated HTML document (or URL) to an MP4 entirely on-device:
+  /// a `WKWebView` paints the page, frames are captured in real time, then
+  /// AVFoundation encodes them (and muxes optional audio). No server needed.
+  func renderHtml(args: [String: Any], result: @escaping FlutterResult) {
+    let html = args["html"] as? String
+    let urlString = args["url"] as? String
+    let width = evenDimension((args["width"] as? Int) ?? 1080)
+    let height = evenDimension((args["height"] as? Int) ?? 1920)
+    let fps = max(1, min(60, (args["fps"] as? Int) ?? 30))
+    let durationMs = max(200, min(120_000, (args["durationMs"] as? Int) ?? 5000))
+    let audioPath = args["audioPath"] as? String
+    let frameCount = max(1, Int((Double(durationMs) / 1000.0 * Double(fps)).rounded()))
+    let frameInterval = 1.0 / Double(fps)
+
+    if (html == nil || html!.isEmpty) && (urlString == nil || urlString!.isEmpty) {
+      result(
+        FlutterError(code: "invalid_arguments", message: "Provide html or url.", details: nil))
+      return
+    }
+
+    let capturer = HtmlFrameCapturer(width: width, height: height)
+    // Keep a strong reference alive for the duration of the render.
+    self.htmlCapturer = capturer
+
+    let onReady: (Bool) -> Void = { [weak self] ok in
+      guard let self = self else { return }
+      guard ok else {
+        capturer.cleanup()
+        self.htmlCapturer = nil
+        result(
+          FlutterError(code: "render_failed", message: "The page failed to load.", details: nil))
+        return
+      }
+
+      // Phase 1 — capture frames in real time (main thread) as JPEG data so
+      // memory stays bounded regardless of clip length.
+      var frames: [Data] = []
+      frames.reserveCapacity(frameCount)
+      let start = CACurrentMediaTime()
+
+      func captureNext(_ index: Int) {
+        if self.isCancelled {
+          capturer.cleanup()
+          self.htmlCapturer = nil
+          result(FlutterError(code: "cancelled", message: "Render was cancelled.", details: nil))
+          return
+        }
+        if index >= frameCount {
+          capturer.cleanup()
+          self.htmlCapturer = nil
+          // Phase 2 — encode off the main thread.
+          self.workQueue.async {
+            self.encodeHtmlFrames(
+              frames, width: width, height: height, fps: fps, durationMs: durationMs,
+              audioPath: audioPath, result: result)
+          }
+          return
+        }
+        capturer.snapshot { cg in
+          if let cg = cg, let data = self.jpegData(from: cg) {
+            frames.append(data)
+          }
+          let target = start + Double(index + 1) * frameInterval
+          let delay = max(0, target - CACurrentMediaTime())
+          DispatchQueue.main.asyncAfter(deadline: .now() + delay) { captureNext(index + 1) }
+        }
+      }
+      captureNext(0)
+    }
+
+    if let html = html, !html.isEmpty {
+      capturer.load(html: html, onReady: onReady)
+    } else if let urlString = urlString, let url = URL(string: urlString) {
+      capturer.load(url: url, onReady: onReady)
+    } else {
+      capturer.cleanup()
+      self.htmlCapturer = nil
+      result(FlutterError(code: "invalid_arguments", message: "Invalid url.", details: nil))
+    }
+  }
+
+  private func encodeHtmlFrames(
+    _ frames: [Data], width: Int, height: Int, fps: Int, durationMs: Int,
+    audioPath: String?, result: @escaping FlutterResult
+  ) {
+    let durationSeconds = max(1, Int((Double(durationMs) / 1000.0).rounded()))
+    do {
+      let tmp = FileManager.default.temporaryDirectory
+      let videoURL = tmp.appendingPathComponent("stillora_html_\(UUID().uuidString).mp4")
+      let writer = try AVAssetWriter(outputURL: videoURL, fileType: .mp4)
+      let settings: [String: Any] = [
+        AVVideoCodecKey: AVVideoCodecType.h264,
+        AVVideoWidthKey: width,
+        AVVideoHeightKey: height,
+      ]
+      let input = AVAssetWriterInput(mediaType: .video, outputSettings: settings)
+      input.expectsMediaDataInRealTime = false
+      let adaptor = AVAssetWriterInputPixelBufferAdaptor(
+        assetWriterInput: input,
+        sourcePixelBufferAttributes: [
+          kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32ARGB,
+          kCVPixelBufferWidthKey as String: width,
+          kCVPixelBufferHeightKey as String: height,
+        ])
+      writer.add(input)
+      guard writer.startWriting() else { throw EngineError.write }
+      writer.startSession(atSourceTime: .zero)
+
+      for (index, data) in frames.enumerated() {
+        guard let cg = cgImage(from: data),
+          let buffer = pixelBuffer(from: cg, width: width, height: height, fill: true)
+        else { continue }
+        while !input.isReadyForMoreMediaData { usleep(3000) }
+        let time = CMTime(value: CMTimeValue(index), timescale: CMTimeScale(fps))
+        adaptor.append(buffer, withPresentationTime: time)
+      }
+      input.markAsFinished()
+      let semaphore = DispatchSemaphore(value: 0)
+      writer.finishWriting { semaphore.signal() }
+      semaphore.wait()
+
+      if writer.status != .completed {
+        throw writer.error ?? EngineError.write
+      }
+
+      var outputURL = videoURL
+      if let audioPath = audioPath, FileManager.default.fileExists(atPath: audioPath) {
+        let muxed = tmp.appendingPathComponent("stillora_html_av_\(UUID().uuidString).mp4")
+        try mux(
+          videoURL: videoURL, audioURL: URL(fileURLWithPath: audioPath),
+          duration: durationSeconds, to: muxed)
+        outputURL = muxed
+      }
+
+      result([
+        "outputPath": outputURL.path, "width": width, "height": height,
+        "durationSeconds": durationSeconds,
+      ])
+    } catch {
+      result(FlutterError(code: "render_failed", message: error.localizedDescription, details: nil))
+    }
+  }
+
+  private func jpegData(from cgImage: CGImage) -> Data? {
+    let data = NSMutableData()
+    guard
+      let dest = CGImageDestinationCreateWithData(
+        data as CFMutableData, "public.jpeg" as CFString, 1, nil)
+    else { return nil }
+    CGImageDestinationAddImage(
+      dest, cgImage, [kCGImageDestinationLossyCompressionQuality: 0.9] as CFDictionary)
+    guard CGImageDestinationFinalize(dest) else { return nil }
+    return data as Data
+  }
+
+  private func cgImage(from data: Data) -> CGImage? {
+    guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
+    return CGImageSourceCreateImageAtIndex(source, 0, nil)
+  }
+}
+
+/// Offscreen WKWebView that loads a page and hands back per-frame snapshots.
+final class HtmlFrameCapturer: NSObject, WKNavigationDelegate {
+  private let window: NSWindow
+  private let webView: WKWebView
+  private var onReady: ((Bool) -> Void)?
+  private var finished = false
+
+  init(width: Int, height: Int) {
+    let rect = NSRect(x: 0, y: 0, width: width, height: height)
+    let config = WKWebViewConfiguration()
+    webView = WKWebView(frame: rect, configuration: config)
+    webView.setValue(false, forKey: "drawsBackground")
+    // A borderless window keeps the web content in a live view hierarchy (so it
+    // actually paints) while sitting far off-screen.
+    window = NSWindow(
+      contentRect: rect, styleMask: [.borderless], backing: .buffered, defer: false)
+    super.init()
+    window.contentView = webView
+    window.setFrameOrigin(NSPoint(x: -20000, y: -20000))
+    window.orderFrontRegardless()
+    webView.navigationDelegate = self
+  }
+
+  func load(html: String, onReady: @escaping (Bool) -> Void) {
+    self.onReady = onReady
+    scheduleTimeout()
+    webView.loadHTMLString(html, baseURL: nil)
+  }
+
+  func load(url: URL, onReady: @escaping (Bool) -> Void) {
+    self.onReady = onReady
+    scheduleTimeout()
+    webView.load(URLRequest(url: url))
+  }
+
+  private func scheduleTimeout() {
+    // Fire ready even if didFinish never arrives (pages that hold connections).
+    DispatchQueue.main.asyncAfter(deadline: .now() + 30) { [weak self] in
+      self?.signalReady(true)
+    }
+  }
+
+  private func signalReady(_ ok: Bool) {
+    guard !finished else { return }
+    finished = true
+    let cb = onReady
+    onReady = nil
+    cb?(ok)
+  }
+
+  func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+    // Give scripts, web fonts and first paint a moment to settle.
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
+      self?.signalReady(true)
+    }
+  }
+
+  func webView(
+    _ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error
+  ) {
+    signalReady(false)
+  }
+
+  func webView(
+    _ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!,
+    withError error: Error
+  ) {
+    signalReady(false)
+  }
+
+  func snapshot(_ completion: @escaping (CGImage?) -> Void) {
+    let config = WKSnapshotConfiguration()
+    config.rect = webView.bounds
+    config.afterScreenUpdates = true
+    webView.takeSnapshot(with: config) { image, _ in
+      guard let image = image else { completion(nil); return }
+      var rect = NSRect(origin: .zero, size: image.size)
+      completion(image.cgImage(forProposedRect: &rect, context: nil, hints: nil))
+    }
+  }
+
+  func cleanup() {
+    window.orderOut(nil)
+    webView.navigationDelegate = nil
   }
 }

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
+import '../../core/platform/import_directory.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
@@ -64,6 +65,10 @@ class _HtmlToVideoViewState extends ConsumerState<HtmlToVideoView> {
   int _durationSeconds = 10;
   int _fps = 30;
 
+  // Optional soundtrack / voice-over muxed onto the rendered video.
+  String? _audioPath;
+  String? _audioName;
+
   /// The picked aspect ratio scaled to the chosen quality tier.
   ({int width, int height}) get _outputSize =>
       scaleDimensionsToQuality(_size.width, _size.height, _quality);
@@ -96,7 +101,7 @@ class _HtmlToVideoViewState extends ConsumerState<HtmlToVideoView> {
   }
 
   Future<void> _pickFile() async {
-    final result = await FilePicker.platform.pickFiles(
+    final result = await pickImportFiles(
       type: FileType.custom,
       allowedExtensions: const ['html', 'htm'],
       withData: false,
@@ -110,6 +115,25 @@ class _HtmlToVideoViewState extends ConsumerState<HtmlToVideoView> {
       _validationError = null;
     });
   }
+
+  Future<void> _pickAudio() async {
+    final result = await pickImportFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['mp3', 'm4a', 'aac', 'wav', 'ogg', 'opus'],
+      withData: false,
+    );
+    final path = result?.files.single.path;
+    if (path == null) return;
+    setState(() {
+      _audioPath = path;
+      _audioName = result!.files.single.name;
+    });
+  }
+
+  void _removeAudio() => setState(() {
+        _audioPath = null;
+        _audioName = null;
+      });
 
   String? _resolveHtml() {
     switch (_mode) {
@@ -149,6 +173,7 @@ class _HtmlToVideoViewState extends ConsumerState<HtmlToVideoView> {
             height: _outputSize.height,
             durationMs: _durationSeconds * 1000,
             fps: _fps,
+            audioPath: _audioPath,
           ),
         );
   }
@@ -320,6 +345,68 @@ class _HtmlToVideoViewState extends ConsumerState<HtmlToVideoView> {
       ),
     );
 
+    final hasAudio = _audioPath != null;
+    final audioCard = _StepCard(
+      number: '5',
+      title: 'Audio',
+      trailing: const _TagPill('optional'),
+      footer: 'Voice-over or music mixed onto the video · trimmed to its length',
+      child: Material(
+        color: hasAudio
+            ? _accent.withValues(alpha: 0.12)
+            : StilloraColors.surfaceDim,
+        borderRadius: BorderRadius.circular(StilloraRadius.sm),
+        child: InkWell(
+          onTap: _converting ? null : _pickAudio,
+          borderRadius: BorderRadius.circular(StilloraRadius.sm),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(StilloraRadius.sm),
+              border: Border.all(
+                color: hasAudio ? _accent : _panelBorder,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  hasAudio
+                      ? Icons.music_note_rounded
+                      : Icons.audiotrack_outlined,
+                  size: 20,
+                  color: hasAudio ? _accent : StilloraColors.onSurfaceVariant,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    hasAudio ? _audioName! : 'Add voice-over or music (optional)',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: hasAudio
+                          ? StilloraColors.onSurface
+                          : StilloraColors.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                if (hasAudio)
+                  IconButton(
+                    onPressed: _converting ? null : _removeAudio,
+                    icon: const Icon(Icons.delete_outline_rounded, size: 20),
+                    tooltip: 'Remove audio',
+                    color: StilloraColors.onSurfaceVariant,
+                  )
+                else
+                  const Icon(Icons.add_rounded,
+                      color: StilloraColors.onSurfaceVariant),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
     return [
       const _Eyebrow(),
       const SizedBox(height: StilloraSpacing.sm),
@@ -382,7 +469,7 @@ class _HtmlToVideoViewState extends ConsumerState<HtmlToVideoView> {
             const SizedBox(height: 4),
             Text(
               '${_outputSize.width} × ${_outputSize.height}'
-              '  ·  ≈ ${formatFileSize(estimateExportBytes(width: _outputSize.width, height: _outputSize.height, durationSeconds: _durationSeconds, hasVideo: true, hasAudio: false, fps: _fps))}',
+              '  ·  ≈ ${formatFileSize(estimateExportBytes(width: _outputSize.width, height: _outputSize.height, durationSeconds: _durationSeconds, hasVideo: true, hasAudio: _audioPath != null, fps: _fps))}',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: StilloraColors.onSurfaceVariant,
               ),
@@ -407,6 +494,8 @@ class _HtmlToVideoViewState extends ConsumerState<HtmlToVideoView> {
         const SizedBox(height: StilloraSpacing.sm),
         fpsCard,
       ],
+      const SizedBox(height: StilloraSpacing.sm),
+      audioCard,
       if (_displayError != null) ...[
         const SizedBox(height: StilloraSpacing.sm),
         _ErrorBanner(message: _displayError!),

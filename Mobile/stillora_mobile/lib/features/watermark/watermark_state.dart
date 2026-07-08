@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:equatable/equatable.dart';
 import 'package:file_picker/file_picker.dart';
+import '../../core/platform/import_directory.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/services.dart' show MissingPluginException;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -374,7 +375,7 @@ class WatermarkController extends Notifier<WatermarkState> {
 
   Future<String?> _pickVideoPath() async {
     if (Platform.isMacOS || Platform.isLinux || Platform.isWindows) {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await pickImportFiles(
         type: FileType.custom,
         allowedExtensions: _wmVideoExtensions.toList(),
       );
@@ -392,7 +393,7 @@ class WatermarkController extends Notifier<WatermarkState> {
 
   Future<List<String>> _pickRawOverlayPaths() async {
     if (Platform.isMacOS || Platform.isLinux || Platform.isWindows) {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await pickImportFiles(
         allowMultiple: true,
         type: FileType.custom,
         allowedExtensions: _wmOverlayExtensions,

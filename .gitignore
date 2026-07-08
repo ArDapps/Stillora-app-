@@ -1,1 +1,6 @@
 .vercel
+
+# Local environment secrets (never commit)
+.env
+.env.local
+.env.*.local

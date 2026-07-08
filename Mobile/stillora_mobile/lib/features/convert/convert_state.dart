@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:equatable/equatable.dart';
 import 'package:file_picker/file_picker.dart';
+import '../../core/platform/import_directory.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gal/gal.dart';
 import 'package:image/image.dart' as img;
@@ -95,7 +96,7 @@ class ConvertController extends Notifier<ConvertState> {
   /// Lets the user choose an export folder. If the platform can't provide one
   /// (or the user cancels), the default location is kept.
   Future<void> pickOutputFolder() async {
-    final dir = await FilePicker.platform.getDirectoryPath();
+    final dir = await pickImportDirectory();
     if (dir == null || dir.isEmpty) return;
     final name = dir.split(RegExp(r'[/\\]')).last;
     state = state.copyWith(outputDir: dir, outputDirName: name.isEmpty ? dir : name);
@@ -104,7 +105,7 @@ class ConvertController extends Notifier<ConvertState> {
   void clearOutputFolder() => state = state.copyWith(clearOutputDir: true);
 
   Future<void> pickImages() async {
-    final result = await FilePicker.platform.pickFiles(
+    final result = await pickImportFiles(
       allowMultiple: true,
       type: FileType.custom,
       allowedExtensions: convertInputExtensions,

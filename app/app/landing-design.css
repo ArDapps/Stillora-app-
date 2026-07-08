@@ -115,78 +115,68 @@ section{position:relative;z-index:1}
 .nav-toggle{display:none}
 
 /* ============================================================ HERO */
-.hero{padding:72px 0 60px;overflow:hidden}
-.hero-grid{display:grid;grid-template-columns:1.04fr .96fr;gap:56px;align-items:center}
-.hero-badges{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:26px}
+.hero{padding:64px 0 40px;overflow:hidden}
 .tag{
   font-family:var(--mono);font-size:12px;letter-spacing:.04em;color:var(--on-var);
   border:1px solid var(--stroke);border-radius:999px;padding:5px 12px;background:var(--surface-low);
 }
 .tag.soon{color:var(--gold-soft);border-color:rgba(250,204,21,.3)}
-.hero h1{font-size:clamp(38px,5.2vw,62px);font-weight:700;letter-spacing:-.04em;line-height:1.02}
-.hero .lede{margin-top:22px;font-size:19px;line-height:1.6;color:var(--on-var);max-width:540px}
+
+/* centered copy */
+.hero-head{max-width:760px;margin:0 auto;text-align:center}
+.hero-head .eyebrow{display:inline-flex;align-items:center;gap:8px;margin-bottom:22px}
+.hero h1{font-size:clamp(34px,5vw,58px);font-weight:700;letter-spacing:-.04em;line-height:1.04}
+.hero .lede{margin:22px auto 0;font-size:18px;line-height:1.6;color:var(--on-var);max-width:600px}
 .hero .lede b{color:var(--on);font-weight:600}
-.media-flow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:28px 0 32px}
-.mf-chip{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:500;
-  padding:8px 14px;border-radius:10px;background:var(--surface-low);border:1px solid var(--stroke)}
-.mf-chip svg{color:var(--violet-bright)}
-.mf-arrow{color:var(--dimmer)}
-.mf-out{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:700;
-  padding:8px 15px;border-radius:10px;background:rgba(124,58,237,.16);border:1px solid rgba(124,58,237,.45);color:#fff}
-.hero-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-.hero-trust{margin-top:26px;display:flex;align-items:center;gap:9px;flex-wrap:wrap;
+.hero-actions{margin-top:30px;display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap}
+.hero-trust{margin-top:22px;display:flex;align-items:center;justify-content:center;gap:9px;flex-wrap:wrap;
   font-size:13.5px;color:var(--dim)}
 .hero-trust .sep{width:4px;height:4px;border-radius:50%;background:var(--dimmer)}
 
-/* ---- hero device cluster (real product shots) ---- */
-.hero-stage{position:relative;display:block;min-height:440px;padding-bottom:40px}
-.stage-glow{position:absolute;inset:-14% -10% -4%;z-index:0;pointer-events:none;
-  background:radial-gradient(58% 56% at 60% 42%,rgba(124,58,237,.42),transparent 68%),
-  radial-gradient(42% 44% at 26% 74%,rgba(49,46,129,.5),transparent 70%);filter:blur(24px)}
+/* ---- device showcase: desktop window + two phones ---- */
+.hero-showcase{position:relative;max-width:940px;margin:60px auto 0;padding:0 92px 56px}
+.sc-glow{position:absolute;inset:-6% 4% 4%;z-index:0;pointer-events:none;
+  background:radial-gradient(55% 60% at 50% 32%,rgba(124,58,237,.38),transparent 70%),
+  radial-gradient(38% 48% at 80% 84%,rgba(49,46,129,.5),transparent 72%);filter:blur(26px)}
 
-/* Web editor in a browser chrome */
-.device-browser{position:relative;z-index:1;width:min(560px,100%);margin-left:auto;
-  border-radius:16px;overflow:hidden;background:var(--surface);
-  border:1px solid var(--stroke-b);
-  box-shadow:0 40px 90px -34px rgba(0,0,0,.85),0 0 0 1px rgba(124,58,237,.12),
+/* Native app window (screenshot already carries its own title bar) */
+.sc-window{position:relative;z-index:1;width:100%;margin:0 auto;
+  border-radius:14px;overflow:hidden;background:var(--surface);border:1px solid var(--stroke-b);
+  box-shadow:0 44px 100px -40px rgba(0,0,0,.9),0 0 0 1px rgba(124,58,237,.12),
     inset 0 0 0 1px rgba(255,255,255,.03);
-  transform:rotate(.8deg);transform-origin:60% 40%;
   animation:floatBrowser 9s ease-in-out infinite}
-.browser-bar{display:flex;align-items:center;gap:7px;height:38px;padding:0 14px;
-  background:linear-gradient(180deg,#161d31,#111829);border-bottom:1px solid var(--stroke)}
-.browser-bar .bd{width:11px;height:11px;border-radius:50%;background:#2d3449;flex-shrink:0}
-.browser-bar .bd:nth-child(1){background:#ff5f57}
-.browser-bar .bd:nth-child(2){background:#febc2e}
-.browser-bar .bd:nth-child(3){background:#28c840}
-.browser-url{display:inline-flex;align-items:center;gap:6px;margin:0 auto;padding:4px 16px;
-  font-family:var(--mono);font-size:11.5px;color:var(--dim);
-  background:rgba(2,6,23,.55);border:1px solid var(--stroke);border-radius:999px}
-.browser-url svg{color:var(--dimmer)}
-.browser-shot{display:block;width:100%;height:auto}
-.device-browser .shine{position:absolute;top:38px;left:-40%;width:40%;bottom:0;z-index:2;pointer-events:none;
-  background:linear-gradient(105deg,transparent,rgba(255,255,255,.10) 46%,transparent);
-  transform:skewX(-14deg);animation:shine 7s ease-in-out 1.5s infinite}
+.sc-shot{display:block;width:100%;height:auto}
+.sc-shine{position:absolute;top:0;left:-40%;width:40%;bottom:0;z-index:2;pointer-events:none;
+  background:linear-gradient(105deg,transparent,rgba(255,255,255,.08) 46%,transparent);
+  transform:skewX(-14deg);animation:shine 8s ease-in-out 1.5s infinite}
 
-/* Mobile app screenshot (already framed) overlapping in front */
-.device-phone{position:absolute;z-index:3;left:-6px;bottom:0;width:37%;max-width:186px;
-  filter:drop-shadow(0 34px 60px rgba(0,0,0,.62));
-  transform:rotate(-4deg);transform-origin:bottom center;
-  animation:floatPhone 7.5s ease-in-out .4s infinite}
-.device-phone img{display:block;width:100%;height:auto}
+/* CSS phone frames holding raw app screenshots */
+.sc-phone{position:absolute;z-index:3;bottom:0;width:148px;
+  border-radius:24px;padding:6px;background:linear-gradient(160deg,#20263a,#0b1020);
+  border:1px solid var(--stroke-b);
+  box-shadow:0 40px 66px -26px rgba(0,0,0,.78),inset 0 0 0 1px rgba(255,255,255,.04)}
+.sc-phone img{display:block;width:100%;height:auto;border-radius:19px}
+.sc-notch{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:2;
+  width:32%;height:11px;border-radius:0 0 8px 8px;background:#0b1020}
+.sc-phone-l{left:0;transform:rotate(-6deg);transform-origin:bottom center;
+  animation:floatPhone 7.5s ease-in-out .3s infinite}
+.sc-phone-r{right:0;transform:rotate(6deg);transform-origin:bottom center;
+  animation:floatPhoneR 8s ease-in-out .7s infinite}
 
 /* Floating proof badges */
-.stage-badge{position:absolute;z-index:4;display:flex;align-items:center;gap:10px;
-  padding:10px 13px;border-radius:13px;background:rgba(11,19,38,.86);backdrop-filter:blur(14px);
+.sc-badge{position:absolute;z-index:4;display:flex;align-items:center;gap:10px;
+  padding:10px 13px;border-radius:13px;background:rgba(11,19,38,.88);backdrop-filter:blur(14px);
   border:1px solid var(--stroke-b);box-shadow:var(--shadow-card)}
-.stage-badge .sb-ic{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;
+.sc-badge .sb-ic{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;
   justify-content:center;flex-shrink:0}
-.stage-badge .sb-t{font-size:12.5px;font-weight:600;line-height:1.2;white-space:nowrap}
-.stage-badge .sb-s{font-size:10.5px;color:var(--dim);font-family:var(--mono);margin-top:2px;white-space:nowrap}
-.sb-1{top:8px;left:-10px;animation:floatBadge 6s ease-in-out infinite}
-.sb-2{right:-8px;bottom:64px;animation:floatBadge 6.6s ease-in-out .8s infinite}
+.sc-badge .sb-t{font-size:12.5px;font-weight:600;line-height:1.2;white-space:nowrap}
+.sc-badge .sb-s{font-size:10.5px;color:var(--dim);font-family:var(--mono);margin-top:2px;white-space:nowrap}
+.sc-b1{top:36px;left:44px;animation:floatBadge 6s ease-in-out infinite}
+.sc-b2{top:104px;right:46px;animation:floatBadge 6.6s ease-in-out .8s infinite}
 
-@keyframes floatBrowser{0%,100%{transform:rotate(.8deg) translateY(0)}50%{transform:rotate(.8deg) translateY(-13px)}}
-@keyframes floatPhone{0%,100%{transform:rotate(-4deg) translateY(0)}50%{transform:rotate(-4deg) translateY(-19px)}}
+@keyframes floatBrowser{0%,100%{transform:translateY(0)}50%{transform:translateY(-11px)}}
+@keyframes floatPhone{0%,100%{transform:rotate(-6deg) translateY(0)}50%{transform:rotate(-6deg) translateY(-15px)}}
+@keyframes floatPhoneR{0%,100%{transform:rotate(6deg) translateY(0)}50%{transform:rotate(6deg) translateY(-15px)}}
 @keyframes floatBadge{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
 @keyframes shine{0%,62%{left:-40%}88%,100%{left:120%}}
 
@@ -365,15 +355,15 @@ footer{border-top:1px solid var(--stroke);padding:64px 0 40px;background:rgba(6,
 .reveal:nth-child(6){animation-delay:.30s}
 @media (prefers-reduced-motion:reduce){
   .reveal{animation:none}
-  .device-browser,.device-phone,.stage-badge,.device-browser .shine{animation:none}
+  .sc-window,.sc-phone,.sc-badge,.sc-shine{animation:none}
   html{scroll-behavior:auto}
 }
 
 /* ============================================================ responsive */
 @media (max-width:1080px){
   :root{--gutter:48px}
-  .hero-grid{grid-template-columns:1fr;gap:56px}
-  .hero-stage{max-width:560px;margin:0 auto;min-height:0}
+  .hero-showcase{padding:0 70px 48px}
+  .sc-phone{width:132px}
   .presets{grid-template-columns:1fr;gap:40px}
   .pillar-grid,.feature-grid,.platform-grid{grid-template-columns:repeat(2,1fr)}
   .final-grid{grid-template-columns:1fr;gap:36px}
@@ -381,19 +371,16 @@ footer{border-top:1px solid var(--stroke);padding:64px 0 40px;background:rgba(6,
 @media (max-width:760px){
   :root{--gutter:22px}
   .nav-links{display:none}
-  .hero{padding:48px 0 40px}
+  .hero{padding:48px 0 36px}
+  /* phones + badges are redundant on a phone — show just the desktop window */
+  .hero-showcase{padding:0 0 8px;margin-top:44px}
+  .sc-phone,.sc-badge{display:none}
   .media-cards,.steps,.avail-grid,.quotes,.stats-strip{grid-template-columns:1fr}
   .stats-strip{grid-template-columns:repeat(2,1fr)}
   .foot-grid{grid-template-columns:1fr 1fr;gap:32px}
   .foot-brand{grid-column:1/-1}
   .final-card{padding:40px 26px}
-  .sb-1{left:0;top:0}
-  .sb-2{right:0;bottom:44px}
-  .stage-badge{padding:8px 11px}
-  .stage-badge .sb-ic{width:28px;height:28px}
 }
 @media (max-width:480px){
   .pillar-grid,.platform-grid{grid-template-columns:1fr}
-  .stage-badge{display:none}
-  .device-phone{width:40%}
 }

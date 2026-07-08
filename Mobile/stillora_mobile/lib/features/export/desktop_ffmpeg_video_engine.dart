@@ -21,6 +21,29 @@ class DesktopFfmpegVideoEngine implements engine.StilloraVideoEngine {
       _progressController.stream;
 
   @override
+  Future<engine.ExportResult> renderHtml({
+    String? html,
+    String? url,
+    required int width,
+    required int height,
+    required int durationMs,
+    int fps = 30,
+    String? audioPath,
+  }) {
+    // HTML rendering needs a WebView, which only the native platform engine
+    // provides — ffmpeg can't paint a page. Delegate to it.
+    return engine.PlatformStilloraVideoEngine().renderHtml(
+      html: html,
+      url: url,
+      width: width,
+      height: height,
+      durationMs: durationMs,
+      fps: fps,
+      audioPath: audioPath,
+    );
+  }
+
+  @override
   Future<engine.ExportResult> exportVideo({
     required String imagePath,
     List<String> mediaPaths = const [],

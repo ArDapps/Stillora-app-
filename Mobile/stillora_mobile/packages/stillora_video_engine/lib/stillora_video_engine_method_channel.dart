@@ -63,6 +63,37 @@ class MethodChannelStilloraVideoEngine extends StilloraVideoEnginePlatform {
   }
 
   @override
+  Future<ExportResult> renderHtml({
+    String? html,
+    String? url,
+    required int width,
+    required int height,
+    required int durationMs,
+    int fps = 30,
+    String? audioPath,
+  }) async {
+    final result = await methodChannel.invokeMapMethod<Object?, Object?>(
+      'renderHtml',
+      {
+        'html': html,
+        'url': url,
+        'width': width,
+        'height': height,
+        'durationMs': durationMs,
+        'fps': fps,
+        'audioPath': audioPath,
+      },
+    );
+    if (result == null) {
+      throw PlatformException(
+        code: 'render_failed',
+        message: 'The video engine did not return an HTML render result.',
+      );
+    }
+    return ExportResult.fromMap(result);
+  }
+
+  @override
   Future<ExportResult> exportReel({
     required List<ReelLayerSpec> layers,
     String? audioPath,

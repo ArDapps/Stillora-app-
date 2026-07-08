@@ -1,3 +1,5 @@
+import { BrandLogo, BRANDS, type BrandName } from "./brand-logos";
+
 function SecHead({ eyebrow, title, body }: { eyebrow: string; title: string; body: string }) {
   return (
     <div className="sec-head reveal">
@@ -9,15 +11,30 @@ function SecHead({ eyebrow, title, body }: { eyebrow: string; title: string; bod
 }
 
 export function TrustStrip() {
+  const brands: BrandName[] = [
+    "instagram",
+    "tiktok",
+    "youtube",
+    "facebook",
+    "x",
+    "linkedin",
+  ];
   return (
     <section className="trust">
       <div className="wrap">
         <span className="lbl">Built for</span>
         <div className="plat-badges">
-          <span className="pbadge" style={{ background: "linear-gradient(135deg,#f9ce34,#ee2a7b 45%,#6228d7)" }} title="Instagram">IG</span>
-          <span className="pbadge" style={{ background: "#010101" }} title="TikTok">TK</span>
-          <span className="pbadge" style={{ background: "#ff0000" }} title="YouTube">YT</span>
-          <span className="pbadge" style={{ background: "#0866ff" }} title="Facebook">FB</span>
+          {brands.map((name) => (
+            <span
+              key={name}
+              className="pbadge"
+              style={{ background: BRANDS[name].bg }}
+              title={BRANDS[name].label}
+              aria-label={BRANDS[name].label}
+            >
+              <BrandLogo name={name} size={22} />
+            </span>
+          ))}
         </div>
         <span className="lbl">and more</span>
       </div>
@@ -167,11 +184,11 @@ export function Presets() {
 }
 
 export function PlatformCards() {
-  const cards = [
-    { ic: "IG", bg: "linear-gradient(135deg,#f9ce34,#ee2a7b 45%,#6228d7)", h: "Instagram", sub: "Reels, Stories & feed", dim: "1080 × 1920" },
-    { ic: "TK", bg: "#010101", h: "TikTok", sub: "For You feed", dim: "1080 × 1920" },
-    { ic: "YT", bg: "#ff0000", h: "YouTube", sub: "Shorts & long video", dim: "1080×1920 / 1920×1080" },
-    { ic: "FB", bg: "#0866ff", h: "Facebook", sub: "Reels & feed", dim: "1080 × 1920" },
+  const cards: { ic: BrandName; h: string; sub: string; dim: string }[] = [
+    { ic: "instagram", h: "Instagram", sub: "Reels, Stories & feed", dim: "1080 × 1920" },
+    { ic: "tiktok", h: "TikTok", sub: "For You feed", dim: "1080 × 1920" },
+    { ic: "youtube", h: "YouTube", sub: "Shorts & long video", dim: "1080×1920 / 1920×1080" },
+    { ic: "facebook", h: "Facebook", sub: "Reels & feed", dim: "1080 × 1920" },
   ];
   return (
     <section className="section-pad" style={{ paddingTop: 0 }}>
@@ -184,7 +201,9 @@ export function PlatformCards() {
         <div className="platform-grid">
           {cards.map((c) => (
             <article className="pcard reveal" key={c.h}>
-              <div className="pc-ic" style={{ background: c.bg }}>{c.ic}</div>
+              <div className="pc-ic" style={{ background: BRANDS[c.ic].bg }}>
+                <BrandLogo name={c.ic} size={26} />
+              </div>
               <h3>{c.h}</h3>
               <div className="pc-sub">{c.sub}</div>
               <div className="pc-dim">{c.dim}</div>
