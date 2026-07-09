@@ -10,7 +10,7 @@ import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_spacing.dart';
 import '../../core/platform/media_actions.dart';
 import '../../core/widgets/ad_widget.dart';
-import '../../core/widgets/seconds_input_field.dart';
+import '../../core/widgets/duration_slider.dart';
 import '../../core/platform/platform_info.dart';
 import '../editor/editor_state.dart';
 import '../editor/video_preset.dart';
@@ -307,31 +307,12 @@ class _HtmlToVideoViewState extends ConsumerState<HtmlToVideoView> {
     final durationCard = _StepCard(
       number: '3',
       title: 'Duration',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                '$_durationSeconds s',
-                style: const TextStyle(
-                  color: _accent,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 18,
-                ),
-              ),
-              const Spacer(),
-              const Text(
-                'up to 60s',
-                style: TextStyle(color: StilloraColors.onSurfaceVariant),
-              ),
-            ],
-          ),
-          SecondsInputField(
-            seconds: _durationSeconds,
-            onChanged: (value) => setState(() => _durationSeconds = value),
-          ),
-        ],
+      child: DurationSlider(
+        seconds: _durationSeconds,
+        min: 1,
+        maxSeconds: 60,
+        label: 'Length',
+        onChanged: (value) => setState(() => _durationSeconds = value),
       ),
     );
 

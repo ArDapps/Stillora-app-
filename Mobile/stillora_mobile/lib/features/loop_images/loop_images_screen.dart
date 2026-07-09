@@ -4,14 +4,13 @@ import 'package:file_picker/file_picker.dart';
 import '../../core/platform/import_directory.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/services.dart';
 import 'package:stillora_video_engine/stillora_video_engine.dart' as engine;
 
 import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_spacing.dart';
 import '../../core/platform/media_actions.dart';
 import '../../core/widgets/ad_widget.dart';
-import '../../core/widgets/seconds_input_field.dart';
+import '../../core/widgets/duration_slider.dart';
 import '../../core/platform/platform_info.dart';
 import '../../core/widgets/render_panel.dart';
 import '../editor/editor_state.dart';
@@ -155,10 +154,6 @@ class LoopImagesView extends ConsumerWidget {
                 ),
               ],
             ),
-            SecondsInputField(
-              seconds: state.durationSeconds,
-              onChanged: controller.setDuration,
-            ),
             Wrap(
               spacing: StilloraSpacing.xs,
               runSpacing: StilloraSpacing.xs,
@@ -178,50 +173,12 @@ class LoopImagesView extends ConsumerWidget {
                   ),
               ],
             ),
-            const SizedBox(height: StilloraSpacing.xs),
-            Row(
-              children: [
-                IconButton.filledTonal(
-                  tooltip: 'Shorter',
-                  onPressed: () => controller.setDuration(
-                    state.durationSeconds -
-                        durationAdjustmentStep(state.durationSeconds),
-                  ),
-                  icon: const Icon(Icons.remove_rounded),
-                ),
-                const Spacer(),
-                Text(
-                  '${state.durationSeconds} s',
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-                const Spacer(),
-                IconButton.filledTonal(
-                  tooltip: 'Longer',
-                  onPressed: () => controller.setDuration(
-                    state.durationSeconds +
-                        durationAdjustmentStep(state.durationSeconds),
-                  ),
-                  icon: const Icon(Icons.add_rounded),
-                ),
-              ],
-            ),
-            TextFormField(
-              key: ValueKey('loop-duration-${state.durationSeconds}'),
-              initialValue: state.durationSeconds.toString(),
-              textAlign: TextAlign.center,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: const InputDecoration(
-                isDense: true,
-                suffixText: 'seconds',
-                helperText: 'Any positive duration for each output',
-              ),
-              onFieldSubmitted: (value) {
-                final seconds = int.tryParse(value);
-                if (seconds != null) {
-                  controller.setDuration(seconds);
-                }
-              },
+            const SizedBox(height: StilloraSpacing.sm),
+            DurationSlider(
+              seconds: state.durationSeconds,
+              min: minDurationSeconds,
+              label: 'Each output',
+              onChanged: controller.setDuration,
             ),
           ],
         ),

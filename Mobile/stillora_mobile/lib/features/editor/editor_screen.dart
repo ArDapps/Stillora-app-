@@ -5,7 +5,6 @@ import 'package:file_picker/file_picker.dart';
 import '../../core/platform/import_directory.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:video_player/video_player.dart';
@@ -13,7 +12,7 @@ import 'package:video_player/video_player.dart';
 import '../../core/auth/auth_controller.dart';
 import '../../core/design/render_components.dart';
 import '../../core/design/stillora_colors.dart';
-import '../../core/widgets/seconds_input_field.dart';
+import '../../core/widgets/duration_slider.dart';
 import '../../core/design/stillora_glow.dart';
 import '../../core/widgets/ad_widget.dart';
 import '../../core/design/stillora_spacing.dart';
@@ -209,8 +208,6 @@ class _MobileEditorFlow extends StatelessWidget {
         ),
         const SizedBox(height: StilloraSpacing.sm),
         _StyleCard(editor: editor, controller: controller),
-        const SizedBox(height: StilloraSpacing.sm),
-        _PrivacyCard(isSignedIn: session != null),
         const SizedBox(height: StilloraSpacing.sm),
         StilloraPrimaryButton(
           onPressed: editor.canExport ? onConvert : null,
@@ -506,8 +503,6 @@ class _DesktopEditorWorkspace extends StatelessWidget {
                 compact: compact,
               ),
               const SizedBox(height: 10),
-              _PrivacyCard(isSignedIn: session != null, compact: compact),
-              const SizedBox(height: 10),
               _PresetCard(
                 editor: editor,
                 controller: controller,
@@ -555,25 +550,11 @@ class _DesktopEditorWorkspace extends StatelessWidget {
                           compact: compact,
                         ),
                         const SizedBox(height: 10),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: _SoundscapeCard(
-                                editor: editor,
-                                onPickAudio: onPickAudio,
-                                onRemoveAudio: controller.removeAudio,
-                                compact: compact,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _PrivacyCard(
-                                isSignedIn: session != null,
-                                compact: compact,
-                              ),
-                            ),
-                          ],
+                        _SoundscapeCard(
+                          editor: editor,
+                          onPickAudio: onPickAudio,
+                          onRemoveAudio: controller.removeAudio,
+                          compact: compact,
                         ),
                         const SizedBox(height: 10),
                         _PresetCard(
@@ -1658,16 +1639,8 @@ class _ClipDurationSheet extends StatefulWidget {
 class _ClipDurationSheetState extends State<_ClipDurationSheet> {
   late int _seconds = widget.initialSeconds;
   late double _volume = widget.initialVolume;
-  late final TextEditingController _controller =
-      TextEditingController(text: widget.initialSeconds.toString());
 
   static const _quickPicks = [1, 3, 5, 10, 30, 60, 300, 600, 1800];
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
 
   void _setVolume(double volume) {
     final clamped = normalizeClipVolume(volume);
@@ -1675,15 +1648,9 @@ class _ClipDurationSheetState extends State<_ClipDurationSheet> {
     widget.onVolumeChanged(clamped);
   }
 
-  /// Applies a new duration. [syncField] keeps the text box in step when the
-  /// change comes from the steppers / quick-picks; it's left false while the
-  /// user is typing so the cursor doesn't jump.
-  void _set(int seconds, {bool syncField = true}) {
+  void _set(int seconds) {
     final clamped = normalizeDurationSeconds(seconds);
     setState(() => _seconds = clamped);
-    if (syncField && _controller.text != clamped.toString()) {
-      _controller.text = clamped.toString();
-    }
     widget.onChanged(clamped);
   }
 
@@ -1726,44 +1693,11 @@ class _ClipDurationSheetState extends State<_ClipDurationSheet> {
             ],
           ),
           const SizedBox(height: StilloraSpacing.sm),
-          Row(
-            children: [
-              IconButton.filledTonal(
-                tooltip: 'Shorter',
-                onPressed: () =>
-                    _set(_seconds - durationAdjustmentStep(_seconds)),
-                icon: const Icon(Icons.remove_rounded),
-              ),
-              const SizedBox(width: StilloraSpacing.xs),
-              Expanded(
-                child: TextField(
-                  controller: _controller,
-                  textAlign: TextAlign.center,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  decoration: const InputDecoration(
-                    isDense: true,
-                    suffixText: 'seconds',
-                    border: OutlineInputBorder(),
-                  ),
-                  onChanged: (value) {
-                    final seconds = int.tryParse(value);
-                    if (seconds != null) _set(seconds, syncField: false);
-                  },
-                  onEditingComplete: () {
-                    _set(_seconds);
-                    FocusScope.of(context).unfocus();
-                  },
-                ),
-              ),
-              const SizedBox(width: StilloraSpacing.xs),
-              IconButton.filledTonal(
-                tooltip: 'Longer',
-                onPressed: () =>
-                    _set(_seconds + durationAdjustmentStep(_seconds)),
-                icon: const Icon(Icons.add_rounded),
-              ),
-            ],
+          DurationSlider(
+            seconds: _seconds,
+            min: minDurationSeconds,
+            label: 'Length',
+            onChanged: _set,
           ),
           if (widget.isVideo) ...[
             const SizedBox(height: StilloraSpacing.md),
@@ -2273,57 +2207,11 @@ class _PresetCard extends StatelessWidget {
                 ),
             ],
           ),
-          const SizedBox(height: StilloraSpacing.xs),
-          SecondsInputField(
+          const SizedBox(height: StilloraSpacing.sm),
+          DurationSlider(
             seconds: editor.totalDurationSeconds,
             min: minDurationSeconds,
             onChanged: controller.setDuration,
-          ),
-          Row(
-            children: [
-              IconButton.filledTonal(
-                tooltip: 'Shorter',
-                onPressed: () => controller.setDuration(
-                  editor.totalDurationSeconds -
-                      durationAdjustmentStep(editor.totalDurationSeconds),
-                ),
-                icon: const Icon(Icons.remove_rounded),
-              ),
-              const SizedBox(width: StilloraSpacing.xs),
-              Expanded(
-                child: TextFormField(
-                  key: ValueKey('duration-${editor.totalDurationSeconds}'),
-                  initialValue: editor.totalDurationSeconds.toString(),
-                  textAlign: TextAlign.center,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  decoration: const InputDecoration(
-                    isDense: true,
-                    suffixText: 's',
-                    helperText: 'Any positive duration',
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 12,
-                    ),
-                  ),
-                  onFieldSubmitted: (value) {
-                    final seconds = int.tryParse(value);
-                    if (seconds != null) {
-                      controller.setDuration(seconds);
-                    }
-                  },
-                ),
-              ),
-              const SizedBox(width: StilloraSpacing.xs),
-              IconButton.filledTonal(
-                tooltip: 'Longer',
-                onPressed: () => controller.setDuration(
-                  editor.totalDurationSeconds +
-                      durationAdjustmentStep(editor.totalDurationSeconds),
-                ),
-                icon: const Icon(Icons.add_rounded),
-              ),
-            ],
           ),
         ],
       ),
@@ -2442,36 +2330,3 @@ bool _canReset(EditorState editor) =>
     editor.durationSeconds != defaultDurationSeconds ||
     editor.resizeMode != ResizeMode.fit;
 
-class _PrivacyCard extends StatelessWidget {
-  const _PrivacyCard({required this.isSignedIn, this.compact = false});
-
-  final bool isSignedIn;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    return StilloraGlassCard(
-      padding: EdgeInsets.all(compact ? 12 : StilloraSpacing.sm),
-      child: Row(
-        children: [
-          Icon(
-            isSignedIn ? Icons.verified_user_rounded : Icons.lock_rounded,
-            color: StilloraColors.secondary,
-            size: compact ? 20 : 24,
-          ),
-          SizedBox(width: compact ? 10 : StilloraSpacing.sm),
-          Expanded(
-            child: Text(
-              isSignedIn
-                  ? 'Ready to convert. Media files stay on your phone.'
-                  : 'No account needed. Media files stay on this phone.',
-              style: (compact
-                  ? Theme.of(context).textTheme.bodySmall
-                  : Theme.of(context).textTheme.bodyMedium),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
