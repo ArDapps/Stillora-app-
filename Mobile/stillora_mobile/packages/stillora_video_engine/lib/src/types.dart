@@ -79,6 +79,85 @@ class WatermarkLayerSpec extends Equatable {
   List<Object?> get props => [path, isImage, x, y, scale, start, end];
 }
 
+/// A baked color grade to apply to a finished video as a post-process pass.
+///
+/// The values are the *derived*, engine-ready form of the app's colour sliders
+/// (see the app-side `ColorAdjust`). The three per-channel [rGain]/[gGain]/
+/// [bGain] multipliers fold exposure + warmth + tint into one diagonal matrix,
+/// while [brightness]/[contrast]/[saturation] map straight onto CoreImage's
+/// `CIColorControls` and ffmpeg's `eq`. Keeping the maths in one Dart place lets
+/// the Flutter live preview, the ffmpeg desktop pass and the macOS CoreImage
+/// pass all produce the same look.
+class ColorAdjustSpec extends Equatable {
+  const ColorAdjustSpec({
+    this.rGain = 1,
+    this.gGain = 1,
+    this.bGain = 1,
+    this.brightness = 0,
+    this.contrast = 1,
+    this.saturation = 1,
+    this.sharpness = 0,
+  });
+
+  factory ColorAdjustSpec.fromMap(Map<Object?, Object?> map) => ColorAdjustSpec(
+    rGain: (map['rGain'] as num?)?.toDouble() ?? 1,
+    gGain: (map['gGain'] as num?)?.toDouble() ?? 1,
+    bGain: (map['bGain'] as num?)?.toDouble() ?? 1,
+    brightness: (map['brightness'] as num?)?.toDouble() ?? 0,
+    contrast: (map['contrast'] as num?)?.toDouble() ?? 1,
+    saturation: (map['saturation'] as num?)?.toDouble() ?? 1,
+    sharpness: (map['sharpness'] as num?)?.toDouble() ?? 0,
+  );
+
+  /// Per-channel multipliers (1 = unchanged) encoding exposure + warmth + tint.
+  final double rGain;
+  final double gGain;
+  final double bGain;
+
+  /// Additive brightness in [-1, 1] (0 = unchanged).
+  final double brightness;
+
+  /// Contrast multiplier around mid-grey (1 = unchanged).
+  final double contrast;
+
+  /// Saturation multiplier (1 = unchanged, 0 = greyscale).
+  final double saturation;
+
+  /// Luminance sharpening amount in [0, 1] (0 = none).
+  final double sharpness;
+
+  /// A grade that changes nothing — callers can skip the extra pass entirely.
+  bool get isIdentity =>
+      rGain == 1 &&
+      gGain == 1 &&
+      bGain == 1 &&
+      brightness == 0 &&
+      contrast == 1 &&
+      saturation == 1 &&
+      sharpness == 0;
+
+  Map<String, Object?> toMap() => {
+    'rGain': rGain,
+    'gGain': gGain,
+    'bGain': bGain,
+    'brightness': brightness,
+    'contrast': contrast,
+    'saturation': saturation,
+    'sharpness': sharpness,
+  };
+
+  @override
+  List<Object?> get props => [
+    rGain,
+    gGain,
+    bGain,
+    brightness,
+    contrast,
+    saturation,
+    sharpness,
+  ];
+}
+
 enum ExportStage {
   preparingImage,
   generatingVideo,

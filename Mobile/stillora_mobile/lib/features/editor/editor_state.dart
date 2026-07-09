@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../core/storage/app_preferences.dart';
+import '../color/color_adjust.dart';
 import 'desktop_media_probe.dart';
 import 'local_editor_media_store.dart';
 import 'video_preset.dart';
@@ -113,6 +114,7 @@ class EditorState extends Equatable {
     this.exportQuality = defaultExportQuality,
     this.effect = ClipEffect.none,
     this.transition = FrameTransition.none,
+    this.color = ColorAdjust.identity,
   });
 
   final List<MediaItem> media;
@@ -123,6 +125,9 @@ class EditorState extends Equatable {
   /// Preview style applied to the Create output (preview-only).
   final ClipEffect effect;
   final FrameTransition transition;
+
+  /// Colour grade baked onto the exported video (desktop). Neutral by default.
+  final ColorAdjust color;
 
   /// True when the attached audio came from the Voice Narration recorder rather
   /// than a picked soundtrack file. Only affects how the editor labels it.
@@ -206,6 +211,7 @@ class EditorState extends Equatable {
     ExportQuality? exportQuality,
     ClipEffect? effect,
     FrameTransition? transition,
+    ColorAdjust? color,
   }) {
     final int? nextAudioDurationSeconds;
     if (clearAudio) {
@@ -232,6 +238,7 @@ class EditorState extends Equatable {
       exportQuality: exportQuality ?? this.exportQuality,
       effect: effect ?? this.effect,
       transition: transition ?? this.transition,
+      color: color ?? this.color,
     );
   }
 
@@ -248,6 +255,7 @@ class EditorState extends Equatable {
     exportQuality,
     effect,
     transition,
+    color,
   ];
 }
 
@@ -407,6 +415,9 @@ class EditorController extends Notifier<EditorState> {
     ];
     state = state.copyWith(media: items, selectedIndex: 0);
     _persist();
+    // A video clip should default to its own length (images keep the baseline).
+    // Measured off the main path; patches durations in as each one resolves.
+    unawaited(_applyNaturalVideoDurations(paths));
   }
 
   /// Appends more media to the current selection.
@@ -429,6 +440,46 @@ class EditorController extends Notifier<EditorState> {
     }
     state = state.copyWith(media: [...state.media, ...additions]);
     _refitMediaToAudio();
+    _persist();
+    // Default each newly added video to its own length (no-op under audio fit).
+    unawaited(
+      _applyNaturalVideoDurations([for (final a in additions) a.path]),
+    );
+  }
+
+  /// Sets each *video* clip's duration to the source file's real length so a
+  /// clip defaults to how long the video actually is (images keep their
+  /// placeholder duration, having no intrinsic length). The user can still
+  /// change any clip afterwards via [setClipDuration].
+  ///
+  /// Skipped entirely while a soundtrack/narration is fitting the timeline — in
+  /// that case [_refitMediaToAudio] deliberately spreads the audio length across
+  /// clips and should win. Measures off the main path and patches each clip by
+  /// its path, so it survives reordering/removal during the async probe.
+  Future<void> _applyNaturalVideoDurations(List<String> paths) async {
+    for (final path in paths) {
+      if (mediaKindForPath(path) != MediaKind.video) continue;
+      if (state.audioDurationSeconds != null) return; // audio fit wins
+      final seconds = await _readMediaDurationSeconds(path);
+      if (seconds == null) continue;
+      // Bail if audio was attached while we were probing.
+      if (state.audioDurationSeconds != null) return;
+      // Rebuilt from the *current* media, so a clip removed mid-probe is simply
+      // absent here and stays untouched.
+      final next = [
+        for (final item in state.media)
+          (item.path == path && item.kind == MediaKind.video)
+              ? item.copyWith(durationSeconds: seconds)
+              : item,
+      ];
+      state = state.copyWith(
+        media: next,
+        durationSeconds: next.fold<int>(
+          0,
+          (sum, item) => sum + item.durationSeconds,
+        ),
+      );
+    }
     _persist();
   }
 
@@ -674,6 +725,10 @@ class EditorController extends Notifier<EditorState> {
   void setEffect(ClipEffect effect) {
     state = state.copyWith(effect: effect);
     _persist();
+  }
+
+  void setColor(ColorAdjust color) {
+    state = state.copyWith(color: color);
   }
 
   void setTransition(FrameTransition transition) {

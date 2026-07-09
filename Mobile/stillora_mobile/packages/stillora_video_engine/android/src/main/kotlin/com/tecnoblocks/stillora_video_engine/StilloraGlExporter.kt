@@ -163,6 +163,7 @@ internal class StilloraGlExporter(
         durationSeconds: Int,
         fill: Boolean,
         outputPath: String,
+        color: ColorGrade = ColorGrade.IDENTITY,
     ) {
         require(media.isNotEmpty()) { "At least one media item is required." }
 
@@ -206,6 +207,7 @@ internal class StilloraGlExporter(
         val inputSurface = encoder.createInputSurface()
         val egl = EglCore(inputSurface)
         val renderer = BitmapRenderer(firstFrame.bitmap, width, height, fill)
+        renderer.setColor(color)
         firstFrame.recycleIfNeeded()
         encoder.start()
 
@@ -453,14 +455,36 @@ private class BitmapRenderer(
     private val positionHandle: Int
     private val texCoordHandle: Int
     private val textureHandle: Int
+    private val gainHandle: Int
+    private val brightnessHandle: Int
+    private val contrastHandle: Int
+    private val saturationHandle: Int
     private val textureId: Int
     private var vertexBuffer: FloatBuffer
+
+    // Colour grade — identity until [setColor] is called, so normal exports are
+    // unaffected.
+    private var gain = floatArrayOf(1f, 1f, 1f)
+    private var brightness = 0f
+    private var contrast = 1f
+    private var saturation = 1f
+
+    fun setColor(color: ColorGrade) {
+        gain = floatArrayOf(color.rGain, color.gGain, color.bGain)
+        brightness = color.brightness
+        contrast = color.contrast
+        saturation = color.saturation
+    }
 
     init {
         program = buildProgram(VERTEX_SHADER, FRAGMENT_SHADER)
         positionHandle = GLES20.glGetAttribLocation(program, "aPosition")
         texCoordHandle = GLES20.glGetAttribLocation(program, "aTexCoord")
         textureHandle = GLES20.glGetUniformLocation(program, "uTexture")
+        gainHandle = GLES20.glGetUniformLocation(program, "uGain")
+        brightnessHandle = GLES20.glGetUniformLocation(program, "uBrightness")
+        contrastHandle = GLES20.glGetUniformLocation(program, "uContrast")
+        saturationHandle = GLES20.glGetUniformLocation(program, "uSaturation")
 
         vertexBuffer = makeVertexBuffer(bitmap)
 
@@ -505,6 +529,11 @@ private class BitmapRenderer(
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId)
         GLES20.glUniform1i(textureHandle, 0)
+
+        GLES20.glUniform3f(gainHandle, gain[0], gain[1], gain[2])
+        GLES20.glUniform1f(brightnessHandle, brightness)
+        GLES20.glUniform1f(contrastHandle, contrast)
+        GLES20.glUniform1f(saturationHandle, saturation)
 
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
         GLES20.glDisableVertexAttribArray(positionHandle)
@@ -579,10 +608,42 @@ private class BitmapRenderer(
             precision mediump float;
             varying vec2 vTexCoord;
             uniform sampler2D uTexture;
+            // Colour grade (identity by default): per-channel gains fold
+            // exposure/warmth/tint; then contrast (around mid), brightness, and a
+            // luma-blend saturation — matching the ffmpeg/CoreImage passes.
+            uniform vec3 uGain;
+            uniform float uBrightness;
+            uniform float uContrast;
+            uniform float uSaturation;
             void main() {
-                gl_FragColor = texture2D(uTexture, vTexCoord);
+                vec4 c = texture2D(uTexture, vTexCoord);
+                vec3 rgb = c.rgb * uGain;
+                rgb = (rgb - 0.5) * uContrast + 0.5;
+                rgb = rgb + uBrightness;
+                float luma = dot(rgb, vec3(0.2126, 0.7152, 0.0722));
+                rgb = mix(vec3(luma), rgb, uSaturation);
+                gl_FragColor = vec4(clamp(rgb, 0.0, 1.0), c.a);
             }
         """
+    }
+}
+
+/** Baked colour grade applied in the GL fragment shader. Values are the derived
+ *  engine-ready form of the app's colour sliders (see the Dart `ColorAdjust`):
+ *  the per-channel gains fold exposure + warmth + tint; [brightness] is additive
+ *  (0..1 space), [contrast] is a multiplier around mid-grey, [saturation] a luma
+ *  blend. [IDENTITY] leaves the frame untouched. Sharpening isn't applied on
+ *  Android (it needs neighbour taps); everything else matches the other engines. */
+internal data class ColorGrade(
+    val rGain: Float,
+    val gGain: Float,
+    val bGain: Float,
+    val brightness: Float,
+    val contrast: Float,
+    val saturation: Float,
+) {
+    companion object {
+        val IDENTITY = ColorGrade(1f, 1f, 1f, 0f, 1f, 1f)
     }
 }
 

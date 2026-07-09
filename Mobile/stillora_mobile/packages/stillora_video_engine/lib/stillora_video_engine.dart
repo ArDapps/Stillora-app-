@@ -81,6 +81,18 @@ abstract interface class StilloraVideoEngine {
     String? newAudioPath,
   });
 
+  /// Applies a baked colour grade ([adjust]) to a finished [videoPath] as a
+  /// single post-process pass, preserving its audio, and returns the graded
+  /// file. Sized [width]x[height] running [durationSeconds] — echoed back in the
+  /// result. Callers should skip this when [ColorAdjustSpec.isIdentity].
+  Future<ExportResult> colorGrade({
+    required String videoPath,
+    required ColorAdjustSpec adjust,
+    required int width,
+    required int height,
+    required int durationSeconds,
+  });
+
   Future<void> cancelExport();
 
   Future<void> clearTemporaryFiles();
@@ -207,6 +219,23 @@ class PlatformStilloraVideoEngine implements StilloraVideoEngine {
       speed: speed,
       muteAudio: muteAudio,
       newAudioPath: newAudioPath,
+    );
+  }
+
+  @override
+  Future<ExportResult> colorGrade({
+    required String videoPath,
+    required ColorAdjustSpec adjust,
+    required int width,
+    required int height,
+    required int durationSeconds,
+  }) {
+    return _platform.colorGrade(
+      videoPath: videoPath,
+      adjust: adjust,
+      width: width,
+      height: height,
+      durationSeconds: durationSeconds,
     );
   }
 

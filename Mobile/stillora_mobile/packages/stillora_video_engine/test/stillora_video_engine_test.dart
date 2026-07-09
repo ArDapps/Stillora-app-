@@ -89,6 +89,40 @@ class MockStilloraVideoEnginePlatform
   }
 
   @override
+  Future<ExportResult> renderHtml({
+    String? html,
+    String? url,
+    required int width,
+    required int height,
+    required int durationMs,
+    int fps = 30,
+    String? audioPath,
+  }) async {
+    return ExportResult(
+      outputPath: '/tmp/stillora-html.mp4',
+      width: width,
+      height: height,
+      durationSeconds: (durationMs / 1000).round(),
+    );
+  }
+
+  @override
+  Future<ExportResult> colorGrade({
+    required String videoPath,
+    required ColorAdjustSpec adjust,
+    required int width,
+    required int height,
+    required int durationSeconds,
+  }) async {
+    return ExportResult(
+      outputPath: '/tmp/stillora-color.mp4',
+      width: width,
+      height: height,
+      durationSeconds: durationSeconds,
+    );
+  }
+
+  @override
   Future<void> cancelExport() async {
     cancelled = true;
   }

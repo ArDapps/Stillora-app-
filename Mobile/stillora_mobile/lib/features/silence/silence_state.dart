@@ -9,6 +9,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:stillora_video_engine/stillora_video_engine.dart' as engine;
 import 'package:video_player/video_player.dart';
 
+import '../color/color_adjust.dart';
+import '../color/color_grade_runner.dart';
 import '../editor/editor_state.dart' show estimateExportBytes;
 import '../editor/local_editor_media_store.dart';
 import '../editor/video_preset.dart';
@@ -29,6 +31,7 @@ class SilenceState extends Equatable {
     this.muteAudio = false,
     this.newAudioPath,
     this.newAudioName,
+    this.color = ColorAdjust.identity,
   });
 
   final String? videoPath;
@@ -53,6 +56,9 @@ class SilenceState extends Equatable {
   /// the video loops to this track's length, and the audio is not sped up.
   final String? newAudioPath;
   final String? newAudioName;
+
+  /// Colour grade baked onto the final cut (desktop). Neutral by default.
+  final ColorAdjust color;
 
   bool get hasVideo => videoPath != null;
   bool get hasNewAudio => newAudioPath != null;
@@ -90,6 +96,7 @@ class SilenceState extends Equatable {
     bool? muteAudio,
     String? newAudioPath,
     String? newAudioName,
+    ColorAdjust? color,
     bool clearNewAudio = false,
   }) => SilenceState(
     videoPath: videoPath ?? this.videoPath,
@@ -103,6 +110,7 @@ class SilenceState extends Equatable {
     muteAudio: muteAudio ?? this.muteAudio,
     newAudioPath: clearNewAudio ? null : newAudioPath ?? this.newAudioPath,
     newAudioName: clearNewAudio ? null : newAudioName ?? this.newAudioName,
+    color: color ?? this.color,
   );
 
   @override
@@ -118,6 +126,7 @@ class SilenceState extends Equatable {
     muteAudio,
     newAudioPath,
     newAudioName,
+    color,
   ];
 }
 
@@ -169,6 +178,8 @@ class SilenceController extends Notifier<SilenceState> {
 
   void setSpeed(int speed) => state = state.copyWith(speed: speed);
 
+  void setColor(ColorAdjust color) => state = state.copyWith(color: color);
+
   void setMuteAudio(bool value) => state = state.copyWith(muteAudio: value);
 
   /// Picks a replacement soundtrack. Selecting one also removes the original
@@ -193,12 +204,23 @@ class SilenceController extends Notifier<SilenceState> {
 
   void reset() => state = const SilenceState();
 
+  /// Aborts an in-flight export (and any colour-grade pass). The engine throws a
+  /// cancellation error that [run]'s caller treats as a benign stop.
+  Future<void> cancel() async {
+    try {
+      await ref.read(videoEngineProvider).cancelExport();
+    } catch (_) {
+      // Never let a cancel failure block the user.
+    }
+  }
+
   /// Runs detection + cut + export and saves the result to the Library.
   Future<engine.ExportResult?> run() async {
     final path = state.videoPath;
     if (path == null) return null;
     final res = state.outputResolution;
-    final result = await ref.read(videoEngineProvider).removeSilence(
+    final videoEngine = ref.read(videoEngineProvider);
+    final base = await videoEngine.removeSilence(
           videoPath: path,
           width: res.width,
           height: res.height,
@@ -207,6 +229,12 @@ class SilenceController extends Notifier<SilenceState> {
           muteAudio: state.muteAudio,
           newAudioPath: state.newAudioPath,
         );
+    // Bake the colour grade on as a second pass (no-op when neutral).
+    final result = await applyColorGrade(
+      videoEngine: videoEngine,
+      base: base,
+      color: state.color,
+    );
     final now = DateTime.now();
     await ref.read(galleryControllerProvider.notifier).addRecord(
           LocalExportRecord(

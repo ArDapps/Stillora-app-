@@ -7,7 +7,11 @@ import 'package:video_player/video_player.dart';
 import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_spacing.dart';
 import '../../core/design/stillora_surface.dart';
+import '../../core/platform/platform_info.dart';
 import '../../core/widgets/ad_widget.dart';
+import '../color/color_correction_panel.dart';
+import '../color/color_graded_preview.dart';
+import '../export/export_cancellation.dart';
 import 'watermark_state.dart';
 
 /// "Watermark" section: load a video, then stack one or more logos / images /
@@ -33,7 +37,9 @@ class WatermarkView extends ConsumerWidget {
     showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
+      builder: (_) => _ExportingDialog(
+        onCancel: () => ref.read(watermarkControllerProvider.notifier).cancel(),
+      ),
     );
     try {
       final result =
@@ -51,7 +57,11 @@ class WatermarkView extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) Navigator.of(context).pop();
       messenger.showSnackBar(
-        SnackBar(content: Text('Export failed: $e')),
+        SnackBar(
+          content: Text(
+            isExportCancellation(e) ? 'Export cancelled' : 'Export failed: $e',
+          ),
+        ),
       );
     }
   }
@@ -98,10 +108,15 @@ class WatermarkView extends ConsumerWidget {
                       child: ClipRRect(
                         borderRadius:
                             BorderRadius.circular(StilloraRadius.full),
-                        child: _WatermarkPreview(
-                          wm: wm,
-                          onTransform: controller.setOverlayTransform,
-                          onSelect: controller.selectOverlay,
+                        // Grade the whole composite so the preview matches the
+                        // exported (graded) file.
+                        child: ColorGradedPreview(
+                          adjust: wm.color,
+                          child: _WatermarkPreview(
+                            wm: wm,
+                            onTransform: controller.setOverlayTransform,
+                            onSelect: controller.selectOverlay,
+                          ),
                         ),
                       ),
                     ),
@@ -121,6 +136,13 @@ class WatermarkView extends ConsumerWidget {
                 _OverlayList(wm: wm, controller: controller)
               else
                 _OverlayHint(),
+              if (colorGradingSupported) ...[
+                const SizedBox(height: 16),
+                ColorCorrectionPanel(
+                  value: wm.color,
+                  onChanged: controller.setColor,
+                ),
+              ],
               const SizedBox(height: 16),
               _ExportSection(
                 wm: wm,
@@ -678,4 +700,51 @@ String _fmt(int seconds) {
   final m = seconds ~/ 60;
   final s = seconds % 60;
   return s == 0 ? '${m}m' : '${m}m ${s}s';
+}
+
+/// Modal shown while the watermark export runs, with a Cancel button that aborts
+/// the in-flight export (and its colour-grade pass).
+class _ExportingDialog extends StatefulWidget {
+  const _ExportingDialog({required this.onCancel});
+
+  final Future<void> Function() onCancel;
+
+  @override
+  State<_ExportingDialog> createState() => _ExportingDialogState();
+}
+
+class _ExportingDialogState extends State<_ExportingDialog> {
+  bool _cancelling = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: StilloraColors.surfaceContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(StilloraSpacing.md),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: StilloraSpacing.sm),
+            Text(
+              _cancelling ? 'Cancelling…' : 'Exporting…',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: StilloraSpacing.sm),
+            OutlinedButton.icon(
+              onPressed: _cancelling
+                  ? null
+                  : () async {
+                      setState(() => _cancelling = true);
+                      await widget.onCancel();
+                    },
+              icon: const Icon(Icons.close_rounded),
+              label: const Text('Cancel export'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

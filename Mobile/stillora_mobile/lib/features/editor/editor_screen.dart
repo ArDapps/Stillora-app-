@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:video_player/video_player.dart';
 
 import '../../core/auth/auth_controller.dart';
 import '../../core/design/render_components.dart';
@@ -18,6 +19,8 @@ import '../../core/widgets/ad_widget.dart';
 import '../../core/design/stillora_spacing.dart';
 import '../../core/design/stillora_surface.dart';
 import '../../core/platform/platform_info.dart';
+import '../color/color_correction_panel.dart';
+import '../color/color_graded_preview.dart';
 import 'add_audio_screen.dart';
 import 'choose_preset_screen.dart';
 import 'editor_state.dart';
@@ -330,6 +333,15 @@ class _StyleCard extends StatelessWidget {
             iconOf: (t) => t.icon,
             onSelected: controller.setTransition,
           ),
+          // Colour correction is a real (baked) grade, unlike the preview-only
+          // effects above — desktop only for now.
+          if (colorGradingSupported) ...[
+            const SizedBox(height: 14),
+            ColorCorrectionPanel(
+              value: editor.color,
+              onChanged: controller.setColor,
+            ),
+          ],
         ],
       ),
     );
@@ -1144,24 +1156,89 @@ class _PreviewMedia extends StatelessWidget {
       );
     }
 
+    // Show the video's real first frame so the preview (and any colour grade
+    // over it) reflects the actual footage, not just a placeholder icon.
+    return _VideoFramePreview(key: ValueKey(item.path), path: item.path, resizeMode: resizeMode);
+  }
+}
+
+/// Renders the first frame of a video clip, scaled to fill the preview area.
+/// Used inside the Create preview so a colour grade is visible over real
+/// footage (mirrors the poster approach in [VideoThumbnail]).
+class _VideoFramePreview extends StatefulWidget {
+  const _VideoFramePreview({super.key, required this.path, required this.resizeMode});
+
+  final String path;
+  final ResizeMode resizeMode;
+
+  @override
+  State<_VideoFramePreview> createState() => _VideoFramePreviewState();
+}
+
+class _VideoFramePreviewState extends State<_VideoFramePreview> {
+  VideoPlayerController? _controller;
+  bool _ready = false;
+  bool _failed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _init();
+  }
+
+  Future<void> _init() async {
+    final file = File(widget.path);
+    if (!file.existsSync()) {
+      if (mounted) setState(() => _failed = true);
+      return;
+    }
+    final controller = VideoPlayerController.file(file);
+    try {
+      await controller.initialize();
+      await controller.seekTo(Duration.zero);
+      if (!mounted) {
+        await controller.dispose();
+        return;
+      }
+      setState(() {
+        _controller = controller;
+        _ready = true;
+      });
+    } catch (_) {
+      await controller.dispose();
+      if (mounted) setState(() => _failed = true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = _controller;
+    if (_ready && controller != null) {
+      return FittedBox(
+        fit: widget.resizeMode == ResizeMode.fit ? BoxFit.contain : BoxFit.cover,
+        clipBehavior: Clip.hardEdge,
+        child: SizedBox(
+          width: controller.value.size.width,
+          height: controller.value.size.height,
+          child: VideoPlayer(controller),
+        ),
+      );
+    }
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(
-            Icons.play_circle_fill_rounded,
-            color: StilloraColors.primary,
-            size: 44,
-          ),
-          const SizedBox(height: StilloraSpacing.xs),
-          Text(
-            'Video selected',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: StilloraColors.onSurfaceVariant,
+      child: _failed
+          ? const Icon(Icons.movie_outlined,
+              color: StilloraColors.onSurfaceVariant, size: 36)
+          : const SizedBox(
+              width: 26,
+              height: 26,
+              child: CircularProgressIndicator(strokeWidth: 2),
             ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -1176,6 +1253,15 @@ class _PreviewStage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Grade the whole preview live so the editor shows how the exported (graded)
+    // video will look, matching the Speed/Watermark/Silence sections.
+    return ColorGradedPreview(
+      adjust: editor.color,
+      child: _buildStage(),
+    );
+  }
+
+  Widget _buildStage() {
     if (editor.exportsImageSlideshow && editor.media.length > 1) {
       return SlideshowPreview(
         media: editor.media,

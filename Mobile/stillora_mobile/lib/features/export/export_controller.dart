@@ -9,6 +9,7 @@ import 'package:stillora_video_engine/stillora_video_engine.dart' as engine;
 import '../../core/api/api_client.dart';
 import '../../core/auth/auth_controller.dart';
 import '../../core/platform/platform_info.dart';
+import '../color/color_grade_runner.dart';
 import '../editor/editor_state.dart';
 import '../editor/video_styles.dart';
 import '../gallery/gallery_controller.dart';
@@ -77,32 +78,40 @@ class ExportController extends AsyncNotifier<engine.ExportResult?> {
       // Skipped gracefully where the platform engine can't composite.
       final styled = exportEditor.effect != ClipEffect.none ||
           exportEditor.transition != FrameTransition.none;
-      if (!styled) return base;
-      try {
-        final result = await videoEngine.exportReel(
-          layers: [
-            engine.ReelLayerSpec(
-              path: base.outputPath,
-              isImage: false,
-              x: 0,
-              y: 0,
-              scale: 1.0,
-            ),
-          ],
-          audioPath: base.outputPath,
-          width: base.width,
-          height: base.height,
-          durationSeconds: base.durationSeconds,
-          effect: exportEditor.effect.name,
-          transition: exportEditor.transition.name,
-        );
+      var produced = base;
+      if (styled) {
         try {
-          File(base.outputPath).deleteSync();
-        } catch (_) {}
-        return result;
-      } on MissingPluginException {
-        return base;
+          final result = await videoEngine.exportReel(
+            layers: [
+              engine.ReelLayerSpec(
+                path: base.outputPath,
+                isImage: false,
+                x: 0,
+                y: 0,
+                scale: 1.0,
+              ),
+            ],
+            audioPath: base.outputPath,
+            width: base.width,
+            height: base.height,
+            durationSeconds: base.durationSeconds,
+            effect: exportEditor.effect.name,
+            transition: exportEditor.transition.name,
+          );
+          try {
+            File(base.outputPath).deleteSync();
+          } catch (_) {}
+          produced = result;
+        } on MissingPluginException {
+          produced = base;
+        }
       }
+      // Final pass: bake the colour grade (no-op when neutral / unsupported).
+      return applyColorGrade(
+        videoEngine: videoEngine,
+        base: produced,
+        color: exportEditor.color,
+      );
     });
 
     // A user-initiated cancel resolves to a benign idle state, not an error.

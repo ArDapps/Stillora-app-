@@ -12,6 +12,8 @@ import 'package:stillora_video_engine/stillora_video_engine.dart' as engine;
 import 'package:video_player/video_player.dart';
 
 import '../../core/platform/platform_info.dart';
+import '../color/color_adjust.dart';
+import '../color/color_grade_runner.dart';
 import '../editor/editor_state.dart' show MediaKind, mediaKindForPath;
 import '../editor/local_editor_media_store.dart';
 import '../export/export_controller.dart' show videoEngineProvider;
@@ -115,6 +117,7 @@ class WatermarkState extends Equatable {
     this.baseDurationSeconds = 0,
     this.overlays = const [],
     this.selectedOverlay = 0,
+    this.color = ColorAdjust.identity,
   });
 
   final String? baseVideoPath;
@@ -123,6 +126,9 @@ class WatermarkState extends Equatable {
   final int baseDurationSeconds;
   final List<WatermarkOverlay> overlays;
   final int selectedOverlay;
+
+  /// Colour grade baked onto the watermarked video (desktop). Neutral default.
+  final ColorAdjust color;
 
   bool get hasBase => baseVideoPath != null;
   bool get hasOverlays => overlays.isNotEmpty;
@@ -148,6 +154,7 @@ class WatermarkState extends Equatable {
     int? baseDurationSeconds,
     List<WatermarkOverlay>? overlays,
     int? selectedOverlay,
+    ColorAdjust? color,
   }) =>
       WatermarkState(
         baseVideoPath: clearBase ? null : baseVideoPath ?? this.baseVideoPath,
@@ -157,6 +164,7 @@ class WatermarkState extends Equatable {
             clearBase ? 0 : baseDurationSeconds ?? this.baseDurationSeconds,
         overlays: clearBase ? const [] : overlays ?? this.overlays,
         selectedOverlay: selectedOverlay ?? this.selectedOverlay,
+        color: clearBase ? ColorAdjust.identity : color ?? this.color,
       );
 
   @override
@@ -167,6 +175,7 @@ class WatermarkState extends Equatable {
         baseDurationSeconds,
         overlays,
         selectedOverlay,
+        color,
       ];
 }
 
@@ -276,6 +285,18 @@ class WatermarkController extends Notifier<WatermarkState> {
     state = state.copyWith(overlays: next, selectedOverlay: target);
   }
 
+  void setColor(ColorAdjust color) => state = state.copyWith(color: color);
+
+  /// Aborts an in-flight export (and any colour-grade pass). The engine throws a
+  /// cancellation error that [export]'s caller treats as a benign stop.
+  Future<void> cancel() async {
+    try {
+      await ref.read(videoEngineProvider).cancelExport();
+    } catch (_) {
+      // Never let a cancel failure block the user.
+    }
+  }
+
   void reset() => state = const WatermarkState();
 
   /// Composites the base video with every overlay and saves it to the Library.
@@ -357,6 +378,13 @@ class WatermarkController extends Notifier<WatermarkState> {
         transition: 'none',
       );
     }
+
+    // Bake the colour grade on as a second pass (no-op when neutral).
+    result = await applyColorGrade(
+      videoEngine: videoEngine,
+      base: result,
+      color: state.color,
+    );
 
     final now = DateTime.now();
     await ref.read(galleryControllerProvider.notifier).addRecord(

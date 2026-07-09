@@ -187,6 +187,33 @@ class MethodChannelStilloraVideoEngine extends StilloraVideoEnginePlatform {
   }
 
   @override
+  Future<ExportResult> colorGrade({
+    required String videoPath,
+    required ColorAdjustSpec adjust,
+    required int width,
+    required int height,
+    required int durationSeconds,
+  }) async {
+    final result = await methodChannel.invokeMapMethod<Object?, Object?>(
+      'colorGrade',
+      {
+        'videoPath': videoPath,
+        'adjust': adjust.toMap(),
+        'width': width,
+        'height': height,
+        'durationSeconds': durationSeconds,
+      },
+    );
+    if (result == null) {
+      throw PlatformException(
+        code: 'export_failed',
+        message: 'The video engine did not return a colour-grade result.',
+      );
+    }
+    return ExportResult.fromMap(result);
+  }
+
+  @override
   Future<void> cancelExport() {
     return methodChannel.invokeMethod<void>('cancelExport');
   }

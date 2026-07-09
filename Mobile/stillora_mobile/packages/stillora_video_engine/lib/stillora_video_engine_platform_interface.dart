@@ -95,6 +95,16 @@ abstract class StilloraVideoEnginePlatform extends PlatformInterface {
     throw UnimplementedError('removeSilence has not been implemented.');
   }
 
+  Future<ExportResult> colorGrade({
+    required String videoPath,
+    required ColorAdjustSpec adjust,
+    required int width,
+    required int height,
+    required int durationSeconds,
+  }) {
+    throw UnimplementedError('colorGrade has not been implemented.');
+  }
+
   Future<void> cancelExport() {
     throw UnimplementedError('cancelExport has not been implemented.');
   }

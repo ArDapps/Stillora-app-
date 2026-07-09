@@ -65,6 +65,10 @@ class StilloraVideoEnginePlugin :
                 cancelled = false
                 executor.execute { runExport(call, result) }
             }
+            "colorGrade" -> {
+                cancelled = false
+                executor.execute { runColorGrade(call, result) }
+            }
             "cancelExport" -> {
                 cancelled = true
                 result.success(null)
@@ -173,6 +177,86 @@ class StilloraVideoEnginePlugin :
             failOnMain(result, "cancelled", "Export was cancelled.")
         } catch (error: Exception) {
             failOnMain(result, "export_failed", error.message ?: "Export failed.")
+        }
+    }
+
+    /**
+     * Bakes a colour grade onto a finished video: decodes it through the GL
+     * pipeline with the grade applied in the fragment shader, then re-muxes the
+     * source's own audio back on (AAC only, like every Android export). Mirrors
+     * the ffmpeg/CoreImage passes so the export matches the live preview. The GL
+     * pass re-encodes at 30fps.
+     */
+    private fun runColorGrade(call: MethodCall, result: Result) {
+        val videoPath = call.argument<String>("videoPath")
+        if (videoPath.isNullOrBlank() || !File(videoPath).exists()) {
+            failOnMain(result, "invalid_arguments", "No video was provided.")
+            return
+        }
+        val adjust = call.argument<Map<String, Any?>>("adjust") ?: emptyMap()
+        fun d(key: String, fallback: Double) = (adjust[key] as? Number)?.toDouble() ?: fallback
+        val color = ColorGrade(
+            rGain = d("rGain", 1.0).toFloat(),
+            gGain = d("gGain", 1.0).toFloat(),
+            bGain = d("bGain", 1.0).toFloat(),
+            brightness = d("brightness", 0.0).toFloat(),
+            contrast = d("contrast", 1.0).toFloat(),
+            saturation = d("saturation", 1.0).toFloat(),
+        )
+        val width = evenDimension(call.argument<Int>("width") ?: 1080)
+        val height = evenDimension(call.argument<Int>("height") ?: 1920)
+        val duration = (call.argument<Int>("durationSeconds") ?: 1).coerceAtLeast(1)
+
+        try {
+            emit("generatingVideo", 0.2, "Applying colour grade")
+            val outputDir = outputDirectory()
+            val finalPath = File(outputDir, "stillora-color-${UUID.randomUUID()}.mp4").absolutePath
+            val gradedPath = File(outputDir, "tmp-${UUID.randomUUID()}.mp4").absolutePath
+
+            val exporter = StilloraGlExporter(
+                isCancelled = { cancelled },
+                onProgress = { emit("generatingVideo", it, "Applying colour grade") },
+            )
+            exporter.encodeTimeline(
+                listOf(StilloraTimelineMedia.Video(videoPath)),
+                width,
+                height,
+                duration,
+                fill = false,
+                outputPath = gradedPath,
+                color = color,
+            )
+
+            if (cancelled) {
+                File(gradedPath).delete()
+                failOnMain(result, "cancelled", "Export was cancelled.")
+                return
+            }
+
+            // Re-attach the source video's own audio (AAC). If it has none or the
+            // codec isn't muxable, keep the graded (silent) video.
+            emit("mergingAudio", 0.9, "Finishing")
+            val merged = muxVideoAndAudio(gradedPath, videoPath, duration, finalPath)
+            val outputPath = if (merged) {
+                File(gradedPath).delete()
+                finalPath
+            } else {
+                File(gradedPath).renameTo(File(finalPath))
+                finalPath
+            }
+
+            emit("done", 1.0, "Saved")
+            val payload = mapOf(
+                "outputPath" to outputPath,
+                "width" to width,
+                "height" to height,
+                "durationSeconds" to duration,
+            )
+            mainHandler.post { result.success(payload) }
+        } catch (_: ExportCancelledException) {
+            failOnMain(result, "cancelled", "Export was cancelled.")
+        } catch (error: Exception) {
+            failOnMain(result, "export_failed", error.message ?: "Colour grade failed.")
         }
     }
 

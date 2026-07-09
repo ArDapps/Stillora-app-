@@ -52,6 +52,11 @@ bool get useFfmpegDesktopExport {
   };
 }
 
+/// Colour grading is baked as a post-process pass, implemented on every native
+/// engine: macOS/iOS via CoreImage, Android via a GL shader, Windows/Linux via
+/// ffmpeg. Only web (no native engine) is excluded.
+bool get colorGradingSupported => !kIsWeb;
+
 bool useDesktopLayout(BuildContext context) {
   return isDesktopPlatform && MediaQuery.sizeOf(context).width >= 900;
 }

@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_surface.dart';
 import '../../core/widgets/ad_widget.dart';
+import '../color/color_grade_section.dart';
 import '../editor/editor_state.dart' show formatFileSize;
 import '../editor/video_preset.dart';
+import '../export/export_cancellation.dart';
 import 'speed_state.dart';
 
 /// Standalone "Speed" section: upload a video, speed it up (1x–4x), optionally
@@ -19,9 +21,13 @@ class SpeedView extends ConsumerStatefulWidget {
 
 class _SpeedViewState extends ConsumerState<SpeedView> {
   bool _running = false;
+  bool _cancelling = false;
 
   Future<void> _run() async {
-    setState(() => _running = true);
+    setState(() {
+      _running = true;
+      _cancelling = false;
+    });
     try {
       final result = await ref.read(speedControllerProvider.notifier).run();
       if (!mounted) return;
@@ -38,11 +44,23 @@ class _SpeedViewState extends ConsumerState<SpeedView> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed: $e')),
+        SnackBar(
+          content: Text(isExportCancellation(e) ? 'Export cancelled' : 'Failed: $e'),
+        ),
       );
     } finally {
-      if (mounted) setState(() => _running = false);
+      if (mounted) {
+        setState(() {
+          _running = false;
+          _cancelling = false;
+        });
+      }
     }
+  }
+
+  Future<void> _cancel() async {
+    setState(() => _cancelling = true);
+    await ref.read(speedControllerProvider.notifier).cancel();
   }
 
   @override
@@ -206,6 +224,15 @@ class _SpeedViewState extends ConsumerState<SpeedView> {
             ],
             const SizedBox(height: 12),
 
+            // Color correction (desktop) — live preview + grade the final video.
+            ColorGradeSection(
+              videoPath: speed.videoPath,
+              value: speed.color,
+              onChanged: controller.setColor,
+              enabled: !_running,
+            ),
+            const SizedBox(height: 12),
+
             // Quality
             Text('Quality', style: Theme.of(context).textTheme.labelMedium),
             const SizedBox(height: 8),
@@ -241,6 +268,12 @@ class _SpeedViewState extends ConsumerState<SpeedView> {
             if (_running) ...[
               const SizedBox(height: 16),
               const Center(child: CircularProgressIndicator()),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _cancelling ? null : _cancel,
+                icon: const Icon(Icons.close_rounded),
+                label: Text(_cancelling ? 'Cancelling…' : 'Cancel export'),
+              ),
             ],
             const SizedBox(height: 16),
             const AdSlotWidget(placement: 'USER_DASHBOARD_LEFT'),

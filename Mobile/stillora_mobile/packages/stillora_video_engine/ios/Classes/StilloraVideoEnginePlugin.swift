@@ -1,4 +1,5 @@
 import AVFoundation
+import CoreImage
 import Flutter
 import UIKit
 
@@ -64,6 +65,18 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
       workQueue.async { [weak self] in
         self?.runRemoveSilence(args: args, result: result)
       }
+    case "colorGrade":
+      guard let args = call.arguments as? [String: Any] else {
+        result(
+          FlutterError(
+            code: "invalid_arguments", message: "Colour-grade arguments were missing.",
+            details: nil))
+        return
+      }
+      isCancelled = false
+      workQueue.async { [weak self] in
+        self?.runColorGrade(args: args, result: result)
+      }
     case "cancelExport":
       isCancelled = true
       result(nil)
@@ -72,6 +85,84 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
       result(nil)
     default:
       result(FlutterMethodNotImplemented)
+    }
+  }
+
+  /// Bakes a colour grade onto a finished video as a single CoreImage pass,
+  /// preserving audio. Per-channel gains (CIColorMatrix) fold exposure + warmth +
+  /// tint; CIColorControls applies brightness/contrast/saturation;
+  /// CISharpenLuminance sharpens. Mirrors the macOS engine and the Flutter live
+  /// preview so the export matches what the user previews.
+  private func runColorGrade(args: [String: Any], result: @escaping FlutterResult) {
+    guard let videoPath = args["videoPath"] as? String else {
+      result(
+        FlutterError(code: "invalid_arguments", message: "No video was provided.", details: nil))
+      return
+    }
+    let adjust = (args["adjust"] as? [String: Any]) ?? [:]
+    let rGain = CGFloat((adjust["rGain"] as? Double) ?? 1)
+    let gGain = CGFloat((adjust["gGain"] as? Double) ?? 1)
+    let bGain = CGFloat((adjust["bGain"] as? Double) ?? 1)
+    let brightness = CGFloat((adjust["brightness"] as? Double) ?? 0)
+    let contrast = CGFloat((adjust["contrast"] as? Double) ?? 1)
+    let saturation = CGFloat((adjust["saturation"] as? Double) ?? 1)
+    let sharpness = CGFloat((adjust["sharpness"] as? Double) ?? 0)
+    let width = args["width"] as? Int ?? 0
+    let height = args["height"] as? Int ?? 0
+    let duration = max(1, args["durationSeconds"] as? Int ?? 1)
+
+    do {
+      emit(stage: "generatingVideo", percentage: 0.2, message: "Applying colour grade")
+      let asset = loadedAsset(URL(fileURLWithPath: videoPath))
+
+      let videoComposition = AVVideoComposition(asset: asset) { request in
+        var image = request.sourceImage.clampedToExtent()
+        if let matrix = CIFilter(name: "CIColorMatrix") {
+          matrix.setValue(image, forKey: kCIInputImageKey)
+          matrix.setValue(CIVector(x: rGain, y: 0, z: 0, w: 0), forKey: "inputRVector")
+          matrix.setValue(CIVector(x: 0, y: gGain, z: 0, w: 0), forKey: "inputGVector")
+          matrix.setValue(CIVector(x: 0, y: 0, z: bGain, w: 0), forKey: "inputBVector")
+          image = matrix.outputImage ?? image
+        }
+        if let controls = CIFilter(name: "CIColorControls") {
+          controls.setValue(image, forKey: kCIInputImageKey)
+          controls.setValue(brightness, forKey: kCIInputBrightnessKey)
+          controls.setValue(contrast, forKey: kCIInputContrastKey)
+          controls.setValue(saturation, forKey: kCIInputSaturationKey)
+          image = controls.outputImage ?? image
+        }
+        if sharpness > 0, let sharpen = CIFilter(name: "CISharpenLuminance") {
+          sharpen.setValue(image, forKey: kCIInputImageKey)
+          sharpen.setValue(sharpness * 1.5, forKey: kCIInputSharpnessKey)
+          image = sharpen.outputImage ?? image
+        }
+        image = image.cropped(to: request.sourceImage.extent)
+        request.finish(with: image, context: nil)
+      }
+
+      guard
+        let export = AVAssetExportSession(
+          asset: asset, presetName: AVAssetExportPresetHighestQuality)
+      else { throw EngineError.export }
+      let outputURL = try makeOutputURL()
+      try? FileManager.default.removeItem(at: outputURL)
+      export.outputURL = outputURL
+      export.outputFileType = .mp4
+      export.videoComposition = videoComposition
+      export.shouldOptimizeForNetworkUse = true
+
+      emit(stage: "savingVideo", percentage: 0.7, message: "Rendering")
+      try runExportSession(export)
+      emit(stage: "done", percentage: 1.0, message: "Saved")
+      result([
+        "outputPath": outputURL.path,
+        "width": width, "height": height, "durationSeconds": duration,
+      ])
+    } catch EngineError.cancelled {
+      result(FlutterError(code: "cancelled", message: "Export was cancelled.", details: nil))
+    } catch {
+      result(
+        FlutterError(code: "export_failed", message: error.localizedDescription, details: nil))
     }
   }
 

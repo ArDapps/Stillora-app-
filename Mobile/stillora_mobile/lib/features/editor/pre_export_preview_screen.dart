@@ -8,6 +8,7 @@ import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_spacing.dart';
 import '../../core/design/stillora_surface.dart';
 import '../../core/widgets/desktop_shell.dart';
+import '../color/color_graded_preview.dart';
 import '../export/export_progress_screen.dart';
 import 'editor_state.dart';
 
@@ -59,7 +60,12 @@ class PreExportPreviewScreen extends ConsumerWidget {
                           aspectRatio: aspectRatio,
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(StilloraRadius.full),
-                            child: _PreviewContent(editor: editor),
+                            // Show the colour grade so the preview matches the
+                            // exported (graded) file.
+                            child: ColorGradedPreview(
+                              adjust: editor.color,
+                              child: _PreviewContent(editor: editor),
+                            ),
                           ),
                         ),
                       ),

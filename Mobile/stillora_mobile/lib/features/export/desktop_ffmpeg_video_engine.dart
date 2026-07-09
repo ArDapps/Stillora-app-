@@ -553,6 +553,65 @@ class DesktopFfmpegVideoEngine implements engine.StilloraVideoEngine {
     return stderr;
   }
 
+  /// Bakes a colour grade onto [videoPath] in one pass, keeping its audio.
+  /// The per-channel gains (`colorchannelmixer`) fold exposure + warmth + tint;
+  /// `eq` applies brightness/contrast/saturation; `unsharp` sharpens. This is
+  /// the same maths the Flutter live preview and macOS CoreImage pass use, so
+  /// the export matches the preview.
+  @override
+  Future<engine.ExportResult> colorGrade({
+    required String videoPath,
+    required engine.ColorAdjustSpec adjust,
+    required int width,
+    required int height,
+    required int durationSeconds,
+  }) async {
+    await _resolveFfmpeg();
+    _cancelled = false;
+    final exportRoot = await _exportRoot();
+    final stamp = DateTime.now().microsecondsSinceEpoch.toString();
+    final outputPath = _join(exportRoot.path, 'stillora-color-$stamp.mp4');
+
+    _emit(engine.ExportStage.generatingVideo, 0.3, 'Applying colour grade');
+
+    final filters = <String>[
+      'colorchannelmixer='
+          'rr=${_f(adjust.rGain)}:gg=${_f(adjust.gGain)}:bb=${_f(adjust.bGain)}',
+      'eq=contrast=${_f(adjust.contrast)}:'
+          'brightness=${_f(adjust.brightness)}:'
+          'saturation=${_f(adjust.saturation)}',
+      if (adjust.sharpness > 0)
+        'unsharp=5:5:${_f(adjust.sharpness * 2.0)}:5:5:0',
+      'format=yuv420p',
+    ];
+
+    await _runFfmpeg([
+      '-y',
+      '-i', videoPath,
+      '-vf', filters.join(','),
+      '-c:v', 'libx264',
+      '-pix_fmt', 'yuv420p',
+      // Keep the source audio untouched (optional — `?` tolerates silent video).
+      '-c:a', 'copy',
+      '-map', '0:v:0',
+      '-map', '0:a:0?',
+      '-movflags', '+faststart',
+      outputPath,
+    ]);
+
+    _emit(engine.ExportStage.done, 1, 'Colour grade complete');
+    return engine.ExportResult(
+      outputPath: outputPath,
+      width: width,
+      height: height,
+      durationSeconds: durationSeconds < 1 ? 1 : durationSeconds,
+    );
+  }
+
+  /// Formats a double for an ffmpeg filter argument (trims to 4 dp, no exponent).
+  String _f(double value) =>
+      value.toStringAsFixed(4).replaceFirst(RegExp(r'\.?0+$'), '');
+
   @override
   Future<void> cancelExport() async {
     _cancelled = true;

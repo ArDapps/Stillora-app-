@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_surface.dart';
 import '../../core/widgets/ad_widget.dart';
+import '../color/color_grade_section.dart';
 import '../editor/editor_state.dart' show formatFileSize;
 import '../editor/video_preset.dart';
+import '../export/export_cancellation.dart';
 import 'silence_state.dart';
 
 /// Standalone "Remove Silence" section: upload a video, auto-cut the silent
@@ -19,9 +21,13 @@ class SilenceView extends ConsumerStatefulWidget {
 
 class _SilenceViewState extends ConsumerState<SilenceView> {
   bool _running = false;
+  bool _cancelling = false;
 
   Future<void> _run() async {
-    setState(() => _running = true);
+    setState(() {
+      _running = true;
+      _cancelling = false;
+    });
     try {
       final result = await ref.read(silenceControllerProvider.notifier).run();
       if (!mounted) return;
@@ -38,11 +44,23 @@ class _SilenceViewState extends ConsumerState<SilenceView> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed: $e')),
+        SnackBar(
+          content: Text(isExportCancellation(e) ? 'Export cancelled' : 'Failed: $e'),
+        ),
       );
     } finally {
-      if (mounted) setState(() => _running = false);
+      if (mounted) {
+        setState(() {
+          _running = false;
+          _cancelling = false;
+        });
+      }
     }
+  }
+
+  Future<void> _cancel() async {
+    setState(() => _cancelling = true);
+    await ref.read(silenceControllerProvider.notifier).cancel();
   }
 
   @override
@@ -216,6 +234,15 @@ class _SilenceViewState extends ConsumerState<SilenceView> {
             ],
             const SizedBox(height: 12),
 
+            // Color correction (desktop) — live preview + grade the final cut.
+            ColorGradeSection(
+              videoPath: silence.videoPath,
+              value: silence.color,
+              onChanged: controller.setColor,
+              enabled: !_running,
+            ),
+            const SizedBox(height: 12),
+
             // Quality
             Text('Quality', style: Theme.of(context).textTheme.labelMedium),
             const SizedBox(height: 8),
@@ -252,6 +279,12 @@ class _SilenceViewState extends ConsumerState<SilenceView> {
             if (_running) ...[
               const SizedBox(height: 16),
               const Center(child: CircularProgressIndicator()),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _cancelling ? null : _cancel,
+                icon: const Icon(Icons.close_rounded),
+                label: Text(_cancelling ? 'Cancelling…' : 'Cancel export'),
+              ),
             ],
             const SizedBox(height: 16),
             const AdSlotWidget(placement: 'USER_DASHBOARD_LEFT'),
