@@ -118,11 +118,14 @@ class _AdSlotWidgetState extends State<AdSlotWidget>
     final isDesktop = useDesktopLayout(context);
     // Desktop caps at the native 320x100 banner. On mobile the banner spans the
     // full content width (matching the primary buttons' margins) so there are no
-    // black side gaps. The image aspect-fills (BoxFit.cover), cropping as needed.
+    // black side gaps. The height keeps the ad's native 320:100 aspect ratio so
+    // the whole creative fits — nothing is cropped and there are no empty bars.
     final bannerWidth = isDesktop
         ? _bannerWidth
         : MediaQuery.sizeOf(context).width - 2 * StilloraSpacing.mobileMargin;
-    final bannerHeight = isDesktop ? _bannerHeight : 64.0;
+    final bannerHeight = isDesktop
+        ? _bannerHeight
+        : bannerWidth * (_bannerHeight / _bannerWidth);
 
     final radius = BorderRadius.circular(StilloraRadius.md);
     final banner = ClipRRect(
