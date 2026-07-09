@@ -1099,6 +1099,9 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
       var end = (overlay["end"] as? Double) ?? Double(duration)
       end = min(end, Double(duration))
       if end <= start { continue }
+      let span = end - start
+      let fadeIn = min(max(0, (overlay["fadeIn"] as? Double) ?? 0), span / 2)
+      let fadeOut = min(max(0, (overlay["fadeOut"] as? Double) ?? 0), span / 2)
       let startT = CMTime(seconds: start, preferredTimescale: 600)
       let endT = CMTime(seconds: end, preferredTimescale: 600)
 
@@ -1112,6 +1115,8 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
         info.scale = scale
         info.start = start
         info.end = end
+        info.fadeIn = fadeIn
+        info.fadeOut = fadeOut
         infos.append(info)
       } else {
         let asset = loadedAsset(URL(fileURLWithPath: path))
@@ -1140,6 +1145,8 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
         info.scale = scale
         info.start = start
         info.end = end
+        info.fadeIn = fadeIn
+        info.fadeOut = fadeOut
         infos.append(info)
       }
     }
@@ -1555,6 +1562,24 @@ final class ReelLayerInfo {
   // a real range.
   var start: Double = 0
   var end: Double = .greatestFiniteMagnitude
+  // Seconds over which the layer ramps opacity up at `start` and down before
+  // `end` (0 = a hard cut). Used by text/watermark overlays to dissolve in/out.
+  var fadeIn: Double = 0
+  var fadeOut: Double = 0
+
+  /// The layer's opacity at composition time [now], accounting for its fade
+  /// windows. Callers gate visibility on start/end separately; this only shapes
+  /// the alpha within the visible span.
+  func opacity(at now: Double) -> CGFloat {
+    var a: CGFloat = 1
+    if fadeIn > 0, now < start + fadeIn {
+      a = min(a, CGFloat((now - start) / fadeIn))
+    }
+    if fadeOut > 0, now > end - fadeOut {
+      a = min(a, CGFloat((end - now) / fadeOut))
+    }
+    return max(0, min(1, a))
+  }
 }
 
 /// Carries the layer list + render config to the compositor for the whole reel.
@@ -1798,9 +1823,16 @@ final class ReelCompositor: NSObject, AVVideoCompositing {
       for layer in instruction.layers {
         // Time-gated overlays (watermark): skip layers outside their window.
         if now < layer.start || now >= layer.end { continue }
-        guard let layerImage = imageForLayer(layer, request: request) else { continue }
+        guard var layerImage = imageForLayer(layer, request: request) else { continue }
         let extent = layerImage.extent
         guard extent.width > 0, extent.height > 0 else { continue }
+        // Ramp the layer's alpha over its fade windows so it dissolves in/out.
+        let opacity = layer.opacity(at: now)
+        if opacity < 1 {
+          layerImage = layerImage.applyingFilter(
+            "CIColorMatrix",
+            parameters: ["inputAVector": CIVector(x: 0, y: 0, z: 0, w: opacity)])
+        }
         let drawW = layer.scale * size.width
         let s = drawW / extent.width
         let drawH = extent.height * s

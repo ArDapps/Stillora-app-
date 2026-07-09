@@ -9,6 +9,7 @@ import 'package:video_player/video_player.dart';
 import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_spacing.dart';
 import '../../core/platform/media_actions.dart';
+import '../audio/audio_source.dart';
 import '../../core/widgets/ad_widget.dart';
 import '../../core/widgets/duration_slider.dart';
 import '../../core/platform/platform_info.dart';
@@ -113,20 +114,6 @@ class _HtmlToVideoViewState extends ConsumerState<HtmlToVideoView> {
       _pickedFileName = result!.files.single.name;
       _pickedHtml = content;
       _validationError = null;
-    });
-  }
-
-  Future<void> _pickAudio() async {
-    final result = await pickImportFiles(
-      type: FileType.custom,
-      allowedExtensions: const ['mp3', 'm4a', 'aac', 'wav', 'ogg', 'opus'],
-      withData: false,
-    );
-    final path = result?.files.single.path;
-    if (path == null) return;
-    setState(() {
-      _audioPath = path;
-      _audioName = result!.files.single.name;
     });
   }
 
@@ -332,60 +319,49 @@ class _HtmlToVideoViewState extends ConsumerState<HtmlToVideoView> {
       title: 'Audio',
       trailing: const _TagPill('optional'),
       footer: 'Voice-over or music mixed onto the video · trimmed to its length',
-      child: Material(
-        color: hasAudio
-            ? _accent.withValues(alpha: 0.12)
-            : StilloraColors.surfaceDim,
-        borderRadius: BorderRadius.circular(StilloraRadius.sm),
-        child: InkWell(
-          onTap: _converting ? null : _pickAudio,
-          borderRadius: BorderRadius.circular(StilloraRadius.sm),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-            decoration: BoxDecoration(
+      child: hasAudio
+          ? Material(
+              color: _accent.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(StilloraRadius.sm),
-              border: Border.all(
-                color: hasAudio ? _accent : _panelBorder,
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  hasAudio
-                      ? Icons.music_note_rounded
-                      : Icons.audiotrack_outlined,
-                  size: 20,
-                  color: hasAudio ? _accent : StilloraColors.onSurfaceVariant,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(StilloraRadius.sm),
+                  border: Border.all(color: _accent),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    hasAudio ? _audioName! : 'Add voice-over or music (optional)',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: hasAudio
-                          ? StilloraColors.onSurface
-                          : StilloraColors.onSurfaceVariant,
+                child: Row(
+                  children: [
+                    Icon(Icons.music_note_rounded, size: 20, color: _accent),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        _audioName ?? 'Audio',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: StilloraColors.onSurface,
+                        ),
+                      ),
                     ),
-                  ),
+                    IconButton(
+                      onPressed: _converting ? null : _removeAudio,
+                      icon: const Icon(Icons.delete_outline_rounded, size: 20),
+                      tooltip: 'Remove audio',
+                      color: StilloraColors.onSurfaceVariant,
+                    ),
+                  ],
                 ),
-                if (hasAudio)
-                  IconButton(
-                    onPressed: _converting ? null : _removeAudio,
-                    icon: const Icon(Icons.delete_outline_rounded, size: 20),
-                    tooltip: 'Remove audio',
-                    color: StilloraColors.onSurfaceVariant,
-                  )
-                else
-                  const Icon(Icons.add_rounded,
-                      color: StilloraColors.onSurfaceVariant),
-              ],
+              ),
+            )
+          : AudioSourceButtons(
+              enabled: !_converting,
+              onPicked: (path) => setState(() {
+                _audioPath = path;
+                _audioName = path.split(RegExp(r'[/\\]')).last;
+              }),
             ),
-          ),
-        ),
-      ),
     );
 
     return [

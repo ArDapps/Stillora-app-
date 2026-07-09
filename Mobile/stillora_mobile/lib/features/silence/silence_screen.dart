@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_surface.dart';
 import '../../core/widgets/ad_widget.dart';
+import '../audio/audio_source.dart';
 import '../color/color_grade_section.dart';
 import '../editor/editor_state.dart' show formatFileSize;
 import '../editor/video_preset.dart';
@@ -190,39 +191,37 @@ class _SilenceViewState extends ConsumerState<SilenceView> {
                   : controller.setMuteAudio,
             ),
             const SizedBox(height: 4),
-            StilloraGlassCard(
-              onTap: _running || silence.hasNewAudio
-                  ? null
-                  : controller.pickNewAudio,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              child: Row(
-                children: [
-                  const Icon(Icons.music_note_rounded,
-                      size: 20, color: StilloraColors.primary),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      silence.hasNewAudio
-                          ? 'New audio · ${silence.newAudioName}'
-                          : 'Add new audio (optional)',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleSmall,
+            if (!silence.hasNewAudio)
+              AudioSourceButtons(
+                enabled: !_running,
+                onPicked: (path) => controller.setNewAudio(path),
+              )
+            else
+              StilloraGlassCard(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                child: Row(
+                  children: [
+                    const Icon(Icons.music_note_rounded,
+                        size: 20, color: StilloraColors.primary),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'New audio · ${silence.newAudioName}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
                     ),
-                  ),
-                  if (silence.hasNewAudio)
                     IconButton(
                       onPressed: _running ? null : controller.removeNewAudio,
                       icon: const Icon(Icons.delete_outline_rounded, size: 20),
                       tooltip: 'Remove new audio',
                       color: StilloraColors.onSurfaceVariant,
-                    )
-                  else
-                    const Icon(Icons.chevron_right_rounded,
-                        color: StilloraColors.onSurfaceVariant),
-                ],
+                    ),
+                  ],
+                ),
               ),
-            ),
             if (silence.hasNewAudio) ...[
               const SizedBox(height: 6),
               Text(

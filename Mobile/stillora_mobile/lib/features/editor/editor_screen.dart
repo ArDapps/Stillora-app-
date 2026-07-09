@@ -18,6 +18,7 @@ import '../../core/widgets/ad_widget.dart';
 import '../../core/design/stillora_spacing.dart';
 import '../../core/design/stillora_surface.dart';
 import '../../core/platform/platform_info.dart';
+import '../audio/audio_source.dart';
 import '../color/color_correction_panel.dart';
 import '../color/color_graded_preview.dart';
 import 'add_audio_screen.dart';
@@ -62,6 +63,15 @@ class EditorView extends ConsumerWidget {
     final path = result?.files.single.path;
     if (path != null) {
       await ref.read(editorControllerProvider.notifier).setAudioPath(path);
+    }
+  }
+
+  /// Records a voice-over and attaches it as narration (desktop Create). Mobile
+  /// reaches the recorder through the Add Soundtrack screen instead.
+  Future<void> _recordAudio(BuildContext context, WidgetRef ref) async {
+    final path = await recordVoice(context);
+    if (path != null && context.mounted) {
+      await ref.read(editorControllerProvider.notifier).setNarration(path);
     }
   }
 
@@ -123,6 +133,7 @@ class EditorView extends ConsumerWidget {
                 session: session,
                 controller: controller,
                 onPickAudio: () => _pickAudio(ref),
+                onRecordAudio: () => _recordAudio(context, ref),
                 onConvert: () => _convert(context, ref, editor),
                 onReset: () => _confirmReset(context, controller),
               )
@@ -214,6 +225,8 @@ class _MobileEditorFlow extends StatelessWidget {
           icon: Icons.auto_fix_high_rounded,
           label: 'Create MP4',
         ),
+        const SizedBox(height: StilloraSpacing.md),
+        const AdSlotWidget(placement: 'USER_DASHBOARD_LEFT'),
       ],
     );
   }
@@ -464,6 +477,7 @@ class _DesktopEditorWorkspace extends StatelessWidget {
     required this.session,
     required this.controller,
     required this.onPickAudio,
+    required this.onRecordAudio,
     required this.onConvert,
     required this.onReset,
   });
@@ -472,6 +486,7 @@ class _DesktopEditorWorkspace extends StatelessWidget {
   final Object? session;
   final EditorController controller;
   final VoidCallback onPickAudio;
+  final VoidCallback onRecordAudio;
   final VoidCallback onConvert;
   final VoidCallback onReset;
 
@@ -499,6 +514,7 @@ class _DesktopEditorWorkspace extends StatelessWidget {
               _SoundscapeCard(
                 editor: editor,
                 onPickAudio: onPickAudio,
+                onRecordAudio: onRecordAudio,
                 onRemoveAudio: controller.removeAudio,
                 compact: compact,
               ),
@@ -553,6 +569,7 @@ class _DesktopEditorWorkspace extends StatelessWidget {
                         _SoundscapeCard(
                           editor: editor,
                           onPickAudio: onPickAudio,
+                          onRecordAudio: onRecordAudio,
                           onRemoveAudio: controller.removeAudio,
                           compact: compact,
                         ),
@@ -1981,12 +1998,14 @@ class _SoundscapeCard extends StatelessWidget {
   const _SoundscapeCard({
     required this.editor,
     required this.onPickAudio,
+    required this.onRecordAudio,
     required this.onRemoveAudio,
     this.compact = false,
   });
 
   final EditorState editor;
   final VoidCallback onPickAudio;
+  final VoidCallback onRecordAudio;
   final VoidCallback onRemoveAudio;
   final bool compact;
 
@@ -2058,23 +2077,40 @@ class _SoundscapeCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  IconButton(
-                    tooltip: editor.audioPath == null
-                        ? 'Add audio'
-                        : 'Remove audio',
-                    onPressed: editor.audioPath == null
-                        ? onPickAudio
-                        : onRemoveAudio,
-                    icon: Icon(
-                      editor.audioPath == null
-                          ? Icons.add_circle_outline_rounded
-                          : Icons.close_rounded,
+                  if (editor.audioPath != null)
+                    IconButton(
+                      tooltip: 'Remove audio',
+                      onPressed: onRemoveAudio,
+                      icon: const Icon(Icons.close_rounded),
                     ),
-                  ),
                 ],
               ),
             ),
           ),
+          // Two clear options when nothing is attached: record a voice-over or
+          // upload an audio file (same as every other section).
+          if (editor.audioPath == null) ...[
+            SizedBox(height: compact ? 8 : StilloraSpacing.sm),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: onRecordAudio,
+                    icon: const Icon(Icons.mic_rounded),
+                    label: const Text('Record voice'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: onPickAudio,
+                    icon: const Icon(Icons.upload_file_rounded),
+                    label: const Text('Upload audio'),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

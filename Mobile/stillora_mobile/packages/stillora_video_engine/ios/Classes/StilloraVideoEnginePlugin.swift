@@ -77,6 +77,18 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
       workQueue.async { [weak self] in
         self?.runColorGrade(args: args, result: result)
       }
+    case "exportWatermark":
+      guard let args = call.arguments as? [String: Any] else {
+        result(
+          FlutterError(
+            code: "invalid_arguments", message: "Watermark arguments were missing.",
+            details: nil))
+        return
+      }
+      isCancelled = false
+      workQueue.async { [weak self] in
+        self?.runWatermarkExport(args: args, result: result)
+      }
     case "cancelExport":
       isCancelled = true
       result(nil)
@@ -653,6 +665,153 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
     try runExportSession(export)
   }
 
+  // MARK: - Watermark / text overlays
+
+  /// Burns image overlays (e.g. rasterised text layers) onto a base video, each
+  /// gated to its [start, end] window and dissolved in/out over its fade, using
+  /// a Core Animation overlay layer. The base video's own audio is preserved.
+  /// Video overlays and colour grade are not handled on this iOS path yet; the
+  /// Text section only sends image overlays so it is fully covered.
+  private func runWatermarkExport(args: [String: Any], result: @escaping FlutterResult) {
+    guard let videoPath = args["videoPath"] as? String else {
+      result(
+        FlutterError(code: "invalid_arguments", message: "No video was provided.", details: nil))
+      return
+    }
+    let overlays = (args["overlays"] as? [[String: Any]]) ?? []
+    let width = evenDimension(args["width"] as? Int ?? 1080)
+    let height = evenDimension(args["height"] as? Int ?? 1920)
+    let duration = max(1, args["durationSeconds"] as? Int ?? 5)
+
+    do {
+      let outputURL = try makeOutputURL()
+      try exportWatermarkComposite(
+        videoPath: videoPath, overlays: overlays, width: width, height: height,
+        duration: duration, outputURL: outputURL)
+      emit(stage: "done", percentage: 1.0, message: "Saved")
+      result([
+        "outputPath": outputURL.path,
+        "width": width,
+        "height": height,
+        "durationSeconds": duration,
+      ])
+    } catch EngineError.cancelled {
+      result(FlutterError(code: "cancelled", message: "Export was cancelled.", details: nil))
+    } catch EngineError.missingSource {
+      result(
+        FlutterError(
+          code: "missing_source",
+          message: "Stillora could not read the selected video. Please choose it again.",
+          details: nil))
+    } catch {
+      result(
+        FlutterError(code: "export_failed", message: error.localizedDescription, details: nil))
+    }
+  }
+
+  private func exportWatermarkComposite(
+    videoPath: String, overlays: [[String: Any]], width: Int, height: Int, duration: Int,
+    outputURL: URL
+  ) throws {
+    emit(stage: "preparingImage", percentage: 0.05, message: "Preparing text")
+    let asset = loadedAsset(URL(fileURLWithPath: videoPath))
+    guard let sourceVideoTrack = asset.tracks(withMediaType: .video).first else {
+      throw EngineError.missingSource
+    }
+
+    let composition = AVMutableComposition()
+    let targetDuration = CMTime(seconds: Double(duration), preferredTimescale: 600)
+    let clipDuration = min(targetDuration, asset.duration)
+
+    guard
+      let videoTrack = composition.addMutableTrack(
+        withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid)
+    else { throw EngineError.export }
+    try videoTrack.insertTimeRange(
+      CMTimeRange(start: .zero, duration: clipDuration), of: sourceVideoTrack, at: .zero)
+
+    // Preserve the base video's own audio.
+    if let sourceAudioTrack = asset.tracks(withMediaType: .audio).first,
+      let audioTrack = composition.addMutableTrack(
+        withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid)
+    {
+      try? audioTrack.insertTimeRange(
+        CMTimeRange(start: .zero, duration: clipDuration), of: sourceAudioTrack, at: .zero)
+    }
+
+    // The passed width/height already carry the base video's display aspect (the
+    // Dart side scales it to the chosen tier), so the base fills the frame with
+    // no crop or letterbox.
+    let renderSize = CGSize(width: width, height: height)
+    let total = clipDuration.seconds
+
+    // A custom Core Image compositor draws the base frame, then each text PNG on
+    // top, per frame — ramping every overlay's alpha over its fade window. (The
+    // Core Animation post-processor path crashes on the Simulator: its
+    // IOSurface/GLES backing is unsupported there. Core Image compositing works
+    // on both the Simulator and devices, exactly like the macOS engine.)
+    let baseLayer = WatermarkLayerInfo()
+    baseLayer.isImage = false
+    baseLayer.trackID = videoTrack.trackID
+    baseLayer.preferredTransform = sourceVideoTrack.preferredTransform
+    baseLayer.x = 0
+    baseLayer.y = 0
+    baseLayer.scale = 1
+    baseLayer.start = 0
+    baseLayer.end = .greatestFiniteMagnitude
+    var layers: [WatermarkLayerInfo] = [baseLayer]
+
+    emit(stage: "generatingVideo", percentage: 0.2, message: "Placing text")
+    for overlay in overlays {
+      guard (overlay["isImage"] as? Bool) ?? true else { continue }  // image only
+      guard let path = overlay["path"] as? String,
+        let image = UIImage(contentsOfFile: path)?.cgImage
+      else { continue }
+      let start = max(0, (overlay["start"] as? Double) ?? 0)
+      var end = (overlay["end"] as? Double) ?? total
+      end = min(end, total)
+      if end <= start { continue }
+      let span = end - start
+      let info = WatermarkLayerInfo()
+      info.isImage = true
+      info.ciImage = CIImage(cgImage: image)
+      info.x = CGFloat((overlay["x"] as? Double) ?? 0)
+      info.y = CGFloat((overlay["y"] as? Double) ?? 0)
+      info.scale = CGFloat((overlay["scale"] as? Double) ?? 0.3)
+      info.start = start
+      info.end = end
+      info.fadeIn = min(max(0, (overlay["fadeIn"] as? Double) ?? 0), span / 2)
+      info.fadeOut = min(max(0, (overlay["fadeOut"] as? Double) ?? 0), span / 2)
+      layers.append(info)
+    }
+
+    let instruction = WatermarkInstruction()
+    instruction.timeRange = CMTimeRange(start: .zero, duration: clipDuration)
+    instruction.renderSize = renderSize
+    instruction.layers = layers
+    instruction.requiredSourceTrackIDs = [NSNumber(value: Int(videoTrack.trackID))]
+    instruction.passthroughTrackID = kCMPersistentTrackID_Invalid
+
+    let videoComposition = AVMutableVideoComposition()
+    videoComposition.renderSize = renderSize
+    videoComposition.frameDuration = CMTime(value: 1, timescale: 30)
+    videoComposition.customVideoCompositorClass = WatermarkCompositor.self
+    videoComposition.instructions = [instruction]
+
+    guard
+      let export = AVAssetExportSession(
+        asset: composition, presetName: AVAssetExportPresetHighestQuality)
+    else { throw EngineError.export }
+    try? FileManager.default.removeItem(at: outputURL)
+    export.outputURL = outputURL
+    export.outputFileType = .mp4
+    export.videoComposition = videoComposition
+    export.shouldOptimizeForNetworkUse = true
+
+    emit(stage: "mergingAudio", percentage: 0.7, message: "Rendering")
+    try runExportSession(export)
+  }
+
   // MARK: - Audio mux
 
   private func mux(videoURL: URL, audioURL: URL, duration: Int, to outputURL: URL) throws {
@@ -1084,5 +1243,135 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
       }
     }
     return merged.map { (max(0, $0.0 - paddingSec), min(totalDuration, $0.1 + paddingSec)) }
+  }
+}
+
+// MARK: - Watermark / text overlay compositor
+
+/// One layer for the text/watermark composite. The base video is `isImage =
+/// false` (read per-frame from `trackID`); text PNGs are `isImage = true` with a
+/// prepared `ciImage`. [x]/[y] are the normalised top-left and [scale] is the
+/// width as a fraction of the frame. [start]/[end] gate visibility; [fadeIn]/
+/// [fadeOut] ramp the alpha in/out.
+final class WatermarkLayerInfo {
+  var isImage = true
+  var trackID: CMPersistentTrackID = kCMPersistentTrackID_Invalid
+  var ciImage: CIImage?
+  var preferredTransform: CGAffineTransform = .identity
+  var x: CGFloat = 0
+  var y: CGFloat = 0
+  var scale: CGFloat = 1
+  var start: Double = 0
+  var end: Double = .greatestFiniteMagnitude
+  var fadeIn: Double = 0
+  var fadeOut: Double = 0
+
+  /// The layer's opacity at composition time [now] given its fade windows.
+  func opacity(at now: Double) -> CGFloat {
+    var a: CGFloat = 1
+    if fadeIn > 0, now < start + fadeIn {
+      a = min(a, CGFloat((now - start) / fadeIn))
+    }
+    if fadeOut > 0, now > end - fadeOut {
+      a = min(a, CGFloat((end - now) / fadeOut))
+    }
+    return max(0, min(1, a))
+  }
+}
+
+/// Carries the layer list + render size to the compositor for the whole clip.
+final class WatermarkInstruction: NSObject, AVVideoCompositionInstructionProtocol {
+  var timeRange: CMTimeRange = CMTimeRange()
+  var enablePostProcessing = false
+  var containsTweening = true
+  var requiredSourceTrackIDs: [NSValue]?
+  var passthroughTrackID: CMPersistentTrackID = kCMPersistentTrackID_Invalid
+
+  var layers: [WatermarkLayerInfo] = []
+  var renderSize: CGSize = .zero
+}
+
+/// Draws the base video frame then each text PNG on top, per frame, with
+/// per-layer alpha for fades. Core Image based so it runs on the Simulator and
+/// devices alike (unlike `AVVideoCompositionCoreAnimationTool`).
+final class WatermarkCompositor: NSObject, AVVideoCompositing {
+  private let ciContext = CIContext(options: [.useSoftwareRenderer: false])
+  private let colorSpace = CGColorSpaceCreateDeviceRGB()
+
+  var sourcePixelBufferAttributes: [String: Any]? = [
+    kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA
+  ]
+  var requiredPixelBufferAttributesForRenderContext: [String: Any] = [
+    kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA
+  ]
+
+  func renderContextChanged(_ newRenderContext: AVVideoCompositionRenderContext) {}
+
+  private func imageForLayer(
+    _ layer: WatermarkLayerInfo, request: AVAsynchronousVideoCompositionRequest
+  ) -> CIImage? {
+    if layer.isImage { return layer.ciImage }
+    guard let buffer = request.sourceFrame(byTrackID: layer.trackID) else { return nil }
+    // Resolve the track's preferredTransform as an EXIF orientation so rotated
+    // phone videos come out upright in Core Image's y-up space.
+    var ci = CIImage(cvPixelBuffer: buffer)
+      .oriented(orientationForTransform(layer.preferredTransform))
+    ci = ci.transformed(
+      by: CGAffineTransform(translationX: -ci.extent.origin.x, y: -ci.extent.origin.y))
+    return ci
+  }
+
+  private func orientationForTransform(_ t: CGAffineTransform)
+    -> CGImagePropertyOrientation
+  {
+    switch (t.a, t.b, t.c, t.d) {
+    case (0, 1, -1, 0): return .right
+    case (0, -1, 1, 0): return .left
+    case (-1, 0, 0, -1): return .down
+    case (1, 0, 0, 1): return .up
+    case (1, 0, 0, -1): return .upMirrored
+    case (-1, 0, 0, 1): return .downMirrored
+    case (0, 1, 1, 0): return .leftMirrored
+    case (0, -1, -1, 0): return .rightMirrored
+    default: return .up
+    }
+  }
+
+  func startRequest(_ request: AVAsynchronousVideoCompositionRequest) {
+    guard let instruction = request.videoCompositionInstruction as? WatermarkInstruction,
+      let output = request.renderContext.newPixelBuffer()
+    else {
+      request.finish(with: NSError(domain: "stillora.watermark", code: -1, userInfo: nil))
+      return
+    }
+    let size = instruction.renderSize
+    let frame = CGRect(origin: .zero, size: size)
+    let now = request.compositionTime.seconds
+    var acc = CIImage(color: CIColor.black).cropped(to: frame)
+
+    for layer in instruction.layers {
+      if now < layer.start || now >= layer.end { continue }
+      guard var image = imageForLayer(layer, request: request) else { continue }
+      let extent = image.extent
+      guard extent.width > 0, extent.height > 0 else { continue }
+      let opacity = layer.opacity(at: now)
+      if opacity < 1 {
+        image = image.applyingFilter(
+          "CIColorMatrix",
+          parameters: ["inputAVector": CIVector(x: 0, y: 0, z: 0, w: opacity)])
+      }
+      let drawW = layer.scale * size.width
+      let s = drawW / extent.width
+      let drawH = extent.height * s
+      let tx = layer.x * size.width
+      let ty = size.height - (layer.y * size.height) - drawH
+      var t = CGAffineTransform(scaleX: s, y: s)
+      t = t.concatenating(CGAffineTransform(translationX: tx, y: ty))
+      acc = image.transformed(by: t).composited(over: acc)
+    }
+
+    acc = acc.cropped(to: frame)
+    ciContext.render(acc, to: output, bounds: frame, colorSpace: colorSpace)
+    request.finish(withComposedVideoFrame: output)
   }
 }

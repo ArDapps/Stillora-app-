@@ -35,6 +35,12 @@ const _navItems = [
     selectedIcon: Icons.add_photo_alternate_rounded,
   ),
   (
+    index: 9,
+    label: 'Text',
+    icon: Icons.text_fields_outlined,
+    selectedIcon: Icons.text_fields_rounded,
+  ),
+  (
     index: 6,
     label: 'Watermark',
     icon: Icons.branding_watermark_outlined,
@@ -303,7 +309,10 @@ class _DesktopSidebar extends ConsumerWidget {
             ),
           const Spacer(),
           if (!collapsed) ...[
-            const AdSlotWidget(placement: 'USER_DASHBOARD_LEFT'),
+            const AdSlotWidget(
+              placement: 'USER_DASHBOARD_LEFT',
+              campaignKey: 'stilloraside',
+            ),
             const SizedBox(height: StilloraSpacing.snug),
             Row(
               children: [
@@ -482,6 +491,7 @@ class _DesktopNavItemState extends State<_DesktopNavItem> {
 /// header so the chrome feels intentional rather than a bare app-bar.
 const _sectionSubtitles = {
   'Create': 'Turn images into video, on this device',
+  'Text': 'Add animated captions & titles onto a video',
   'Watermark': 'Add a logo or overlay onto a video',
   'Library': 'Every render you\'ve made',
   'HTML': 'Capture any web page as a clip',

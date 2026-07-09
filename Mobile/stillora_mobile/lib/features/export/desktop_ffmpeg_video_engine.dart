@@ -283,7 +283,31 @@ class DesktopFfmpegVideoEngine implements engine.StilloraVideoEngine {
       var w = (overlays[i].scale * width).round();
       if (w.isOdd) w += 1;
       w = w.clamp(2, width * 4);
-      filters.add('[${i + 1}:v]scale=w=$w:h=-2:flags=bicubic[s$i]');
+      // Ramp the overlay's own alpha in/out over its fade windows so it dissolves
+      // rather than popping. The looped image input shares the output timeline
+      // (both start at t=0), so the fade start times are the window times.
+      final start = overlays[i].start.clamp(0.0, dur.toDouble());
+      final end = overlays[i].end.clamp(start, dur.toDouble());
+      final span = end - start;
+      final fadeIn = overlays[i].fadeIn.clamp(0.0, span / 2);
+      final fadeOut = overlays[i].fadeOut.clamp(0.0, span / 2);
+      final parts = ['[${i + 1}:v]scale=w=$w:h=-2:flags=bicubic'];
+      if (fadeIn > 0 || fadeOut > 0) {
+        parts.add('format=yuva420p');
+        if (fadeIn > 0) {
+          parts.add(
+            'fade=t=in:st=${start.toStringAsFixed(2)}:'
+            'd=${fadeIn.toStringAsFixed(2)}:alpha=1',
+          );
+        }
+        if (fadeOut > 0) {
+          parts.add(
+            'fade=t=out:st=${(end - fadeOut).toStringAsFixed(2)}:'
+            'd=${fadeOut.toStringAsFixed(2)}:alpha=1',
+          );
+        }
+      }
+      filters.add('${parts.join(',')}[s$i]');
     }
     var prev = '[0:v]';
     for (var i = 0; i < overlays.length; i++) {

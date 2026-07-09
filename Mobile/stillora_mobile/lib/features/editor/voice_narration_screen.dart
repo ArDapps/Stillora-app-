@@ -14,7 +14,6 @@ import '../../core/design/stillora_glow.dart';
 import '../../core/design/stillora_spacing.dart';
 import '../../core/design/stillora_surface.dart';
 import '../../core/widgets/desktop_shell.dart';
-import 'editor_state.dart';
 
 enum _Phase { idle, permissionDenied, recording, paused, recorded }
 
@@ -125,12 +124,18 @@ class _VoiceNarrationScreenState extends ConsumerState<VoiceNarrationScreen> {
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      final status = await Permission.microphone.request();
-      if (!status.isGranted) {
-        if (mounted) {
-          setState(() => _phase = _Phase.permissionDenied);
+      // The `record` plugin manages the native mic authorization itself; on
+      // desktop `permission_handler` can report "granted" without the OS having
+      // actually authorized capture, so trust the recorder's own check first.
+      final allowed = await _recorder.hasPermission();
+      if (!allowed) {
+        final status = await Permission.microphone.request();
+        if (!status.isGranted) {
+          if (mounted) {
+            setState(() => _phase = _Phase.permissionDenied);
+          }
+          return;
         }
-        return;
       }
 
       final dir = await getTemporaryDirectory();
@@ -156,9 +161,10 @@ class _VoiceNarrationScreenState extends ConsumerState<VoiceNarrationScreen> {
           _elapsed = Duration.zero;
         });
       }
-    } catch (_) {
+    } catch (e, s) {
+      debugPrint('[VoiceNarration] start failed: $e\n$s');
       if (mounted) {
-        _showError('Recording could not start. Please try again.');
+        _showError('Recording could not start: $e');
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -249,9 +255,10 @@ class _VoiceNarrationScreenState extends ConsumerState<VoiceNarrationScreen> {
     final path = _recordingPath;
     if (path == null) return;
     await _player.stop();
-    _used = true; // the media store copies it; keep the temp until then.
-    await ref.read(editorControllerProvider.notifier).setNarration(path);
-    if (mounted) context.pop();
+    _used = true; // the caller copies it out of temp; keep the file until then.
+    // Return the recording path to whoever opened the recorder (Create, Speed,
+    // Remove Silence, HTML…) so it can be reused everywhere, not just narration.
+    if (mounted) context.pop(path);
   }
 
   void _showError(String message) {

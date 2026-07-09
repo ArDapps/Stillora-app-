@@ -187,6 +187,12 @@ class SilenceController extends Notifier<SilenceState> {
   Future<void> pickNewAudio() async {
     final raw = await _pickAudioPath();
     if (raw == null) return;
+    await setNewAudio(raw);
+  }
+
+  /// Materialises a recorded or uploaded audio file (raw path from the shared
+  /// audio-source picker) and attaches it as the replacement soundtrack.
+  Future<void> setNewAudio(String raw) async {
     final local = await _mediaStore.materializePath(
       raw,
       kind: EditorMediaStoreKind.audio,

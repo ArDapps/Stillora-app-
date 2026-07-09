@@ -14,6 +14,7 @@ import '../convert/convert_screen.dart';
 import '../html_to_video/html_to_video_screen.dart';
 import '../loop_images/loop_images_screen.dart';
 import '../profile/profile_screen.dart';
+import '../text_overlay/text_overlay_screen.dart';
 import '../watermark/watermark_screen.dart';
 
 class AppTabsScreen extends ConsumerWidget {
@@ -34,6 +35,7 @@ class AppTabsScreen extends ConsumerWidget {
       'Watermark',
       'Speed',
       'Convert',
+      'Text',
     ];
     const views = [
       EditorView(),
@@ -45,6 +47,7 @@ class AppTabsScreen extends ConsumerWidget {
       WatermarkView(),
       SpeedView(),
       ConvertView(),
+      TextOverlayView(),
     ];
 
     if (useDesktopLayout(context)) {
@@ -85,6 +88,12 @@ const _drawerNavItems = [
     icon: Icons.add_photo_alternate_outlined,
     selectedIcon: Icons.add_photo_alternate_rounded,
     label: 'Create',
+  ),
+  (
+    view: 9,
+    icon: Icons.text_fields_outlined,
+    selectedIcon: Icons.text_fields_rounded,
+    label: 'Text',
   ),
   (
     view: 6,
@@ -176,13 +185,16 @@ class _AppNavDrawer extends StatelessWidget {
             const Divider(height: 1, color: StilloraColors.glassStroke),
             const SizedBox(height: StilloraSpacing.xs),
             // iOS shows every section: Remove Silence (5) & Speed (7) run on
-            // its native removeSilence engine, and Watermark (6) is shown too
-            // (its export currently messages that it's desktop-only). Android
-            // has no native engine for 5/6/7, so those stay hidden there.
+            // its native removeSilence engine, and Watermark (6) + Text (9) are
+            // shown too (their export currently messages that it's desktop-only).
+            // Android has no native engine for 5/6/7/9, so those stay hidden.
             for (final item in _drawerNavItems)
               if (isDesktopPlatform ||
                   isIosPlatform ||
-                  (item.view != 5 && item.view != 6 && item.view != 7))
+                  (item.view != 5 &&
+                      item.view != 6 &&
+                      item.view != 7 &&
+                      item.view != 9))
                 _DrawerNavTile(
                   selected: item.view == activeView,
                   icon: item.icon,

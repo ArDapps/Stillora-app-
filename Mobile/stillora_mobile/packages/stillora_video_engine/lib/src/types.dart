@@ -45,7 +45,10 @@ class ReelLayerSpec extends Equatable {
 /// One overlay for a watermark composite. [x]/[y] are the normalised top-left
 /// (0..1) and [scale] is the layer width as a fraction of the output width.
 /// [start]/[end] are the seconds within the base video during which the overlay
-/// is shown.
+/// is shown. [fadeIn]/[fadeOut] are the seconds over which the overlay ramps its
+/// opacity up at [start] and down before [end] (0 = a hard cut). The fade
+/// windows are clamped so they never overlap past the middle of the visible
+/// span.
 class WatermarkLayerSpec extends Equatable {
   const WatermarkLayerSpec({
     required this.path,
@@ -55,6 +58,8 @@ class WatermarkLayerSpec extends Equatable {
     required this.scale,
     required this.start,
     required this.end,
+    this.fadeIn = 0,
+    this.fadeOut = 0,
   });
 
   final String path;
@@ -64,6 +69,8 @@ class WatermarkLayerSpec extends Equatable {
   final double scale;
   final double start;
   final double end;
+  final double fadeIn;
+  final double fadeOut;
 
   Map<String, Object?> toMap() => {
     'path': path,
@@ -73,10 +80,13 @@ class WatermarkLayerSpec extends Equatable {
     'scale': scale,
     'start': start,
     'end': end,
+    'fadeIn': fadeIn,
+    'fadeOut': fadeOut,
   };
 
   @override
-  List<Object?> get props => [path, isImage, x, y, scale, start, end];
+  List<Object?> get props =>
+      [path, isImage, x, y, scale, start, end, fadeIn, fadeOut];
 }
 
 /// A baked color grade to apply to a finished video as a post-process pass.
