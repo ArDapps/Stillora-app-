@@ -26,15 +26,29 @@ class AdSlotWidget extends StatefulWidget {
   State<AdSlotWidget> createState() => _AdSlotWidgetState();
 }
 
-class _AdSlotWidgetState extends State<AdSlotWidget> {
+class _AdSlotWidgetState extends State<AdSlotWidget>
+    with SingleTickerProviderStateMixin {
   static final _dio = Dio();
   _Promo? _promo;
+
+  // Drives the pulsing glow border around the banner.
+  late final AnimationController _glow = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 2),
+  );
 
   @override
   void initState() {
     super.initState();
+    _glow.repeat(reverse: true);
     // Re-fetch the pool on every load; never cache ad IDs across sessions.
     _load();
+  }
+
+  @override
+  void dispose() {
+    _glow.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -102,59 +116,86 @@ class _AdSlotWidgetState extends State<AdSlotWidget> {
             : '${AdConfig.looparaBaseUrl}${promo.image}');
 
     final isDesktop = useDesktopLayout(context);
-    // Desktop caps at the native 320x100 banner; mobile is a compact half-width
-    // bar. The image aspect-fills the box (BoxFit.cover), cropping as needed so
-    // there are never empty bars.
+    // Desktop caps at the native 320x100 banner. On mobile the banner spans the
+    // full content width (matching the primary buttons' margins) so there are no
+    // black side gaps. The image aspect-fills (BoxFit.cover), cropping as needed.
     final bannerWidth = isDesktop
         ? _bannerWidth
-        : MediaQuery.sizeOf(context).width / 2;
-    final bannerHeight = isDesktop ? _bannerHeight : 56.0;
+        : MediaQuery.sizeOf(context).width - 2 * StilloraSpacing.mobileMargin;
+    final bannerHeight = isDesktop ? _bannerHeight : 64.0;
+
+    final radius = BorderRadius.circular(StilloraRadius.md);
+    final banner = ClipRRect(
+      borderRadius: radius,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (imageUrl.isNotEmpty)
+            Image.network(
+              imageUrl,
+              fit: BoxFit.cover,
+              // If the image fails, fall back to the text banner.
+              errorBuilder: (context, error, stack) =>
+                  _textBanner(context, promo),
+              loadingBuilder: (context, child, progress) =>
+                  progress == null ? child : _textBanner(context, promo),
+            )
+          else
+            _textBanner(context, promo),
+          // "Sponsored" label.
+          Positioned(
+            bottom: 2,
+            right: 4,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.35),
+                borderRadius: BorderRadius.circular(StilloraRadius.sm),
+              ),
+              child: const Text(
+                'Sponsored',
+                style: TextStyle(fontSize: 9, color: Colors.white70),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
 
     return GestureDetector(
       onTap: () => _onTap(promo.id),
       child: Center(
-        child: SizedBox(
-          width: bannerWidth,
-          height: bannerHeight,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(StilloraRadius.md),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                if (imageUrl.isNotEmpty)
-                  Image.network(
-                    imageUrl,
-                    fit: BoxFit.cover,
-                    // If the image fails, fall back to the text banner.
-                    errorBuilder: (context, error, stack) =>
-                        _textBanner(context, promo),
-                    loadingBuilder: (context, child, progress) =>
-                        progress == null ? child : _textBanner(context, promo),
-                  )
-                else
-                  _textBanner(context, promo),
-                // "Sponsored" label.
-                Positioned(
-                  bottom: 2,
-                  right: 4,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 4,
-                      vertical: 1,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.35),
-                      borderRadius: BorderRadius.circular(StilloraRadius.sm),
-                    ),
-                    child: const Text(
-                      'Sponsored',
-                      style: TextStyle(fontSize: 9, color: Colors.white70),
-                    ),
-                  ),
+        child: AnimatedBuilder(
+          animation: _glow,
+          builder: (context, child) {
+            final t = _glow.value; // 0..1, ping-pongs
+            // Sweep the glow hue between the brand violet and cyan as it pulses.
+            final glow = Color.lerp(
+              StilloraColors.brandViolet,
+              StilloraColors.brandCyan,
+              t,
+            )!;
+            return Container(
+              width: bannerWidth,
+              height: bannerHeight,
+              decoration: BoxDecoration(
+                borderRadius: radius,
+                border: Border.all(
+                  color: glow.withValues(alpha: 0.85),
+                  width: 1.5,
                 ),
-              ],
-            ),
-          ),
+                boxShadow: [
+                  BoxShadow(
+                    color: glow.withValues(alpha: 0.30 + 0.35 * t),
+                    blurRadius: 8 + 12 * t,
+                    spreadRadius: 0.5 + 1.5 * t,
+                  ),
+                ],
+              ),
+              child: child,
+            );
+          },
+          child: banner,
         ),
       ),
     );
