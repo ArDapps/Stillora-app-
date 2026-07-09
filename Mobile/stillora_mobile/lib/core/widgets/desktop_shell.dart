@@ -47,12 +47,6 @@ const _navItems = [
     selectedIcon: Icons.content_cut_rounded,
   ),
   (
-    index: 7,
-    label: 'Speed',
-    icon: Icons.fast_forward_outlined,
-    selectedIcon: Icons.fast_forward_rounded,
-  ),
-  (
     index: 8,
     label: 'Convert',
     icon: Icons.swap_horiz_outlined,

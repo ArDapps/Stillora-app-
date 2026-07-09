@@ -931,12 +931,12 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
 
     do {
       let outputURL = try makeOutputURL()
-      try exportWatermarkComposite(
+      let outSize = try exportWatermarkComposite(
         videoPath: videoPath, overlays: overlays, width: width, height: height,
         duration: duration, outputURL: outputURL)
       emit(stage: "done", percentage: 1.0, message: "Saved")
       result([
-        "outputPath": outputURL.path, "width": width, "height": height,
+        "outputPath": outputURL.path, "width": outSize.width, "height": outSize.height,
         "durationSeconds": duration,
       ])
     } catch EngineError.cancelled {
@@ -1039,10 +1039,9 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
   private func exportWatermarkComposite(
     videoPath: String, overlays: [[String: Any]], width: Int, height: Int, duration: Int,
     outputURL: URL
-  ) throws {
+  ) throws -> (width: Int, height: Int) {
     emit(stage: "preparingImage", percentage: 0.05, message: "Preparing media")
     let composition = AVMutableComposition()
-    let renderSize = CGSize(width: width, height: height)
     let targetDuration = CMTime(seconds: Double(duration), preferredTimescale: 600)
 
     var infos: [ReelLayerInfo] = []
@@ -1054,6 +1053,20 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
       let baseTrack = composition.addMutableTrack(
         withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid)
     else { throw EngineError.missingSource }
+
+    // Render at the base video's TRUE display size so the watermarked output
+    // keeps the original resolution/aspect exactly — no crop, no letterbox. The
+    // width/height passed from Dart come from the Flutter player and can
+    // disagree with the real display size for rotated phone videos, which used
+    // to scale-to-fill-width and crop the base. Derive it natively instead.
+    let baseDisplay = baseSrc.naturalSize.applying(baseSrc.preferredTransform)
+    let baseW = abs(baseDisplay.width)
+    let baseH = abs(baseDisplay.height)
+    let renderSize = (baseW >= 2 && baseH >= 2)
+      ? CGSize(
+        width: CGFloat(evenDimension(Int(baseW.rounded()))),
+        height: CGFloat(evenDimension(Int(baseH.rounded()))))
+      : CGSize(width: width, height: height)
     let baseDur = CMTimeMinimum(targetDuration, baseAsset.duration)
     try? baseTrack.insertTimeRange(
       CMTimeRange(start: .zero, duration: baseDur), of: baseSrc, at: .zero)
@@ -1157,6 +1170,7 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
     export.videoComposition = videoComposition
     emit(stage: "generatingVideo", percentage: 0.3, message: "Compositing watermark")
     try runExportSession(export)
+    return (Int(renderSize.width), Int(renderSize.height))
   }
 
   /// Writes a short black video used only to give image-only reels a timeline.
