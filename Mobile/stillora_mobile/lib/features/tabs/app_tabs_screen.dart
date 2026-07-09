@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_spacing.dart';
 import '../../core/platform/platform_info.dart';
-import '../../core/widgets/ad_widget.dart';
 import '../../core/widgets/desktop_shell.dart';
 import '../../core/widgets/stillora_mark.dart';
 import '../editor/editor_screen.dart';
@@ -71,15 +70,9 @@ class AppTabsScreen extends ConsumerWidget {
         activeView: selected,
         onSelect: (view) => ref.read(homeTabProvider.notifier).state = view,
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: IndexedStack(index: index, children: views),
-          ),
-          // Banner shown on every tab (collapses to nothing on desktop/web).
-          const SafeArea(top: false, child: AdSlotWidget()),
-        ],
-      ),
+      // Each section screen embeds its own ad banner, so no persistent bottom
+      // banner here (that showed a duplicate/static ad under every tab).
+      body: IndexedStack(index: index, children: views),
     );
   }
 }
