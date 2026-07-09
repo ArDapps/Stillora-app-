@@ -118,15 +118,19 @@ class _AdSlotWidgetState extends State<AdSlotWidget>
     final isDesktop = useDesktopLayout(context);
     // Desktop caps at the native 320x100 banner. On mobile the banner spans the
     // full content width (matching the primary buttons' margins) so there are no
-    // black side gaps. The height keeps the ad's native 320:100 aspect ratio so
-    // the whole creative fits — nothing is cropped and there are no empty bars.
+    // black side gaps, but the height is capped so it stays compact. The image
+    // is shown with BoxFit.contain so the whole creative fits — nothing cropped.
     final bannerWidth = isDesktop
         ? _bannerWidth
         : MediaQuery.sizeOf(context).width - 2 * StilloraSpacing.mobileMargin;
+    final aspectHeight = bannerWidth * (_bannerHeight / _bannerWidth);
     final bannerHeight = isDesktop
         ? _bannerHeight
-        : bannerWidth * (_bannerHeight / _bannerWidth);
+        : (aspectHeight < _mobileMaxHeight ? aspectHeight : _mobileMaxHeight);
 
+    // Contain on mobile (capped height) so the whole ad shows; cover on desktop
+    // where the box already matches the native 320x100 ratio.
+    final imageFit = isDesktop ? BoxFit.cover : BoxFit.contain;
     final radius = BorderRadius.circular(StilloraRadius.md);
     final banner = ClipRRect(
       borderRadius: radius,
@@ -136,7 +140,7 @@ class _AdSlotWidgetState extends State<AdSlotWidget>
           if (imageUrl.isNotEmpty)
             Image.network(
               imageUrl,
-              fit: BoxFit.cover,
+              fit: imageFit,
               // If the image fails, fall back to the text banner.
               errorBuilder: (context, error, stack) =>
                   _textBanner(context, promo),
@@ -207,6 +211,9 @@ class _AdSlotWidgetState extends State<AdSlotWidget>
   // Standard "large banner" dimensions served by Loopara (IAB 320x100).
   static const double _bannerWidth = 320;
   static const double _bannerHeight = 100;
+  // Cap the mobile banner height so a full-width banner stays compact; the ad is
+  // shown with BoxFit.contain so the whole creative still fits within it.
+  static const double _mobileMaxHeight = 84;
 
   /// Styled text banner used when the ad has no image (or it fails to load).
   Widget _textBanner(BuildContext context, _Promo promo) {
