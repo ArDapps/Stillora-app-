@@ -1054,19 +1054,26 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
         withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid)
     else { throw EngineError.missingSource }
 
-    // Render at the base video's TRUE display size so the watermarked output
-    // keeps the original resolution/aspect exactly — no crop, no letterbox. The
-    // width/height passed from Dart come from the Flutter player and can
-    // disagree with the real display size for rotated phone videos, which used
-    // to scale-to-fill-width and crop the base. Derive it natively instead.
+    // Derive the render size from the base video's TRUE display aspect (rather
+    // than the Flutter-reported width/height, which can be swapped for rotated
+    // phone videos and cropped the base). The requested resolution tier is the
+    // short edge = min(width, height): Original passes the source size, while
+    // 720p/1080p/2K/4K pass that short edge. We scale the true aspect to it, so
+    // the output keeps the original aspect (no crop) at the chosen resolution.
     let baseDisplay = baseSrc.naturalSize.applying(baseSrc.preferredTransform)
     let baseW = abs(baseDisplay.width)
     let baseH = abs(baseDisplay.height)
-    let renderSize = (baseW >= 2 && baseH >= 2)
-      ? CGSize(
-        width: CGFloat(evenDimension(Int(baseW.rounded()))),
-        height: CGFloat(evenDimension(Int(baseH.rounded()))))
-      : CGSize(width: width, height: height)
+    let targetShort = min(width, height)
+    let renderSize: CGSize
+    if baseW >= 2, baseH >= 2 {
+      let baseShort = min(baseW, baseH)
+      let scale = targetShort >= 2 ? CGFloat(targetShort) / baseShort : 1
+      renderSize = CGSize(
+        width: CGFloat(evenDimension(Int((baseW * scale).rounded()))),
+        height: CGFloat(evenDimension(Int((baseH * scale).rounded()))))
+    } else {
+      renderSize = CGSize(width: width, height: height)
+    }
     let baseDur = CMTimeMinimum(targetDuration, baseAsset.duration)
     try? baseTrack.insertTimeRange(
       CMTimeRange(start: .zero, duration: baseDur), of: baseSrc, at: .zero)

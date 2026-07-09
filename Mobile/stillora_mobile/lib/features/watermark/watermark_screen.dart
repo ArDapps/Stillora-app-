@@ -11,6 +11,7 @@ import '../../core/platform/platform_info.dart';
 import '../../core/widgets/ad_widget.dart';
 import '../color/color_correction_panel.dart';
 import '../color/color_graded_preview.dart';
+import '../editor/video_preset.dart';
 import '../export/export_cancellation.dart';
 import 'watermark_state.dart';
 
@@ -143,6 +144,11 @@ class WatermarkView extends ConsumerWidget {
                   onChanged: controller.setColor,
                 ),
               ],
+              const SizedBox(height: 16),
+              _ResolutionSelector(
+                selected: wm.quality,
+                onSelected: controller.setQuality,
+              ),
               const SizedBox(height: 16),
               _ExportSection(
                 wm: wm,
@@ -700,6 +706,43 @@ String _fmt(int seconds) {
   final m = seconds ~/ 60;
   final s = seconds % 60;
   return s == 0 ? '${m}m' : '${m}m ${s}s';
+}
+
+/// Output-resolution picker: Original (keep the source size) or a tier that
+/// scales the short edge to 720p/1080p/2K/4K, aspect preserved. `null` = Original.
+class _ResolutionSelector extends StatelessWidget {
+  const _ResolutionSelector({required this.selected, required this.onSelected});
+
+  final ExportQuality? selected;
+  final ValueChanged<ExportQuality?> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Resolution', style: Theme.of(context).textTheme.labelMedium),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            ChoiceChip(
+              label: const Text('Original'),
+              selected: selected == null,
+              onSelected: (_) => onSelected(null),
+            ),
+            for (final q in ExportQuality.values)
+              ChoiceChip(
+                label: Text(q.label),
+                selected: selected == q,
+                onSelected: (_) => onSelected(q),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
 }
 
 /// Modal shown while the watermark export runs, with a Cancel button that aborts

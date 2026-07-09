@@ -15,6 +15,7 @@ import '../../core/platform/platform_info.dart';
 import '../color/color_adjust.dart';
 import '../color/color_grade_runner.dart';
 import '../editor/editor_state.dart' show MediaKind, mediaKindForPath;
+import '../editor/video_preset.dart';
 import '../editor/local_editor_media_store.dart';
 import '../export/export_controller.dart' show videoEngineProvider;
 import '../gallery/gallery_controller.dart';
@@ -118,6 +119,7 @@ class WatermarkState extends Equatable {
     this.overlays = const [],
     this.selectedOverlay = 0,
     this.color = ColorAdjust.identity,
+    this.quality,
   });
 
   final String? baseVideoPath;
@@ -130,6 +132,11 @@ class WatermarkState extends Equatable {
   /// Colour grade baked onto the watermarked video (desktop). Neutral default.
   final ColorAdjust color;
 
+  /// Output resolution tier. `null` = Original (keep the source resolution).
+  /// Otherwise the short edge is scaled to the tier (720p/1080p/2K/4K), aspect
+  /// preserved so nothing is cropped.
+  final ExportQuality? quality;
+
   bool get hasBase => baseVideoPath != null;
   bool get hasOverlays => overlays.isNotEmpty;
   bool get canExport => hasBase && hasOverlays;
@@ -138,12 +145,18 @@ class WatermarkState extends Equatable {
       ? baseWidth / baseHeight
       : 9 / 16;
 
-  /// Even output dimensions matching the source video (falls back to a sane
-  /// default before the video is measured).
+  /// Output dimensions: the source size for Original, otherwise the source
+  /// scaled to the chosen quality tier (short edge → tier, aspect preserved).
+  /// The native engine re-derives the exact size from the video's true display
+  /// aspect, so this is used for the on-screen estimate/label.
   ({int width, int height}) get outputResolution {
     final w = baseWidth > 0 ? baseWidth : 1080;
     final h = baseHeight > 0 ? baseHeight : 1920;
-    return (width: w - (w.isOdd ? 1 : 0), height: h - (h.isOdd ? 1 : 0));
+    final q = quality;
+    if (q == null) {
+      return (width: w - (w.isOdd ? 1 : 0), height: h - (h.isOdd ? 1 : 0));
+    }
+    return scaleDimensionsToQuality(w, h, q);
   }
 
   WatermarkState copyWith({
@@ -155,6 +168,8 @@ class WatermarkState extends Equatable {
     List<WatermarkOverlay>? overlays,
     int? selectedOverlay,
     ColorAdjust? color,
+    ExportQuality? quality,
+    bool clearQuality = false,
   }) =>
       WatermarkState(
         baseVideoPath: clearBase ? null : baseVideoPath ?? this.baseVideoPath,
@@ -165,6 +180,7 @@ class WatermarkState extends Equatable {
         overlays: clearBase ? const [] : overlays ?? this.overlays,
         selectedOverlay: selectedOverlay ?? this.selectedOverlay,
         color: clearBase ? ColorAdjust.identity : color ?? this.color,
+        quality: clearBase || clearQuality ? null : quality ?? this.quality,
       );
 
   @override
@@ -176,6 +192,7 @@ class WatermarkState extends Equatable {
         overlays,
         selectedOverlay,
         color,
+        quality,
       ];
 }
 
@@ -286,6 +303,11 @@ class WatermarkController extends Notifier<WatermarkState> {
   }
 
   void setColor(ColorAdjust color) => state = state.copyWith(color: color);
+
+  /// Sets the output resolution tier. `null` = Original (keep source size).
+  void setQuality(ExportQuality? quality) => state = quality == null
+      ? state.copyWith(clearQuality: true)
+      : state.copyWith(quality: quality);
 
   /// Aborts an in-flight export (and any colour-grade pass). The engine throws a
   /// cancellation error that [export]'s caller treats as a benign stop.
