@@ -106,6 +106,12 @@ const _drawerNavItems = [
     label: 'Remove Silence',
   ),
   (
+    view: 7,
+    icon: Icons.fast_forward_outlined,
+    selectedIcon: Icons.fast_forward_rounded,
+    label: 'Speed',
+  ),
+  (
     view: 8,
     icon: Icons.swap_horiz_outlined,
     selectedIcon: Icons.swap_horiz_rounded,
@@ -178,9 +184,12 @@ class _AppNavDrawer extends StatelessWidget {
             const SizedBox(height: StilloraSpacing.xs),
             // Remove Silence (5) & Watermark (6) only have working export on
             // desktop today, so hide them on iOS/Android until their native
-            // engines land. (Speed was removed from navigation.)
+            // engines land. Speed (7) also works on iOS (its removeSilence
+            // engine is ported there).
             for (final item in _drawerNavItems)
-              if (isDesktopPlatform || (item.view != 5 && item.view != 6))
+              if (isDesktopPlatform ||
+                  (item.view != 5 && item.view != 6 && item.view != 7) ||
+                  (item.view == 7 && isIosPlatform))
                 _DrawerNavTile(
                   selected: item.view == activeView,
                   icon: item.icon,
