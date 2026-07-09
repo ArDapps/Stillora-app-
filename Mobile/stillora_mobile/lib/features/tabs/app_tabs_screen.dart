@@ -182,13 +182,14 @@ class _AppNavDrawer extends StatelessWidget {
             ),
             const Divider(height: 1, color: StilloraColors.glassStroke),
             const SizedBox(height: StilloraSpacing.xs),
-            // Remove Silence (5) & Speed (7) both run on the native iOS
-            // removeSilence engine, so show them on iOS too. Watermark (6) has
-            // no iOS/Android native engine yet, so it stays desktop-only.
+            // iOS shows every section: Remove Silence (5) & Speed (7) run on
+            // its native removeSilence engine, and Watermark (6) is shown too
+            // (its export currently messages that it's desktop-only). Android
+            // has no native engine for 5/6/7, so those stay hidden there.
             for (final item in _drawerNavItems)
               if (isDesktopPlatform ||
-                  (item.view != 5 && item.view != 6 && item.view != 7) ||
-                  ((item.view == 5 || item.view == 7) && isIosPlatform))
+                  isIosPlatform ||
+                  (item.view != 5 && item.view != 6 && item.view != 7))
                 _DrawerNavTile(
                   selected: item.view == activeView,
                   icon: item.icon,

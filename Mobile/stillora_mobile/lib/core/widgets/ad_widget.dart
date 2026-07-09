@@ -31,6 +31,11 @@ class _AdSlotWidgetState extends State<AdSlotWidget>
   static final _dio = Dio();
   _Promo? _promo;
 
+  // The ad image's real width/height ratio, measured once it loads, so the
+  // banner box matches it exactly (BoxFit.cover then fills with no black bars
+  // and no cropping).
+  double? _imageAspect;
+
   // Drives the pulsing glow border around the banner.
   late final AnimationController _glow = AnimationController(
     vsync: this,
@@ -69,9 +74,33 @@ class _AdSlotWidgetState extends State<AdSlotWidget>
       if (!mounted) return;
       setState(() => _promo = promo);
       _trackImpression(promo.id);
+      _measureImage(promo);
     } catch (_) {
       // Never surface ad errors to the user.
     }
+  }
+
+  /// Loads the ad image's intrinsic size so the banner box can match its aspect
+  /// ratio exactly (no letterbox bars, no cropping).
+  void _measureImage(_Promo promo) {
+    final url = promo.image.isEmpty
+        ? ''
+        : (promo.image.startsWith('http')
+            ? promo.image
+            : '${AdConfig.looparaBaseUrl}${promo.image}');
+    if (url.isEmpty) return;
+    final stream = Image.network(url).image.resolve(const ImageConfiguration());
+    late final ImageStreamListener listener;
+    listener = ImageStreamListener(
+      (info, _) {
+        stream.removeListener(listener);
+        final h = info.image.height.toDouble();
+        if (!mounted || h <= 0) return;
+        setState(() => _imageAspect = info.image.width / h);
+      },
+      onError: (_, _) => stream.removeListener(listener),
+    );
+    stream.addListener(listener);
   }
 
   /// Report exactly one impression for the displayed ad.
@@ -118,19 +147,18 @@ class _AdSlotWidgetState extends State<AdSlotWidget>
     final isDesktop = useDesktopLayout(context);
     // Desktop caps at the native 320x100 banner. On mobile the banner spans the
     // full content width (matching the primary buttons' margins) so there are no
-    // black side gaps, but the height is capped so it stays compact. The image
-    // is shown with BoxFit.contain so the whole creative fits — nothing cropped.
+    // black side gaps. Its height follows the ad image's real aspect ratio, so
+    // BoxFit.cover fills it exactly — no letterbox bars and nothing cropped. The
+    // height is clamped so an unusually tall creative can't dominate the screen.
     final bannerWidth = isDesktop
         ? _bannerWidth
         : MediaQuery.sizeOf(context).width - 2 * StilloraSpacing.mobileMargin;
-    final aspectHeight = bannerWidth * (_bannerHeight / _bannerWidth);
+    final aspect = _imageAspect ?? (_bannerWidth / _bannerHeight);
     final bannerHeight = isDesktop
         ? _bannerHeight
-        : (aspectHeight < _mobileMaxHeight ? aspectHeight : _mobileMaxHeight);
+        : (bannerWidth / aspect).clamp(48.0, 120.0);
 
-    // Contain on mobile (capped height) so the whole ad shows; cover on desktop
-    // where the box already matches the native 320x100 ratio.
-    final imageFit = isDesktop ? BoxFit.cover : BoxFit.contain;
+    final imageFit = BoxFit.cover;
     final radius = BorderRadius.circular(StilloraRadius.md);
     final banner = ClipRRect(
       borderRadius: radius,
@@ -211,9 +239,6 @@ class _AdSlotWidgetState extends State<AdSlotWidget>
   // Standard "large banner" dimensions served by Loopara (IAB 320x100).
   static const double _bannerWidth = 320;
   static const double _bannerHeight = 100;
-  // Cap the mobile banner height so a full-width banner stays compact; the ad is
-  // shown with BoxFit.contain so the whole creative still fits within it.
-  static const double _mobileMaxHeight = 84;
 
   /// Styled text banner used when the ad has no image (or it fails to load).
   Widget _textBanner(BuildContext context, _Promo promo) {
