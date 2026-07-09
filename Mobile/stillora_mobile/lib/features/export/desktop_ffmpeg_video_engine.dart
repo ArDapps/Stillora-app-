@@ -256,6 +256,7 @@ class DesktopFfmpegVideoEngine implements engine.StilloraVideoEngine {
     required int width,
     required int height,
     required int durationSeconds,
+    engine.ColorAdjustSpec color = const engine.ColorAdjustSpec(),
   }) async {
     await _resolveFfmpeg();
     _cancelled = false;
@@ -296,6 +297,20 @@ class DesktopFfmpegVideoEngine implements engine.StilloraVideoEngine {
         "enable='between(t,${start.toStringAsFixed(2)},${end.toStringAsFixed(2)})'$out",
       );
       prev = out;
+    }
+    // Bake the colour grade in the same pass (no-op when neutral) so there's no
+    // separate re-encode. Same maths as the CoreImage/GL passes.
+    if (!color.isIdentity) {
+      filters.add(
+        '${prev}colorchannelmixer='
+        'rr=${_f(color.rGain)}:gg=${_f(color.gGain)}:bb=${_f(color.bGain)},'
+        'eq=contrast=${_f(color.contrast)}:'
+        'brightness=${_f(color.brightness)}:'
+        'saturation=${_f(color.saturation)}'
+        '${color.sharpness > 0 ? ',unsharp=5:5:${_f(color.sharpness * 2.0)}:5:5:0' : ''}'
+        '[graded]',
+      );
+      prev = '[graded]';
     }
     filters.add('${prev}format=yuv420p[vout]');
 

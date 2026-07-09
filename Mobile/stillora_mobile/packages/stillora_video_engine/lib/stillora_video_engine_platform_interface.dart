@@ -77,6 +77,7 @@ abstract class StilloraVideoEnginePlatform extends PlatformInterface {
     required int width,
     required int height,
     required int durationSeconds,
+    ColorAdjustSpec color = const ColorAdjustSpec(),
   }) {
     throw UnimplementedError('exportWatermark has not been implemented.');
   }

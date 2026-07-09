@@ -352,6 +352,8 @@ class WatermarkController extends Notifier<WatermarkState> {
 
     engine.ExportResult result;
     try {
+      // Colour grade is baked into this same pass (so every frame — including
+      // the first second — is graded, and there's no second re-encode).
       result = await videoEngine.exportWatermark(
         videoPath: basePath,
         overlays: [
@@ -369,6 +371,7 @@ class WatermarkController extends Notifier<WatermarkState> {
         width: res.width,
         height: res.height,
         durationSeconds: duration,
+        color: state.color.toSpec(),
       );
     } on MissingPluginException {
       // No native time-gated watermark yet — fall back to the reel compositor
@@ -399,14 +402,13 @@ class WatermarkController extends Notifier<WatermarkState> {
         effect: 'none',
         transition: 'none',
       );
+      // The reel fallback can't bake colour, so grade it as a second pass here.
+      result = await applyColorGrade(
+        videoEngine: videoEngine,
+        base: result,
+        color: state.color,
+      );
     }
-
-    // Bake the colour grade on as a second pass (no-op when neutral).
-    result = await applyColorGrade(
-      videoEngine: videoEngine,
-      base: result,
-      color: state.color,
-    );
 
     final now = DateTime.now();
     await ref.read(galleryControllerProvider.notifier).addRecord(

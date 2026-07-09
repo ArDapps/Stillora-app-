@@ -133,6 +133,7 @@ class MethodChannelStilloraVideoEngine extends StilloraVideoEnginePlatform {
     required int width,
     required int height,
     required int durationSeconds,
+    ColorAdjustSpec color = const ColorAdjustSpec(),
   }) async {
     final result = await methodChannel.invokeMapMethod<Object?, Object?>(
       'exportWatermark',
@@ -142,6 +143,7 @@ class MethodChannelStilloraVideoEngine extends StilloraVideoEnginePlatform {
         'width': width,
         'height': height,
         'durationSeconds': durationSeconds,
+        'color': color.toMap(),
       },
     );
     if (result == null) {

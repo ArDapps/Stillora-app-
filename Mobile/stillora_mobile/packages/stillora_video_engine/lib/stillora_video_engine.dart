@@ -60,6 +60,7 @@ abstract interface class StilloraVideoEngine {
     required int width,
     required int height,
     required int durationSeconds,
+    ColorAdjustSpec color = const ColorAdjustSpec(),
   });
 
   /// Detects and removes silent (non-speech) stretches from [videoPath], merges
@@ -187,6 +188,7 @@ class PlatformStilloraVideoEngine implements StilloraVideoEngine {
     required int width,
     required int height,
     required int durationSeconds,
+    ColorAdjustSpec color = const ColorAdjustSpec(),
   }) {
     return _platform.exportWatermark(
       videoPath: videoPath,
@@ -194,6 +196,7 @@ class PlatformStilloraVideoEngine implements StilloraVideoEngine {
       width: width,
       height: height,
       durationSeconds: durationSeconds,
+      color: color,
     );
   }
 

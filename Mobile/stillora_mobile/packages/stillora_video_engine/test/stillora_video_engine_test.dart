@@ -59,6 +59,7 @@ class MockStilloraVideoEnginePlatform
     required int width,
     required int height,
     required int durationSeconds,
+    ColorAdjustSpec color = const ColorAdjustSpec(),
   }) async {
     return ExportResult(
       outputPath: '/tmp/stillora-watermark.mp4',

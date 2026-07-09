@@ -928,12 +928,13 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
     let width = evenDimension(args["width"] as? Int ?? 1080)
     let height = evenDimension(args["height"] as? Int ?? 1920)
     let duration = max(1, args["durationSeconds"] as? Int ?? 5)
+    let color = ColorGradeParams(map: (args["color"] as? [String: Any]) ?? [:])
 
     do {
       let outputURL = try makeOutputURL()
       let outSize = try exportWatermarkComposite(
         videoPath: videoPath, overlays: overlays, width: width, height: height,
-        duration: duration, outputURL: outputURL)
+        duration: duration, color: color, outputURL: outputURL)
       emit(stage: "done", percentage: 1.0, message: "Saved")
       result([
         "outputPath": outputURL.path, "width": outSize.width, "height": outSize.height,
@@ -1038,7 +1039,7 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
   /// as the full-frame back layer.
   private func exportWatermarkComposite(
     videoPath: String, overlays: [[String: Any]], width: Int, height: Int, duration: Int,
-    outputURL: URL
+    color: ColorGradeParams, outputURL: URL
   ) throws -> (width: Int, height: Int) {
     emit(stage: "preparingImage", percentage: 0.05, message: "Preparing media")
     let composition = AVMutableComposition()
@@ -1160,6 +1161,7 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
     instruction.totalSeconds = Double(duration)
     instruction.effect = "none"
     instruction.transition = "none"
+    instruction.color = color
 
     let videoComposition = AVMutableVideoComposition()
     videoComposition.customVideoCompositorClass = ReelCompositor.self
@@ -1569,6 +1571,69 @@ final class ReelInstruction: NSObject, AVVideoCompositionInstructionProtocol {
   var effect = "none"
   var transition = "none"
   var mockup = "none"
+  // Colour grade baked into the composite (identity = no change). Applied to the
+  // whole frame in the same pass, so every frame — including the first second —
+  // is graded (a separate export pass could passthrough the opening GOP).
+  var color: ColorGradeParams = .identity
+}
+
+/// Derived colour-grade values (see the Dart `ColorAdjust`): per-channel gains
+/// fold exposure + warmth + tint; brightness/contrast/saturation map onto
+/// CIColorControls; sharpness onto CISharpenLuminance.
+struct ColorGradeParams {
+  var rGain: CGFloat = 1
+  var gGain: CGFloat = 1
+  var bGain: CGFloat = 1
+  var brightness: CGFloat = 0
+  var contrast: CGFloat = 1
+  var saturation: CGFloat = 1
+  var sharpness: CGFloat = 0
+
+  static let identity = ColorGradeParams()
+
+  var isIdentity: Bool {
+    rGain == 1 && gGain == 1 && bGain == 1 && brightness == 0 && contrast == 1
+      && saturation == 1 && sharpness == 0
+  }
+
+  init() {}
+
+  init(map: [String: Any]) {
+    rGain = CGFloat((map["rGain"] as? Double) ?? 1)
+    gGain = CGFloat((map["gGain"] as? Double) ?? 1)
+    bGain = CGFloat((map["bGain"] as? Double) ?? 1)
+    brightness = CGFloat((map["brightness"] as? Double) ?? 0)
+    contrast = CGFloat((map["contrast"] as? Double) ?? 1)
+    saturation = CGFloat((map["saturation"] as? Double) ?? 1)
+    sharpness = CGFloat((map["sharpness"] as? Double) ?? 0)
+  }
+
+  /// Applies the grade to a Core Image frame (same maths as the standalone
+  /// `runColorGrade` pass and the ffmpeg/GL passes).
+  func apply(to input: CIImage) -> CIImage {
+    if isIdentity { return input }
+    var image = input
+    if let matrix = CIFilter(name: "CIColorMatrix") {
+      matrix.setValue(image, forKey: kCIInputImageKey)
+      matrix.setValue(CIVector(x: rGain, y: 0, z: 0, w: 0), forKey: "inputRVector")
+      matrix.setValue(CIVector(x: 0, y: gGain, z: 0, w: 0), forKey: "inputGVector")
+      matrix.setValue(CIVector(x: 0, y: 0, z: bGain, w: 0), forKey: "inputBVector")
+      image = matrix.outputImage ?? image
+    }
+    if let controls = CIFilter(name: "CIColorControls") {
+      controls.setValue(image, forKey: kCIInputImageKey)
+      controls.setValue(brightness, forKey: kCIInputBrightnessKey)
+      controls.setValue(contrast, forKey: kCIInputContrastKey)
+      controls.setValue(saturation, forKey: kCIInputSaturationKey)
+      image = controls.outputImage ?? image
+    }
+    if sharpness > 0, let sharpen = CIFilter(name: "CISharpenLuminance") {
+      sharpen.setValue(image, forKey: kCIInputImageKey)
+      sharpen.setValue(sharpness * 1.5, forKey: kCIInputSharpnessKey)
+      image = sharpen.outputImage ?? image
+    }
+    return image
+  }
 }
 
 /// Draws every layer over a black canvas at its position/size, per frame, with
@@ -1616,10 +1681,37 @@ final class ReelCompositor: NSObject, AVVideoCompositing {
       return layer.ciImage
     }
     guard let buffer = request.sourceFrame(byTrackID: layer.trackID) else { return nil }
-    var ci = CIImage(cvPixelBuffer: buffer).transformed(by: layer.preferredTransform)
+    // A video frame comes from a top-down pixel buffer, and AVFoundation's
+    // `preferredTransform` is expressed in a top-left-origin space. Applying that
+    // matrix directly to a Core Image (y-up) frame flips/rotates rotated phone
+    // videos the wrong way (they come out upside down). Map the transform to a
+    // CGImagePropertyOrientation instead — Core Image resolves it in its own
+    // coordinate space, so the frame is upright and consistent with the cgImage
+    // overlays.
+    var ci = CIImage(cvPixelBuffer: buffer)
+      .oriented(orientationForTransform(layer.preferredTransform))
     ci = ci.transformed(
       by: CGAffineTransform(translationX: -ci.extent.origin.x, y: -ci.extent.origin.y))
     return ci
+  }
+
+  /// Maps an AVFoundation track's `preferredTransform` to the equivalent EXIF
+  /// orientation for Core Image. Covers the eight standard rotations/mirrors;
+  /// anything unexpected falls back to upright.
+  private func orientationForTransform(_ t: CGAffineTransform)
+    -> CGImagePropertyOrientation
+  {
+    switch (t.a, t.b, t.c, t.d) {
+    case (0, 1, -1, 0): return .right  // 90° clockwise
+    case (0, -1, 1, 0): return .left  // 90° counter-clockwise
+    case (-1, 0, 0, -1): return .down  // 180°
+    case (1, 0, 0, 1): return .up  // no rotation
+    case (1, 0, 0, -1): return .upMirrored
+    case (-1, 0, 0, 1): return .downMirrored
+    case (0, 1, 1, 0): return .leftMirrored
+    case (0, -1, -1, 0): return .rightMirrored
+    default: return .up
+    }
   }
 
   private func scaleToFill(_ image: CIImage, width: CGFloat, height: CGFloat) -> CIImage {
@@ -1799,6 +1891,10 @@ final class ReelCompositor: NSObject, AVVideoCompositing {
     default:
       break
     }
+
+    // Bake the colour grade into this same frame (no-op when neutral), so every
+    // frame is graded without a second export pass.
+    acc = instruction.color.apply(to: acc).cropped(to: frame)
 
     ciContext.render(acc, to: output, bounds: frame, colorSpace: colorSpace)
     request.finish(withComposedVideoFrame: output)
