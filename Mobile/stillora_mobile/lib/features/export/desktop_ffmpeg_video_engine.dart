@@ -377,6 +377,7 @@ class DesktopFfmpegVideoEngine implements engine.StilloraVideoEngine {
     int speed = 1,
     bool muteAudio = false,
     String? newAudioPath,
+    int? maxOutputBytes,
   }) async {
     await _resolveFfmpeg();
     _cancelled = false;
@@ -410,6 +411,15 @@ class DesktopFfmpegVideoEngine implements engine.StilloraVideoEngine {
 
       _emit(engine.ExportStage.generatingVideo, 0.35, 'Cutting silence');
       final filter = _videoFilter(width, height, engine.ResizeMode.fit);
+      // When the caller caps the file size (the Compress section), switch the
+      // encoder from its default CRF to average-bitrate mode targeting that
+      // budget, so the output lands under [maxOutputBytes]. Empty otherwise, so
+      // silence/speed exports keep their default quality.
+      final bitrateArgs = _targetBitrateArgs(
+        maxOutputBytes: maxOutputBytes,
+        durationSeconds: duration,
+        hasAudio: !stripAudio,
+      );
       final segments = <String>[];
       for (var i = 0; i < keep.length; i++) {
         if (_cancelled) {
@@ -427,6 +437,7 @@ class DesktopFfmpegVideoEngine implements engine.StilloraVideoEngine {
           '-vf', filter,
           '-r', '30',
           '-c:v', 'libx264',
+          ...bitrateArgs,
           '-pix_fmt', 'yuv420p',
           // Drop audio in the segments when muting / replacing the soundtrack.
           ...stripAudio ? ['-an'] : ['-c:a', 'aac'],
@@ -645,6 +656,34 @@ class DesktopFfmpegVideoEngine implements engine.StilloraVideoEngine {
       height: height,
       durationSeconds: durationSeconds < 1 ? 1 : durationSeconds,
     );
+  }
+
+  /// ffmpeg args that force average-bitrate encoding sized to fit
+  /// [maxOutputBytes] over [durationSeconds]. Returns an empty list when no cap
+  /// is requested (or the inputs are unusable), leaving the encoder on its
+  /// default CRF. Reserves ~128 kbps for audio when it's kept, and floors the
+  /// video bitrate so a tiny target can't produce an unplayable file.
+  List<String> _targetBitrateArgs({
+    required int? maxOutputBytes,
+    required double durationSeconds,
+    required bool hasAudio,
+  }) {
+    if (maxOutputBytes == null ||
+        maxOutputBytes <= 0 ||
+        durationSeconds <= 0) {
+      return const [];
+    }
+    const audioBps = 128000;
+    final totalBps = (maxOutputBytes * 8) / durationSeconds;
+    var videoBps = (totalBps - (hasAudio ? audioBps : 0)).floor();
+    if (videoBps < 100000) videoBps = 100000; // 100 kbps floor
+    final maxrate = (videoBps * 1.2).round();
+    final bufsize = videoBps * 2;
+    return [
+      '-b:v', '$videoBps',
+      '-maxrate', '$maxrate',
+      '-bufsize', '$bufsize',
+    ];
   }
 
   /// Formats a double for an ffmpeg filter argument (trims to 4 dp, no exponent).

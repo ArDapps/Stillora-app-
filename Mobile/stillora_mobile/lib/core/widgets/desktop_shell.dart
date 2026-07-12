@@ -59,10 +59,22 @@ const _navItems = [
     selectedIcon: Icons.fast_forward_rounded,
   ),
   (
+    index: 11,
+    label: 'Compress',
+    icon: Icons.compress_outlined,
+    selectedIcon: Icons.compress_rounded,
+  ),
+  (
     index: 8,
     label: 'Convert',
     icon: Icons.swap_horiz_outlined,
     selectedIcon: Icons.swap_horiz_rounded,
+  ),
+  (
+    index: 10,
+    label: 'MP3 Converter',
+    icon: Icons.audiotrack_outlined,
+    selectedIcon: Icons.audiotrack_rounded,
   ),
   (
     index: 4,
@@ -298,16 +310,30 @@ class _DesktopSidebar extends ConsumerWidget {
             const _SidebarLabel('Workspace'),
             const SizedBox(height: StilloraSpacing.xs),
           ],
-          for (final item in _navItems)
-            _DesktopNavItem(
-              selected: item.index == activeIndex,
-              icon: item.icon,
-              selectedIcon: item.selectedIcon,
-              label: item.label,
-              collapsed: collapsed,
-              onTap: () => onSelect(item.index),
+          // Scrolls when the window is short or the item list grows, so the
+          // nav never overflows and the ad + footer stay pinned below. A
+          // SingleChildScrollView (not ListView) builds every item even when
+          // off-screen, so all nav destinations stay reachable/testable.
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: collapsed
+                    ? CrossAxisAlignment.center
+                    : CrossAxisAlignment.start,
+                children: [
+                  for (final item in _navItems)
+                    _DesktopNavItem(
+                      selected: item.index == activeIndex,
+                      icon: item.icon,
+                      selectedIcon: item.selectedIcon,
+                      label: item.label,
+                      collapsed: collapsed,
+                      onTap: () => onSelect(item.index),
+                    ),
+                ],
+              ),
             ),
-          const Spacer(),
+          ),
           if (!collapsed) ...[
             const AdSlotWidget(
               placement: 'USER_DASHBOARD_LEFT',
@@ -497,7 +523,9 @@ const _sectionSubtitles = {
   'HTML': 'Capture any web page as a clip',
   'Remove Silence': 'Auto-cut the quiet gaps from a video',
   'Speed': 'Speed up a video 1x–4x, mute or add audio',
+  'Compress': 'Shrink a video to a smaller MP4',
   'Convert': 'Batch-convert HEIC & others to JPEG/PNG',
+  'MP3 Converter': 'Grab the audio from a YouTube or TikTok link',
   'Loop images': 'Batch loops & slideshows',
   'Info': 'Account & subscription',
 };

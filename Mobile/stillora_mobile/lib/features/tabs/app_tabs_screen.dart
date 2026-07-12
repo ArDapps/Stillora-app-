@@ -10,8 +10,10 @@ import '../editor/editor_screen.dart';
 import '../gallery/gallery_screen.dart';
 import '../silence/silence_screen.dart';
 import '../speed/speed_screen.dart';
+import '../compress/compress_screen.dart';
 import '../convert/convert_screen.dart';
 import '../html_to_video/html_to_video_screen.dart';
+import '../link_to_mp3/link_to_mp3_screen.dart';
 import '../loop_images/loop_images_screen.dart';
 import '../profile/profile_screen.dart';
 import '../text_overlay/text_overlay_screen.dart';
@@ -36,6 +38,8 @@ class AppTabsScreen extends ConsumerWidget {
       'Speed',
       'Convert',
       'Text',
+      'MP3 Converter',
+      'Compress',
     ];
     const views = [
       EditorView(),
@@ -48,6 +52,8 @@ class AppTabsScreen extends ConsumerWidget {
       SpeedView(),
       ConvertView(),
       TextOverlayView(),
+      LinkToMp3View(),
+      CompressView(),
     ];
 
     if (useDesktopLayout(context)) {
@@ -69,7 +75,7 @@ class AppTabsScreen extends ConsumerWidget {
         title: Text(titles[index]),
         actions: index == 3 ? const [ProfileSettingsButton()] : null,
       ),
-      drawer: _AppNavDrawer(
+      drawer: AppNavDrawer(
         activeView: selected,
         onSelect: (view) => ref.read(homeTabProvider.notifier).state = view,
       ),
@@ -114,10 +120,22 @@ const _drawerNavItems = [
     label: 'Speed',
   ),
   (
+    view: 11,
+    icon: Icons.compress_outlined,
+    selectedIcon: Icons.compress_rounded,
+    label: 'Compress',
+  ),
+  (
     view: 8,
     icon: Icons.swap_horiz_outlined,
     selectedIcon: Icons.swap_horiz_rounded,
     label: 'Convert',
+  ),
+  (
+    view: 10,
+    icon: Icons.audiotrack_outlined,
+    selectedIcon: Icons.audiotrack_rounded,
+    label: 'MP3 Converter',
   ),
   (
     view: 2,
@@ -147,8 +165,10 @@ const _drawerNavItems = [
 
 /// Slide-out navigation drawer for phones/tablets (opened by the AppBar ☰).
 /// Mirrors the desktop sidebar's brand + nav + privacy footer.
-class _AppNavDrawer extends StatelessWidget {
-  const _AppNavDrawer({required this.activeView, required this.onSelect});
+/// The phone navigation drawer. Public so its scroll/overflow behaviour can be
+/// widget-tested in isolation (without the whole tab screen's gallery/ad deps).
+class AppNavDrawer extends StatelessWidget {
+  const AppNavDrawer({super.key, required this.activeView, required this.onSelect});
 
   final int activeView;
   final ValueChanged<int> onSelect;
@@ -184,28 +204,38 @@ class _AppNavDrawer extends StatelessWidget {
             ),
             const Divider(height: 1, color: StilloraColors.glassStroke),
             const SizedBox(height: StilloraSpacing.xs),
-            // iOS shows every section: Remove Silence (5) & Speed (7) run on
-            // its native removeSilence engine, and Watermark (6) + Text (9) are
-            // shown too (their export currently messages that it's desktop-only).
-            // Android has no native engine for 5/6/7/9, so those stay hidden.
-            for (final item in _drawerNavItems)
-              if (isDesktopPlatform ||
-                  isIosPlatform ||
-                  (item.view != 5 &&
-                      item.view != 6 &&
-                      item.view != 7 &&
-                      item.view != 9))
-                _DrawerNavTile(
-                  selected: item.view == activeView,
-                  icon: item.icon,
-                  selectedIcon: item.selectedIcon,
-                  label: item.label,
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    onSelect(item.view);
-                  },
-                ),
-            const Spacer(),
+            // Nav list scrolls so it never overflows on short screens, while the
+            // privacy footer below stays pinned to the bottom.
+            // Per-section platform visibility:
+            //  • 5/6/7/9 (Silence/Watermark/Speed/Text) run on iOS's native
+            //    engine, so desktop + iOS show them; Android hides them.
+            //  • 11 (Compress) re-encodes under a size cap. macOS/iOS use the
+            //    native engine (AVFoundation's fileLengthLimit *is* honored);
+            //    Windows/Linux use bundled ffmpeg. Android reuses the
+            //    removeSilence pipeline it lacks, so it stays hidden there.
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  for (final item in _drawerNavItems)
+                    if (switch (item.view) {
+                      5 || 6 || 7 || 9 || 11 =>
+                        isDesktopPlatform || isIosPlatform,
+                      _ => true,
+                    })
+                      _DrawerNavTile(
+                        selected: item.view == activeView,
+                        icon: item.icon,
+                        selectedIcon: item.selectedIcon,
+                        label: item.label,
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          onSelect(item.view);
+                        },
+                      ),
+                ],
+              ),
+            ),
             Padding(
               padding: const EdgeInsets.all(StilloraSpacing.md),
               child: Row(

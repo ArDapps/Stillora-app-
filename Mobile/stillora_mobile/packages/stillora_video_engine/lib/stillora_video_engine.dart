@@ -70,6 +70,11 @@ abstract interface class StilloraVideoEngine {
   /// replacement soundtrack: the original audio is dropped, the speed-up applies
   /// to the video only (the new audio plays at normal speed), and the video is
   /// looped to match the new audio's length.
+  ///
+  /// [maxOutputBytes] caps the output file size (the "Compress" section's size
+  /// lever): AVFoundation honours it via `fileLengthLimit`, ffmpeg via a derived
+  /// target bitrate. `null` (the default) means no cap, so silence/speed exports
+  /// are unaffected.
   Future<ExportResult> removeSilence({
     required String videoPath,
     required int width,
@@ -80,6 +85,7 @@ abstract interface class StilloraVideoEngine {
     int speed = 1,
     bool muteAudio = false,
     String? newAudioPath,
+    int? maxOutputBytes,
   });
 
   /// Applies a baked colour grade ([adjust]) to a finished [videoPath] as a
@@ -211,6 +217,7 @@ class PlatformStilloraVideoEngine implements StilloraVideoEngine {
     int speed = 1,
     bool muteAudio = false,
     String? newAudioPath,
+    int? maxOutputBytes,
   }) {
     return _platform.removeSilence(
       videoPath: videoPath,
@@ -222,6 +229,7 @@ class PlatformStilloraVideoEngine implements StilloraVideoEngine {
       speed: speed,
       muteAudio: muteAudio,
       newAudioPath: newAudioPath,
+      maxOutputBytes: maxOutputBytes,
     );
   }
 

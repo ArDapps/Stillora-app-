@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
@@ -15,7 +16,9 @@ void main() {
     final router = GoRouter(
       routes: [GoRoute(path: '/', builder: (context, state) => home)],
     );
-    return MaterialApp.router(routerConfig: router);
+    // DesktopShell reads sidebarCollapsedProvider, so a ProviderScope is
+    // required for it to build.
+    return ProviderScope(child: MaterialApp.router(routerConfig: router));
   }
 
   testWidgets('shows the sidebar on a desktop-sized macOS surface', (

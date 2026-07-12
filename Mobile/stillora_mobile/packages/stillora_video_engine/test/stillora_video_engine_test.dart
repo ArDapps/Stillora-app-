@@ -80,6 +80,7 @@ class MockStilloraVideoEnginePlatform
     int speed = 1,
     bool muteAudio = false,
     String? newAudioPath,
+    int? maxOutputBytes,
   }) async {
     return ExportResult(
       outputPath: '/tmp/stillora-trimmed.mp4',

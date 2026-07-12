@@ -1227,6 +1227,8 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
     let speed = max(1, args["speed"] as? Int ?? 1)
     let muteAudio = args["muteAudio"] as? Bool ?? false
     let newAudioPath = args["newAudioPath"] as? String
+    // Optional file-size cap (the "Compress" section). 0/absent means no cap.
+    let maxOutputBytes = args["maxOutputBytes"] as? Int ?? 0
     let hasNewAudio =
       newAudioPath != nil && FileManager.default.fileExists(atPath: newAudioPath!)
     // The cut clip is silent when muting or swapping in a new soundtrack.
@@ -1321,6 +1323,11 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
       export.videoComposition = videoComposition
       export.shouldOptimizeForNetworkUse = true
       export.audioTimePitchAlgorithm = .spectral  // keep voice pitch when sped up
+      // Cap the file size when the Compress section requests it: the session
+      // lowers its bitrate to keep the result under this limit.
+      if maxOutputBytes > 0 {
+        export.fileLengthLimit = Int64(maxOutputBytes)
+      }
       emit(stage: "mergingAudio", percentage: 0.7, message: "Rendering")
       try runExportSession(export)
 

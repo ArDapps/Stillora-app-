@@ -92,6 +92,7 @@ abstract class StilloraVideoEnginePlatform extends PlatformInterface {
     int speed = 1,
     bool muteAudio = false,
     String? newAudioPath,
+    int? maxOutputBytes,
   }) {
     throw UnimplementedError('removeSilence has not been implemented.');
   }

@@ -166,6 +166,7 @@ class MethodChannelStilloraVideoEngine extends StilloraVideoEnginePlatform {
     int speed = 1,
     bool muteAudio = false,
     String? newAudioPath,
+    int? maxOutputBytes,
   }) async {
     final result = await methodChannel
         .invokeMapMethod<Object?, Object?>('removeSilence', {
@@ -178,6 +179,7 @@ class MethodChannelStilloraVideoEngine extends StilloraVideoEnginePlatform {
           'speed': speed,
           'muteAudio': muteAudio,
           'newAudioPath': newAudioPath,
+          'maxOutputBytes': maxOutputBytes,
         });
     if (result == null) {
       throw PlatformException(
