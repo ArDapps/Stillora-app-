@@ -59,7 +59,7 @@ const _navItems = [
     selectedIcon: Icons.fast_forward_rounded,
   ),
   (
-    index: 11,
+    index: 10,
     label: 'Compress',
     icon: Icons.compress_outlined,
     selectedIcon: Icons.compress_rounded,
@@ -69,12 +69,6 @@ const _navItems = [
     label: 'Convert',
     icon: Icons.swap_horiz_outlined,
     selectedIcon: Icons.swap_horiz_rounded,
-  ),
-  (
-    index: 10,
-    label: 'MP3 Converter',
-    icon: Icons.audiotrack_outlined,
-    selectedIcon: Icons.audiotrack_rounded,
   ),
   (
     index: 4,
@@ -525,7 +519,6 @@ const _sectionSubtitles = {
   'Speed': 'Speed up a video 1x–4x, mute or add audio',
   'Compress': 'Shrink a video to a smaller MP4',
   'Convert': 'Batch-convert HEIC & others to JPEG/PNG',
-  'MP3 Converter': 'Grab the audio from a YouTube or TikTok link',
   'Loop images': 'Batch loops & slideshows',
   'Info': 'Account & subscription',
 };

@@ -6,8 +6,7 @@ import 'package:stillora_mobile/features/tabs/app_tabs_screen.dart';
 
 /// Verifies the phone navigation drawer scrolls instead of overflowing on a
 /// short screen (it previously threw a 37px RenderFlex bottom overflow because
-/// the nav items + footer were taller than the viewport), and that Compress —
-/// which only works on desktop — is not offered on iOS.
+/// the nav items + footer were taller than the viewport).
 ///
 /// The drawer is pumped in isolation (not the whole tab screen) so gallery/ad
 /// dependencies don't muddy the layout under test.
@@ -22,8 +21,7 @@ void main() {
     );
   }
 
-  testWidgets('phone drawer scrolls without overflowing and hides Compress',
-      (tester) async {
+  testWidgets('phone drawer scrolls without overflowing', (tester) async {
     // A real phone surface — the size the reported overflow happened on.
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
@@ -53,11 +51,9 @@ void main() {
         findsWidgets,
       );
 
-      // Native-engine sections still show on iOS…
+      // Native-engine sections show on iOS.
       expect(find.text('Speed'), findsOneWidget);
       expect(find.text('Remove Silence'), findsOneWidget);
-      // …but Compress is desktop-only, so it is not listed here.
-      expect(find.text('Compress'), findsNothing);
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }

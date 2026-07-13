@@ -13,7 +13,6 @@ import '../speed/speed_screen.dart';
 import '../compress/compress_screen.dart';
 import '../convert/convert_screen.dart';
 import '../html_to_video/html_to_video_screen.dart';
-import '../link_to_mp3/link_to_mp3_screen.dart';
 import '../loop_images/loop_images_screen.dart';
 import '../profile/profile_screen.dart';
 import '../text_overlay/text_overlay_screen.dart';
@@ -38,7 +37,6 @@ class AppTabsScreen extends ConsumerWidget {
       'Speed',
       'Convert',
       'Text',
-      'MP3 Converter',
       'Compress',
     ];
     const views = [
@@ -52,7 +50,6 @@ class AppTabsScreen extends ConsumerWidget {
       SpeedView(),
       ConvertView(),
       TextOverlayView(),
-      LinkToMp3View(),
       CompressView(),
     ];
 
@@ -120,7 +117,7 @@ const _drawerNavItems = [
     label: 'Speed',
   ),
   (
-    view: 11,
+    view: 10,
     icon: Icons.compress_outlined,
     selectedIcon: Icons.compress_rounded,
     label: 'Compress',
@@ -130,12 +127,6 @@ const _drawerNavItems = [
     icon: Icons.swap_horiz_outlined,
     selectedIcon: Icons.swap_horiz_rounded,
     label: 'Convert',
-  ),
-  (
-    view: 10,
-    icon: Icons.audiotrack_outlined,
-    selectedIcon: Icons.audiotrack_rounded,
-    label: 'MP3 Converter',
   ),
   (
     view: 2,
@@ -209,7 +200,7 @@ class AppNavDrawer extends StatelessWidget {
             // Per-section platform visibility:
             //  • 5/6/7/9 (Silence/Watermark/Speed/Text) run on iOS's native
             //    engine, so desktop + iOS show them; Android hides them.
-            //  • 11 (Compress) re-encodes under a size cap. macOS/iOS use the
+            //  • 10 (Compress) re-encodes under a size cap. macOS/iOS use the
             //    native engine (AVFoundation's fileLengthLimit *is* honored);
             //    Windows/Linux use bundled ffmpeg. Android reuses the
             //    removeSilence pipeline it lacks, so it stays hidden there.
@@ -219,7 +210,7 @@ class AppNavDrawer extends StatelessWidget {
                 children: [
                   for (final item in _drawerNavItems)
                     if (switch (item.view) {
-                      5 || 6 || 7 || 9 || 11 =>
+                      5 || 6 || 7 || 9 || 10 =>
                         isDesktopPlatform || isIosPlatform,
                       _ => true,
                     })
