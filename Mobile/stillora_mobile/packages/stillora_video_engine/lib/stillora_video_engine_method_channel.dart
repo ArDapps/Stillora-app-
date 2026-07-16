@@ -156,6 +156,33 @@ class MethodChannelStilloraVideoEngine extends StilloraVideoEnginePlatform {
   }
 
   @override
+  Future<ExportResult> removeWatermark({
+    required String videoPath,
+    required List<BlurRegionSpec> regions,
+    required int width,
+    required int height,
+    required int durationSeconds,
+  }) async {
+    final result = await methodChannel.invokeMapMethod<Object?, Object?>(
+      'removeWatermark',
+      {
+        'videoPath': videoPath,
+        'regions': [for (final r in regions) r.toMap()],
+        'width': width,
+        'height': height,
+        'durationSeconds': durationSeconds,
+      },
+    );
+    if (result == null) {
+      throw PlatformException(
+        code: 'export_failed',
+        message: 'The video engine did not return a watermark-removal result.',
+      );
+    }
+    return ExportResult.fromMap(result);
+  }
+
+  @override
   Future<ExportResult> removeSilence({
     required String videoPath,
     required int width,

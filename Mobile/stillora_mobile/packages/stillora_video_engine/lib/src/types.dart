@@ -89,6 +89,45 @@ class WatermarkLayerSpec extends Equatable {
       [path, isImage, x, y, scale, start, end, fadeIn, fadeOut];
 }
 
+/// A rectangular region of the frame to blur out — used to hide a burned-in
+/// watermark (e.g. TikTok's). Coordinates are normalised to the frame
+/// (0..1): [x]/[y] are the top-left, [w]/[h] the size. [start]/[end] are the
+/// seconds during which the blur is applied (the whole clip when equal to the
+/// full duration). [strength] is the blur radius as a fraction of the region's
+/// smaller side (0.05..1.0); higher is blurrier.
+class BlurRegionSpec extends Equatable {
+  const BlurRegionSpec({
+    required this.x,
+    required this.y,
+    required this.w,
+    required this.h,
+    required this.start,
+    required this.end,
+    this.strength = 0.5,
+  });
+
+  final double x;
+  final double y;
+  final double w;
+  final double h;
+  final double start;
+  final double end;
+  final double strength;
+
+  Map<String, Object?> toMap() => {
+    'x': x,
+    'y': y,
+    'w': w,
+    'h': h,
+    'start': start,
+    'end': end,
+    'strength': strength,
+  };
+
+  @override
+  List<Object?> get props => [x, y, w, h, start, end, strength];
+}
+
 /// A baked color grade to apply to a finished video as a post-process pass.
 ///
 /// The values are the *derived*, engine-ready form of the app's colour sliders

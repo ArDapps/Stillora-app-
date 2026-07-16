@@ -70,6 +70,22 @@ class MockStilloraVideoEnginePlatform
   }
 
   @override
+  Future<ExportResult> removeWatermark({
+    required String videoPath,
+    required List<BlurRegionSpec> regions,
+    required int width,
+    required int height,
+    required int durationSeconds,
+  }) async {
+    return ExportResult(
+      outputPath: '/tmp/stillora-unmark.mp4',
+      width: width,
+      height: height,
+      durationSeconds: durationSeconds,
+    );
+  }
+
+  @override
   Future<ExportResult> removeSilence({
     required String videoPath,
     required int width,

@@ -63,6 +63,17 @@ abstract interface class StilloraVideoEngine {
     ColorAdjustSpec color = const ColorAdjustSpec(),
   });
 
+  /// Blurs out one or more rectangular [regions] of [videoPath] (each within its
+  /// own time window) to hide a burned-in watermark, preserving the base audio.
+  /// Output is sized [width]x[height] and runs [durationSeconds].
+  Future<ExportResult> removeWatermark({
+    required String videoPath,
+    required List<BlurRegionSpec> regions,
+    required int width,
+    required int height,
+    required int durationSeconds,
+  });
+
   /// Detects and removes silent (non-speech) stretches from [videoPath], merges
   /// what remains, and exports it scaled to [width]x[height].
   ///
@@ -203,6 +214,23 @@ class PlatformStilloraVideoEngine implements StilloraVideoEngine {
       height: height,
       durationSeconds: durationSeconds,
       color: color,
+    );
+  }
+
+  @override
+  Future<ExportResult> removeWatermark({
+    required String videoPath,
+    required List<BlurRegionSpec> regions,
+    required int width,
+    required int height,
+    required int durationSeconds,
+  }) {
+    return _platform.removeWatermark(
+      videoPath: videoPath,
+      regions: regions,
+      width: width,
+      height: height,
+      durationSeconds: durationSeconds,
     );
   }
 

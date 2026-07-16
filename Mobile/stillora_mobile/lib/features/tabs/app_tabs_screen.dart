@@ -15,6 +15,7 @@ import '../convert/convert_screen.dart';
 import '../html_to_video/html_to_video_screen.dart';
 import '../loop_images/loop_images_screen.dart';
 import '../profile/profile_screen.dart';
+import '../remove_watermark/remove_watermark_screen.dart';
 import '../text_overlay/text_overlay_screen.dart';
 import '../watermark/watermark_screen.dart';
 
@@ -38,6 +39,7 @@ class AppTabsScreen extends ConsumerWidget {
       'Convert',
       'Text',
       'Compress',
+      'Remove Watermark',
     ];
     const views = [
       EditorView(),
@@ -51,6 +53,7 @@ class AppTabsScreen extends ConsumerWidget {
       ConvertView(),
       TextOverlayView(),
       CompressView(),
+      RemoveWatermarkView(),
     ];
 
     if (useDesktopLayout(context)) {
@@ -103,6 +106,12 @@ const _drawerNavItems = [
     icon: Icons.branding_watermark_outlined,
     selectedIcon: Icons.branding_watermark_rounded,
     label: 'Watermark',
+  ),
+  (
+    view: 11,
+    icon: Icons.auto_fix_high_outlined,
+    selectedIcon: Icons.auto_fix_high_rounded,
+    label: 'Remove Watermark',
   ),
   (
     view: 5,
@@ -210,7 +219,7 @@ class AppNavDrawer extends StatelessWidget {
                 children: [
                   for (final item in _drawerNavItems)
                     if (switch (item.view) {
-                      5 || 6 || 7 || 9 || 10 =>
+                      5 || 6 || 7 || 9 || 10 || 11 =>
                         isDesktopPlatform || isIosPlatform,
                       _ => true,
                     })

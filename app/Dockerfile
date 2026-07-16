@@ -8,7 +8,13 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PUPPETEER_SKIP_DOWNLOAD=1
 
 COPY package.json package-lock.json ./
-RUN npm ci
+# --ignore-scripts keeps the build hermetic: several deps (ffmpeg-static,
+# youtube-dl-exec) download binaries from GitHub in postinstall, which fails on
+# cloud build servers (unauthenticated GitHub rate limits → 403). Native deps
+# (sharp, unrs-resolver, @next/swc) ship prebuilt binaries via optional
+# dependencies, so they don't need their scripts. ffmpeg is provided via apt in
+# the runner stage instead.
+RUN npm ci --ignore-scripts
 
 FROM node:22-bookworm-slim AS builder
 
@@ -31,11 +37,15 @@ ENV HOSTNAME=0.0.0.0
 # Headless Chromium for the HTML → MP4 renderer (app/api/convert/html).
 ENV PUPPETEER_SKIP_DOWNLOAD=1
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+# ffmpeg comes from the distro (npm install scripts are skipped in the build),
+# so the export/render pipelines resolve this instead of ffmpeg-static.
+ENV FFMPEG_PATH=/usr/bin/ffmpeg
 
-# chromium + fonts (incl. color emoji) for deterministic HTML video rendering.
+# chromium + ffmpeg + fonts (incl. color emoji) for deterministic HTML video rendering.
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
     chromium \
+    ffmpeg \
     fonts-liberation \
     fonts-noto-core \
     fonts-noto-color-emoji \

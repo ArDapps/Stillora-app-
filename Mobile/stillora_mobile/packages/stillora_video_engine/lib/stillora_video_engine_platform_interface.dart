@@ -82,6 +82,16 @@ abstract class StilloraVideoEnginePlatform extends PlatformInterface {
     throw UnimplementedError('exportWatermark has not been implemented.');
   }
 
+  Future<ExportResult> removeWatermark({
+    required String videoPath,
+    required List<BlurRegionSpec> regions,
+    required int width,
+    required int height,
+    required int durationSeconds,
+  }) {
+    throw UnimplementedError('removeWatermark has not been implemented.');
+  }
+
   Future<ExportResult> removeSilence({
     required String videoPath,
     required int width,

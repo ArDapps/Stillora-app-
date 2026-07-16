@@ -366,6 +366,101 @@ class DesktopFfmpegVideoEngine implements engine.StilloraVideoEngine {
     );
   }
 
+  /// Blurs out each rectangular [regions] entry (crop → boxblur → overlay back),
+  /// time-gated with `enable='between(t,start,end)'`, keeping the base audio.
+  /// Used to hide burned-in watermarks (e.g. TikTok's moving logo).
+  @override
+  Future<engine.ExportResult> removeWatermark({
+    required String videoPath,
+    required List<engine.BlurRegionSpec> regions,
+    required int width,
+    required int height,
+    required int durationSeconds,
+  }) async {
+    await _resolveFfmpeg();
+    _cancelled = false;
+    final dur = durationSeconds < 1 ? 1 : durationSeconds;
+    final exportRoot = await _exportRoot();
+    final stamp = DateTime.now().microsecondsSinceEpoch.toString();
+    final outputPath = _join(exportRoot.path, 'stillora-unmark-$stamp.mp4');
+
+    _emit(engine.ExportStage.preparingImage, 0.05, 'Preparing');
+
+    final args = <String>['-y', '-i', videoPath];
+    final filters = <String>[];
+    var prev = '[0:v]';
+
+    for (var i = 0; i < regions.length; i++) {
+      final r = regions[i];
+      // Normalised region → even pixel rect clamped inside the frame (yuv420p
+      // needs even crop offsets/sizes for chroma alignment).
+      var x = _even((r.x.clamp(0.0, 1.0) * width).round());
+      var y = _even((r.y.clamp(0.0, 1.0) * height).round());
+      var w = _even((r.w.clamp(0.0, 1.0) * width).round()).clamp(2, width);
+      var h = _even((r.h.clamp(0.0, 1.0) * height).round()).clamp(2, height);
+      if (x + w > width) x = _even(width - w);
+      if (y + h > height) y = _even(height - h);
+      if (x < 0) x = 0;
+      if (y < 0) y = 0;
+
+      final minSide = w < h ? w : h;
+      final maxRadius = (minSide / 2).floor() - 1;
+      var radius = (r.strength.clamp(0.05, 1.0) * minSide / 2).round();
+      radius = radius.clamp(1, maxRadius < 1 ? 1 : maxRadius);
+
+      final start = r.start.clamp(0.0, dur.toDouble());
+      final end = r.end.clamp(start, dur.toDouble());
+
+      final base = '[b$i]';
+      final copy = '[c$i]';
+      final blurred = '[u$i]';
+      final out = '[o$i]';
+      // Duplicate the running frame, crop+blur the region on one copy, then
+      // paint the blurred patch back over the original at (x,y) during [start,end].
+      filters.add('${prev}split=2$base$copy');
+      filters.add('$copy'
+          'crop=$w:$h:$x:$y,boxblur=$radius:2$blurred');
+      filters.add(
+        "$base$blurred"
+        "overlay=x=$x:y=$y:"
+        "enable='between(t,${start.toStringAsFixed(2)},${end.toStringAsFixed(2)})'$out",
+      );
+      prev = out;
+    }
+
+    if (regions.isEmpty) {
+      // Nothing to blur — still normalise/re-encode so the caller gets a file.
+      filters.add('${prev}null[vpre]');
+      prev = '[vpre]';
+    }
+    filters.add('${prev}format=yuv420p[vout]');
+
+    args.addAll(['-filter_complex', filters.join(';'), '-map', '[vout]']);
+    args.addAll(['-map', '0:a:0?', '-c:a', 'aac']);
+    args.addAll([
+      '-t', '$dur',
+      '-r', '30',
+      '-c:v', 'libx264',
+      '-pix_fmt', 'yuv420p',
+      '-movflags', '+faststart',
+      outputPath,
+    ]);
+
+    _emit(engine.ExportStage.generatingVideo, 0.4, 'Removing watermark');
+    await _runFfmpeg(args);
+    _emit(engine.ExportStage.done, 1, 'Watermark removed');
+    return engine.ExportResult(
+      outputPath: outputPath,
+      width: width,
+      height: height,
+      durationSeconds: dur,
+    );
+  }
+
+  /// Rounds [value] down to the nearest even integer (min 0) — required for
+  /// yuv420p crop offsets/sizes.
+  int _even(int value) => value - (value % 2);
+
   @override
   Future<engine.ExportResult> removeSilence({
     required String videoPath,
