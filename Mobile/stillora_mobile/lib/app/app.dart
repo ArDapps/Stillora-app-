@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/analytics/usage_tracker.dart';
 import '../features/export/export_controller.dart';
 import '../features/html_to_video/html_to_video_controller.dart';
 import '../features/html_to_video/html_to_video_service.dart';
@@ -33,8 +34,9 @@ class StilloraApp extends ConsumerWidget {
       theme: buildStilloraTheme(Brightness.light),
       darkTheme: buildStilloraTheme(Brightness.dark),
       routerConfig: router,
-      builder: (context, child) =>
-          _BackgroundJobToasts(child: child ?? const SizedBox.shrink()),
+      builder: (context, child) => UsageTrackerHost(
+        child: _BackgroundJobToasts(child: child ?? const SizedBox.shrink()),
+      ),
     );
   }
 }

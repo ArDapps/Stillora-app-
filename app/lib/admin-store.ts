@@ -159,6 +159,48 @@ export async function getUsers(): Promise<UserRecord[]> {
   }
 }
 
+export type Page<T> = {
+  rows: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
+function normalizePage(page: unknown, pageSize: number) {
+  const n = typeof page === "string" ? parseInt(page, 10) : Number(page);
+  const safePage = Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1;
+  return { page: safePage, offset: (safePage - 1) * pageSize };
+}
+
+/** One page of users (with export counts), newest activity first. */
+export async function getUsersPage(page = 1, pageSize = 25): Promise<Page<UserRecord>> {
+  const { page: safePage, offset } = normalizePage(page, pageSize);
+  try {
+    const [rows, totals] = await Promise.all([
+      query<UserRow>(
+        `SELECT u.sub, u.email, u.name, u.picture, u.first_seen, u.last_seen,
+                COUNT(e.id)::int AS export_count
+         FROM admin_users u
+         LEFT JOIN admin_exports e ON e.user_sub = u.sub
+         GROUP BY u.sub
+         ORDER BY u.last_seen DESC
+         LIMIT $1 OFFSET $2`,
+        [pageSize, offset],
+      ),
+      query<{ count: number }>(`SELECT COUNT(*)::int AS count FROM admin_users`),
+    ]);
+    return {
+      rows: rows.map(mapUser),
+      total: Number(totals[0]?.count) || 0,
+      page: safePage,
+      pageSize,
+    };
+  } catch (error) {
+    console.error("getUsersPage failed:", error);
+    return { rows: [], total: 0, page: safePage, pageSize };
+  }
+}
+
 export async function getRecentExports(limit = 50): Promise<ExportRecord[]> {
   try {
     const rows = await query<ExportRow>(
@@ -172,6 +214,32 @@ export async function getRecentExports(limit = 50): Promise<ExportRecord[]> {
   } catch (error) {
     console.error("getRecentExports failed:", error);
     return [];
+  }
+}
+
+/** One page of exports, newest first. */
+export async function getExportsPage(page = 1, pageSize = 25): Promise<Page<ExportRecord>> {
+  const { page: safePage, offset } = normalizePage(page, pageSize);
+  try {
+    const [rows, totals] = await Promise.all([
+      query<ExportRow>(
+        `SELECT id, user_sub, user_email, user_name, preset_id, duration, created_at
+         FROM admin_exports
+         ORDER BY created_at DESC
+         LIMIT $1 OFFSET $2`,
+        [pageSize, offset],
+      ),
+      query<{ count: number }>(`SELECT COUNT(*)::int AS count FROM admin_exports`),
+    ]);
+    return {
+      rows: rows.map(mapExport),
+      total: Number(totals[0]?.count) || 0,
+      page: safePage,
+      pageSize,
+    };
+  } catch (error) {
+    console.error("getExportsPage failed:", error);
+    return { rows: [], total: 0, page: safePage, pageSize };
   }
 }
 

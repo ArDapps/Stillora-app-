@@ -1,9 +1,20 @@
-import { getRecentExports, getStats } from "@/lib/admin-store";
+import { getExportsPage, getStats } from "@/lib/admin-store";
+import { Pagination } from "../pagination";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminActivityPage() {
-  const [exports, stats] = await Promise.all([getRecentExports(100), getStats()]);
+const PAGE_SIZE = 25;
+
+export default async function AdminActivityPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const { page } = await searchParams;
+  const [exports, stats] = await Promise.all([
+    getExportsPage(page ? parseInt(page, 10) : 1, PAGE_SIZE),
+    getStats(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -21,11 +32,12 @@ export default async function AdminActivityPage() {
         </div>
       </div>
 
-      {exports.length === 0 ? (
+      {exports.total === 0 ? (
         <p className="rounded-xl border px-4 py-12 text-center text-sm" style={{ borderColor: "var(--color-border)", color: "var(--color-muted)" }}>
           No exports recorded yet.
         </p>
       ) : (
+        <>
         <div className="overflow-x-auto rounded-xl border" style={{ borderColor: "var(--color-border)" }}>
           <table className="w-full text-sm" style={{ background: "var(--color-card)" }}>
             <thead>
@@ -42,7 +54,7 @@ export default async function AdminActivityPage() {
               </tr>
             </thead>
             <tbody>
-              {exports.map((e) => (
+              {exports.rows.map((e) => (
                 <tr key={e.id} style={{ borderBottom: "1px solid var(--color-border-subtle)" }}>
                   <td className="px-4 py-3 font-medium" style={{ color: "var(--color-foreground)" }}>{e.userName}</td>
                   <td className="px-4 py-3" style={{ color: "var(--color-muted)" }}>{e.userEmail}</td>
@@ -63,6 +75,13 @@ export default async function AdminActivityPage() {
             </tbody>
           </table>
         </div>
+        <Pagination
+          basePath="/admin/activity"
+          page={exports.page}
+          pageSize={exports.pageSize}
+          total={exports.total}
+        />
+        </>
       )}
     </div>
   );

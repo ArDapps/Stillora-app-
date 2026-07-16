@@ -1,9 +1,17 @@
-import { getUsers } from "@/lib/admin-store";
+import { getUsersPage } from "@/lib/admin-store";
+import { Pagination } from "../pagination";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminUsersPage() {
-  const users = await getUsers();
+const PAGE_SIZE = 25;
+
+export default async function AdminUsersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const { page } = await searchParams;
+  const users = await getUsersPage(page ? parseInt(page, 10) : 1, PAGE_SIZE);
 
   return (
     <div className="space-y-6">
@@ -12,15 +20,16 @@ export default async function AdminUsersPage() {
           Users
         </h1>
         <span className="text-sm" style={{ color: "var(--color-muted)" }}>
-          {users.length} total
+          {users.total.toLocaleString()} total
         </span>
       </div>
 
-      {users.length === 0 ? (
+      {users.total === 0 ? (
         <p className="rounded-xl border px-4 py-12 text-center text-sm" style={{ borderColor: "var(--color-border)", color: "var(--color-muted)" }}>
           No users yet. They appear after their first Google sign-in.
         </p>
       ) : (
+        <>
         <div className="overflow-x-auto rounded-xl border" style={{ borderColor: "var(--color-border)" }}>
           <table className="w-full text-sm" style={{ background: "var(--color-card)" }}>
             <thead>
@@ -37,7 +46,7 @@ export default async function AdminUsersPage() {
               </tr>
             </thead>
             <tbody>
-              {users.map((u) => (
+              {users.rows.map((u) => (
                 <tr key={u.sub} style={{ borderBottom: "1px solid var(--color-border-subtle)" }}>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
@@ -75,6 +84,13 @@ export default async function AdminUsersPage() {
             </tbody>
           </table>
         </div>
+        <Pagination
+          basePath="/admin/users"
+          page={users.page}
+          pageSize={users.pageSize}
+          total={users.total}
+        />
+        </>
       )}
     </div>
   );

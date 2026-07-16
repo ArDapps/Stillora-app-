@@ -40,6 +40,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
         <nav className="flex flex-1 flex-col gap-0.5 p-2">
           <NavItem href="/admin">Dashboard</NavItem>
+          <NavItem href="/admin/analytics">Analytics</NavItem>
           <NavItem href="/admin/users">Users</NavItem>
           <NavItem href="/admin/activity">Activity</NavItem>
           <NavItem href="/admin/downloads">Downloads</NavItem>

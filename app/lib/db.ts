@@ -59,6 +59,48 @@ export function ensureSchema(): Promise<void> {
         version      TEXT NOT NULL DEFAULT '',
         updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
       );
+
+      -- One row per app usage session (web, mobile, or desktop). A session is
+      -- created on app open and kept alive by heartbeats; duration_seconds is
+      -- the wall-clock time between the first and last heartbeat.
+      CREATE TABLE IF NOT EXISTS admin_sessions (
+        id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        client_id        TEXT NOT NULL UNIQUE,
+        user_sub         TEXT,
+        user_email       TEXT NOT NULL DEFAULT '',
+        user_name        TEXT NOT NULL DEFAULT '',
+        platform         TEXT NOT NULL DEFAULT 'web',
+        app_version      TEXT NOT NULL DEFAULT '',
+        country          TEXT NOT NULL DEFAULT '',
+        country_code     TEXT NOT NULL DEFAULT '',
+        region           TEXT NOT NULL DEFAULT '',
+        city             TEXT NOT NULL DEFAULT '',
+        os               TEXT NOT NULL DEFAULT '',
+        browser          TEXT NOT NULL DEFAULT '',
+        device           TEXT NOT NULL DEFAULT '',
+        user_agent       TEXT NOT NULL DEFAULT '',
+        ip_hash          TEXT NOT NULL DEFAULT '',
+        started_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+        last_seen_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+        ended_at         TIMESTAMPTZ,
+        duration_seconds INTEGER NOT NULL DEFAULT 0
+      );
+
+      CREATE INDEX IF NOT EXISTS admin_sessions_started_at_idx ON admin_sessions (started_at DESC);
+      CREATE INDEX IF NOT EXISTS admin_sessions_user_sub_idx ON admin_sessions (user_sub);
+      CREATE INDEX IF NOT EXISTS admin_sessions_country_idx ON admin_sessions (country_code);
+      CREATE INDEX IF NOT EXISTS admin_sessions_platform_idx ON admin_sessions (platform);
+
+      -- Server-side IP -> location cache so we don't call the geo API on every
+      -- heartbeat. Keyed by raw IP; sessions only persist a hashed IP.
+      CREATE TABLE IF NOT EXISTS admin_geo_cache (
+        ip           TEXT PRIMARY KEY,
+        country      TEXT NOT NULL DEFAULT '',
+        country_code TEXT NOT NULL DEFAULT '',
+        region       TEXT NOT NULL DEFAULT '',
+        city         TEXT NOT NULL DEFAULT '',
+        fetched_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
     `)
     .then(() => undefined)
     .catch((error) => {
