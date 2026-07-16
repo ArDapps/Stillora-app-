@@ -42,7 +42,19 @@ class UsageTracker {
 
   Future<void> end() => _send('end');
 
-  Future<void> _send(String event) async {
+  String _lastScreen = '';
+
+  /// Reports which screen/feature the user opened, linked to the live session.
+  /// De-duplicates consecutive reports of the same screen (the router's redirect
+  /// hook can fire more than once for a single navigation).
+  Future<void> screen(String name) {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty || trimmed == _lastScreen) return Future.value();
+    _lastScreen = trimmed;
+    return _send('screen', screen: trimmed);
+  }
+
+  Future<void> _send(String event, {String? screen}) async {
     try {
       final token = _ref.read(authControllerProvider).asData?.value?.token;
       await _ref.read(dioProvider).post<void>(
@@ -51,6 +63,7 @@ class UsageTracker {
           'clientId': _clientId,
           'event': event,
           'platform': _platformName(),
+          if (screen != null && screen.isNotEmpty) 'screen': screen,
         },
         options: Options(
           headers: {

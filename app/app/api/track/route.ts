@@ -1,6 +1,6 @@
 import { getUserFromRequest } from "@/lib/auth";
 import { getClientIp, lookupGeo } from "@/lib/geo";
-import { trackSession, type TrackEvent } from "@/lib/analytics-store";
+import { recordScreenView, trackSession, type TrackEvent } from "@/lib/analytics-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,6 +22,7 @@ export async function POST(request: Request) {
     event?: unknown;
     platform?: unknown;
     appVersion?: unknown;
+    screen?: unknown;
   };
   try {
     body = (await request.json()) as typeof body;
@@ -34,14 +35,25 @@ export async function POST(request: Request) {
     return Response.json({ error: "clientId is required." }, { status: 400 });
   }
 
+  const platform = typeof body.platform === "string" ? body.platform : "web";
+  const user = await getUserFromRequest(request);
+
+  // A "screen" event records which part of the app was viewed; it doesn't touch
+  // the session row (heartbeats keep that alive).
+  if (body.event === "screen") {
+    const screen = typeof body.screen === "string" ? body.screen : "";
+    if (screen.trim()) {
+      await recordScreenView({ clientId, userSub: user?.sub ?? null, platform, screen });
+    }
+    return Response.json({ ok: true }, { status: 202 });
+  }
+
   const event: TrackEvent = EVENTS.includes(body.event as TrackEvent)
     ? (body.event as TrackEvent)
     : "heartbeat";
-  const platform = typeof body.platform === "string" ? body.platform : "web";
   const appVersion =
     typeof body.appVersion === "string" ? body.appVersion.slice(0, 40) : "";
 
-  const user = await getUserFromRequest(request);
   const ip = getClientIp(request);
   const userAgent = request.headers.get("user-agent") ?? "";
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 
 const HEARTBEAT_MS = 30_000;
 const STORAGE_KEY = "stillora-session-id";
@@ -14,6 +15,26 @@ const STORAGE_KEY = "stillora-session-id";
  * Mounted once in the root layout so it covers every page.
  */
 export function SessionTracker() {
+  const pathname = usePathname();
+
+  // Report each page view as a screen event (skip the admin dashboard so your
+  // own analytics browsing doesn't pollute the numbers).
+  useEffect(() => {
+    if (!pathname || pathname.startsWith("/admin")) return;
+    const payload = JSON.stringify({
+      clientId: getClientId(),
+      event: "screen",
+      platform: "web",
+      screen: pathname,
+    });
+    fetch("/api/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: payload,
+      keepalive: true,
+    }).catch(() => {});
+  }, [pathname]);
+
   useEffect(() => {
     const clientId = getClientId();
 

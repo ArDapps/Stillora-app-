@@ -91,6 +91,20 @@ export function ensureSchema(): Promise<void> {
       CREATE INDEX IF NOT EXISTS admin_sessions_country_idx ON admin_sessions (country_code);
       CREATE INDEX IF NOT EXISTS admin_sessions_platform_idx ON admin_sessions (platform);
 
+      -- One row per screen/feature view, so the dashboard can rank which parts
+      -- of the app get used. Linked back to a session via client_id.
+      CREATE TABLE IF NOT EXISTS admin_screen_views (
+        id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        client_id  TEXT NOT NULL DEFAULT '',
+        user_sub   TEXT,
+        platform   TEXT NOT NULL DEFAULT 'web',
+        screen     TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+
+      CREATE INDEX IF NOT EXISTS admin_screen_views_created_at_idx ON admin_screen_views (created_at DESC);
+      CREATE INDEX IF NOT EXISTS admin_screen_views_screen_idx ON admin_screen_views (screen);
+
       -- Server-side IP -> location cache so we don't call the geo API on every
       -- heartbeat. Keyed by raw IP; sessions only persist a hashed IP.
       CREATE TABLE IF NOT EXISTS admin_geo_cache (

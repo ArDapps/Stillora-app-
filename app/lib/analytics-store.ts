@@ -140,6 +140,28 @@ export async function trackSession(input: TrackInput): Promise<void> {
   }
 }
 
+const MAX_SCREEN_LEN = 120;
+
+/** Records a single screen/feature view. Fire-and-forget like the rest. */
+export async function recordScreenView(input: {
+  clientId: string;
+  userSub: string | null;
+  platform: string;
+  screen: string;
+}): Promise<void> {
+  const screen = input.screen.trim().slice(0, MAX_SCREEN_LEN);
+  if (!screen) return;
+  try {
+    await query(
+      `INSERT INTO admin_screen_views (client_id, user_sub, platform, screen)
+       VALUES ($1, $2, $3, $4)`,
+      [input.clientId.trim().slice(0, 100), input.userSub, normalizePlatform(input.platform), screen],
+    );
+  } catch (error) {
+    console.error("recordScreenView failed:", error);
+  }
+}
+
 // --- Dashboard read models ---
 
 export type AnalyticsOverview = {
@@ -198,17 +220,17 @@ export function normalizeRange(value: string | undefined): AnalyticsRange {
 }
 
 /**
- * SQL boolean limiting `started_at` to the selected range. The range keys come
- * from a fixed set (never user text), so inlining the expression is safe.
+ * SQL boolean limiting a timestamp column to the selected range. The range keys
+ * and column name come from fixed sets (never user text), so inlining is safe.
  */
-function rangeFilter(range: AnalyticsRange): string {
+function rangeFilter(range: AnalyticsRange, column = "started_at"): string {
   switch (range) {
     case "today":
-      return "started_at >= date_trunc('day', now())";
+      return `${column} >= date_trunc('day', now())`;
     case "7d":
-      return "started_at >= now() - make_interval(days => 7)";
+      return `${column} >= now() - make_interval(days => 7)`;
     case "30d":
-      return "started_at >= now() - make_interval(days => 30)";
+      return `${column} >= now() - make_interval(days => 30)`;
     case "all":
       return "TRUE";
   }
@@ -341,6 +363,40 @@ export async function getPlatformStats(
     }));
   } catch (error) {
     console.error("getPlatformStats failed:", error);
+    return [];
+  }
+}
+
+export type ScreenStat = {
+  screen: string;
+  views: number;
+  users: number;
+};
+
+/** Most-viewed screens/features in the selected range. */
+export async function getTopScreens(
+  range: AnalyticsRange = "all",
+  limit = 15,
+): Promise<ScreenStat[]> {
+  try {
+    const rows = await query<{ screen: string; views: number; users: number }>(
+      `SELECT screen,
+              COUNT(*)::int AS views,
+              COUNT(DISTINCT COALESCE(user_sub, client_id))::int AS users
+       FROM admin_screen_views
+       WHERE ${rangeFilter(range, "created_at")}
+       GROUP BY screen
+       ORDER BY views DESC
+       LIMIT $1`,
+      [limit],
+    );
+    return rows.map((r) => ({
+      screen: r.screen,
+      views: Number(r.views) || 0,
+      users: Number(r.users) || 0,
+    }));
+  } catch (error) {
+    console.error("getTopScreens failed:", error);
     return [];
   }
 }

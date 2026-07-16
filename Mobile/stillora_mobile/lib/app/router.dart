@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/analytics/usage_tracker.dart';
 import '../features/editor/add_audio_screen.dart';
 import '../features/editor/choose_preset_screen.dart';
 import '../features/editor/editor_screen.dart';
@@ -19,6 +22,12 @@ import '../features/tabs/app_tabs_screen.dart';
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: SplashScreen.routePath,
+    // Side-effect only: report the visited path for analytics, never redirect.
+    // `screen()` de-dupes, so repeated calls for one navigation are harmless.
+    redirect: (context, state) {
+      unawaited(ref.read(usageTrackerProvider).screen(state.uri.path));
+      return null;
+    },
     routes: [
       GoRoute(
         path: SplashScreen.routePath,

@@ -3,12 +3,14 @@ import {
   getCountryStats,
   getPlatformStats,
   getRecentSessions,
+  getTopScreens,
   getUserUsage,
   normalizeRange,
 } from "@/lib/analytics-store";
 import type {
   CountryStat,
   PlatformStat,
+  ScreenStat,
   SessionRecord,
   UserUsageRecord,
 } from "@/lib/analytics-store";
@@ -30,10 +32,11 @@ export default async function AdminAnalyticsPage({
   const sessionsPage = toInt(sp.sp);
   const usersPage = toInt(sp.up);
 
-  const [overview, countries, platforms, sessions, users] = await Promise.all([
+  const [overview, countries, platforms, screens, sessions, users] = await Promise.all([
     getAnalyticsOverview(range),
     getCountryStats(range, 30),
     getPlatformStats(range),
+    getTopScreens(range, 15),
     getRecentSessions(range, sessionsPage, PAGE_SIZE),
     getUserUsage(range, usersPage, PAGE_SIZE),
   ]);
@@ -67,6 +70,8 @@ export default async function AdminAnalyticsPage({
         <CountriesCard countries={countries} />
         <PlatformsCard platforms={platforms} />
       </div>
+
+      <ScreensCard screens={screens} />
 
       <section>
         <h2 className="mb-3 text-lg font-semibold" style={{ color: "var(--color-foreground)" }}>
@@ -104,6 +109,49 @@ export default async function AdminAnalyticsPage({
 function toInt(value: string | undefined): number {
   const n = value ? parseInt(value, 10) : 1;
   return Number.isFinite(n) && n >= 1 ? n : 1;
+}
+
+function ScreensCard({ screens }: { screens: ScreenStat[] }) {
+  const max = Math.max(1, ...screens.map((s) => s.views));
+  return (
+    <section>
+      <h2 className="mb-3 text-lg font-semibold" style={{ color: "var(--color-foreground)" }}>
+        Top screens &amp; features
+      </h2>
+      <div className="rounded-xl border p-4" style={{ background: "var(--color-card)", borderColor: "var(--color-border)" }}>
+        {screens.length === 0 ? (
+          <p className="py-6 text-center text-sm" style={{ color: "var(--color-muted)" }}>
+            No screen views in this range yet.
+          </p>
+        ) : (
+          <ul className="space-y-2.5">
+            {screens.map((s) => (
+              <li key={s.screen} className="flex items-center gap-3">
+                <span className="w-40 shrink-0 truncate font-mono text-xs" style={{ color: "var(--color-foreground)" }} title={s.screen}>
+                  {screenLabel(s.screen)}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="tabular-nums" style={{ color: "var(--color-muted)" }}>{s.views.toLocaleString()} views</span>
+                    <span className="ml-2 shrink-0 tabular-nums" style={{ color: "var(--color-muted)" }}>{s.users.toLocaleString()} users</span>
+                  </div>
+                  <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full" style={{ background: "var(--color-border-subtle)" }}>
+                    <div className="h-full rounded-full" style={{ width: `${(s.views / max) * 100}%`, background: "var(--color-primary)" }} />
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/** Friendlier label for a route/path (e.g. "/" -> "Home"). */
+function screenLabel(screen: string): string {
+  if (screen === "/" || screen === "") return "Home";
+  return screen;
 }
 
 function UserUsageTable({ users }: { users: UserUsageRecord[] }) {

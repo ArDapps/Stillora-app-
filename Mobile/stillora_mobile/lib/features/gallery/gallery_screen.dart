@@ -30,9 +30,19 @@ class GalleryView extends ConsumerStatefulWidget {
   ConsumerState<GalleryView> createState() => _GalleryViewState();
 }
 
+/// How many videos to reveal per page in the Library. The full list lives in
+/// memory, but we only build thumbnails for the visible slice to keep large
+/// libraries smooth.
+const int _galleryPageSize = 20;
+
 class _GalleryViewState extends ConsumerState<GalleryView> {
   final Set<String> _selected = {};
   bool _selecting = false;
+  int _visibleCount = _galleryPageSize;
+
+  void _loadMore() {
+    setState(() => _visibleCount += _galleryPageSize);
+  }
 
   void _enterSelection(String id) {
     setState(() {
@@ -106,6 +116,8 @@ class _GalleryViewState extends ConsumerState<GalleryView> {
         error: (_, _) => const _GalleryEmpty(),
         data: (items) {
           if (items.isEmpty) return const _GalleryEmpty();
+          final visible = items.take(_visibleCount).toList();
+          final remaining = items.length - visible.length;
           return Column(
             children: [
               _SelectionBar(
@@ -123,7 +135,10 @@ class _GalleryViewState extends ConsumerState<GalleryView> {
                     final wide = constraints.maxWidth >= 640;
                     if (wide) {
                       return _GalleryGrid(
-                        items: items,
+                        items: visible,
+                        totalCount: items.length,
+                        remaining: remaining,
+                        onLoadMore: _loadMore,
                         selecting: _selecting,
                         selected: _selected,
                         onTap: _onTap,
@@ -133,7 +148,7 @@ class _GalleryViewState extends ConsumerState<GalleryView> {
                     return ListView(
                       padding: const EdgeInsets.all(StilloraSpacing.sm),
                       children: [
-                        for (final record in items) ...[
+                        for (final record in visible) ...[
                           _GalleryTile(
                             record: record,
                             selecting: _selecting,
@@ -143,6 +158,8 @@ class _GalleryViewState extends ConsumerState<GalleryView> {
                           ),
                           const SizedBox(height: StilloraSpacing.xs),
                         ],
+                        if (remaining > 0)
+                          _LoadMoreButton(remaining: remaining, onPressed: _loadMore),
                         const SizedBox(height: 16),
                         const AdSlotWidget(placement: 'USER_DASHBOARD_LEFT'),
                       ],
@@ -240,6 +257,9 @@ class _SelectionBar extends StatelessWidget {
 class _GalleryGrid extends StatelessWidget {
   const _GalleryGrid({
     required this.items,
+    required this.totalCount,
+    required this.remaining,
+    required this.onLoadMore,
     required this.selecting,
     required this.selected,
     required this.onTap,
@@ -247,6 +267,9 @@ class _GalleryGrid extends StatelessWidget {
   });
 
   final List<LocalExportRecord> items;
+  final int totalCount;
+  final int remaining;
+  final VoidCallback onLoadMore;
   final bool selecting;
   final Set<String> selected;
   final void Function(LocalExportRecord) onTap;
@@ -260,7 +283,7 @@ class _GalleryGrid extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '${items.length} ${items.length == 1 ? 'video' : 'videos'}',
+            '$totalCount ${totalCount == 1 ? 'video' : 'videos'}',
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
                   color: StilloraColors.onSurfaceVariant,
                   letterSpacing: 0.4,
@@ -281,9 +304,37 @@ class _GalleryGrid extends StatelessWidget {
                 ),
             ],
           ),
+          if (remaining > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: StilloraSpacing.sm),
+              child: _LoadMoreButton(remaining: remaining, onPressed: onLoadMore),
+            ),
           const SizedBox(height: 16),
           const AdSlotWidget(placement: 'USER_DASHBOARD_LEFT'),
         ],
+      ),
+    );
+  }
+}
+
+/// "Load more" footer shown when the Library has more videos than are currently
+/// revealed. Tapping reveals the next page.
+class _LoadMoreButton extends StatelessWidget {
+  const _LoadMoreButton({required this.remaining, required this.onPressed});
+
+  final int remaining;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: StilloraSpacing.sm),
+        child: OutlinedButton.icon(
+          onPressed: onPressed,
+          icon: const Icon(Icons.expand_more_rounded, size: 18),
+          label: Text('Load more ($remaining)'),
+        ),
       ),
     );
   }
