@@ -118,4 +118,41 @@ class AppPreferences {
       _preferences.setString(_reelSessionKey, jsonEncode(data));
 
   Future<void> clearReelSession() => _preferences.remove(_reelSessionKey);
+
+  // ── Usage analytics (buffered on-device, flushed ~every 12h) ───────────────
+
+  static const _analyticsBufferKey = 'stillora.analytics.buffer.v1';
+  static const _analyticsLastFlushKey = 'stillora.analytics.lastFlushMs';
+
+  /// Completed usage sessions waiting to be flushed to the backend. Each entry
+  /// is the JSON payload for one session (clientId, startedAt, durationSeconds,
+  /// platform, screens).
+  List<Map<String, dynamic>> get analyticsBuffer {
+    final raw = _preferences.getString(_analyticsBufferKey);
+    if (raw == null) return const [];
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) return const [];
+      return decoded
+          .whereType<Map>()
+          .map((entry) => entry.cast<String, dynamic>())
+          .toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Future<void> setAnalyticsBuffer(List<Map<String, dynamic>> sessions) =>
+      _preferences.setString(_analyticsBufferKey, jsonEncode(sessions));
+
+  /// When the buffer was last successfully flushed. Null until the first flush.
+  DateTime? get analyticsLastFlushAt {
+    final ms = _preferences.getInt(_analyticsLastFlushKey);
+    return ms == null ? null : DateTime.fromMillisecondsSinceEpoch(ms);
+  }
+
+  Future<void> setAnalyticsLastFlushAt(DateTime value) => _preferences.setInt(
+    _analyticsLastFlushKey,
+    value.millisecondsSinceEpoch,
+  );
 }

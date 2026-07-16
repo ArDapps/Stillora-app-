@@ -8,9 +8,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/api_client.dart';
 import '../auth/auth_controller.dart';
+import '../storage/app_preferences.dart';
 
-/// How often a foregrounded app pings the backend to keep its session alive.
-const _heartbeatInterval = Duration(seconds: 30);
+/// How often the buffered usage is flushed to the backend. The app never sends
+/// live beacons; it caches sessions on-device and uploads them at most this
+/// often, so a normal user makes ~2 analytics requests a day instead of one
+/// every 30 seconds.
+const _flushInterval = Duration(hours: 12);
+
+/// Foreground periods shorter than this are ignored — they're almost always an
+/// accidental tap-through, not real usage.
+const _minSessionSeconds = 2;
+
+/// Hard cap on buffered sessions so an offline device can't grow the store
+/// without bound; oldest entries are dropped first.
+const _maxBufferedSessions = 500;
+
+/// Hard cap on screens recorded per session (defensive against a redirect loop).
+const _maxScreensPerSession = 100;
 
 final usageTrackerProvider = Provider<UsageTracker>((ref) {
   return UsageTracker(ref);
@@ -21,61 +36,132 @@ final usageTrackerProvider = Provider<UsageTracker>((ref) {
 /// including country (resolved server-side from IP), platform, and time-used.
 ///
 /// A "session" spans one foreground period: it opens when the app starts or
-/// returns to the foreground and closes when it's backgrounded. All calls are
-/// fire-and-forget; tracking must never disrupt the app.
+/// returns to the foreground and closes when it's backgrounded. Instead of
+/// pinging live, each completed session is measured on-device, buffered to
+/// [AppPreferences], and uploaded in a single batch no more than once every
+/// [_flushInterval]. All work is fire-and-forget; tracking must never disrupt
+/// the app.
 class UsageTracker {
   UsageTracker(this._ref);
 
   final Ref _ref;
 
-  /// Stable id for the current foreground session. Regenerated each time a new
-  /// session starts so heartbeats within one session share an id but distinct
-  /// sessions stay separate.
+  /// Stable id for the current foreground session, regenerated each time a new
+  /// session starts so buffered sessions stay distinct.
   String _clientId = _newClientId();
 
-  Future<void> start() {
-    _clientId = _newClientId();
-    return _send('start');
-  }
+  /// When the current foreground session opened, or null if none is open.
+  DateTime? _startedAt;
 
-  Future<void> heartbeat() => _send('heartbeat');
-
-  Future<void> end() => _send('end');
-
+  /// Screens visited during the current session, in order.
+  final List<String> _screens = [];
   String _lastScreen = '';
 
-  /// Reports which screen/feature the user opened, linked to the live session.
-  /// De-duplicates consecutive reports of the same screen (the router's redirect
-  /// hook can fire more than once for a single navigation).
-  Future<void> screen(String name) {
-    final trimmed = name.trim();
-    if (trimmed.isEmpty || trimmed == _lastScreen) return Future.value();
-    _lastScreen = trimmed;
-    return _send('screen', screen: trimmed);
+  /// Opens a new foreground session and, if the flush window has elapsed,
+  /// uploads whatever is already buffered.
+  Future<void> start() async {
+    _clientId = _newClientId();
+    _startedAt = DateTime.now();
+    _screens.clear();
+    _lastScreen = '';
+    await _maybeFlush();
   }
 
-  Future<void> _send(String event, {String? screen}) async {
+  /// Closes the current session: buffers it locally (if it lasted long enough),
+  /// then attempts a flush.
+  Future<void> end() async {
+    final startedAt = _startedAt;
+    _startedAt = null;
+    if (startedAt != null) {
+      final duration = DateTime.now().difference(startedAt).inSeconds;
+      if (duration >= _minSessionSeconds) {
+        await _bufferSession({
+          'clientId': _clientId,
+          'startedAt': startedAt.toUtc().toIso8601String(),
+          'durationSeconds': duration,
+          'platform': _platformName(),
+          'screens': List<String>.from(_screens),
+        });
+      }
+    }
+    await _maybeFlush();
+  }
+
+  /// Records which screen/feature the user opened, attributed to the open
+  /// session. De-duplicates consecutive reports of the same screen (the router's
+  /// redirect hook can fire more than once for a single navigation). No network.
+  Future<void> screen(String name) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty || trimmed == _lastScreen) return;
+    _lastScreen = trimmed;
+    if (_startedAt == null) return;
+    if (_screens.length < _maxScreensPerSession) _screens.add(trimmed);
+  }
+
+  Future<void> _bufferSession(Map<String, dynamic> session) async {
+    try {
+      final prefs = _ref.read(appPreferencesProvider);
+      final buffer = [...prefs.analyticsBuffer, session];
+      final trimmed = buffer.length > _maxBufferedSessions
+          ? buffer.sublist(buffer.length - _maxBufferedSessions)
+          : buffer;
+      await prefs.setAnalyticsBuffer(trimmed);
+    } catch (_) {
+      // Telemetry must never surface an error to the user.
+    }
+  }
+
+  /// Uploads the buffer when [_flushInterval] has passed since the last flush.
+  /// On a fresh install it just starts the window without sending anything.
+  Future<void> _maybeFlush() async {
+    try {
+      final prefs = _ref.read(appPreferencesProvider);
+      final last = prefs.analyticsLastFlushAt;
+      if (last == null) {
+        await prefs.setAnalyticsLastFlushAt(DateTime.now());
+        return;
+      }
+      if (DateTime.now().difference(last) < _flushInterval) return;
+
+      final buffer = prefs.analyticsBuffer;
+      if (buffer.isEmpty) {
+        await prefs.setAnalyticsLastFlushAt(DateTime.now());
+        return;
+      }
+      await _flush(prefs, buffer);
+    } catch (_) {
+      // Never let tracking break the app.
+    }
+  }
+
+  Future<void> _flush(
+    AppPreferences prefs,
+    List<Map<String, dynamic>> sent,
+  ) async {
     try {
       final token = _ref.read(authControllerProvider).asData?.value?.token;
       await _ref.read(dioProvider).post<void>(
         '/api/track',
         data: {
-          'clientId': _clientId,
-          'event': event,
+          'event': 'batch',
           'platform': _platformName(),
-          if (screen != null && screen.isNotEmpty) 'screen': screen,
+          'sessions': sent,
         },
         options: Options(
           headers: {
             if (token != null) 'Authorization': 'Bearer $token',
           },
-          // A late beacon is worthless; don't let it pile up on a bad network.
-          sendTimeout: const Duration(seconds: 6),
-          receiveTimeout: const Duration(seconds: 6),
+          // A late batch is still worth sending, but don't hang forever.
+          sendTimeout: const Duration(seconds: 15),
+          receiveTimeout: const Duration(seconds: 15),
         ),
       );
+      // Drop only what we sent; a session may have been buffered mid-flush.
+      final remaining = prefs.analyticsBuffer.skip(sent.length).toList();
+      await prefs.setAnalyticsBuffer(remaining);
+      await prefs.setAnalyticsLastFlushAt(DateTime.now());
     } catch (_) {
-      // Telemetry must never surface an error to the user.
+      // Keep the buffer and retry on a later open once the window elapses again.
     }
   }
 }
@@ -104,9 +190,9 @@ String _newClientId() {
 }
 
 /// Invisible widget that drives the [UsageTracker] from the app lifecycle:
-/// opens a session on mount / foreground, heartbeats every 30s while visible,
-/// and closes the session when the app is backgrounded or disposed. Mount it
-/// once near the app root so it stays alive across every route.
+/// opens a session on mount / foreground and closes (and buffers) it when the
+/// app is backgrounded or disposed. Mount it once near the app root so it stays
+/// alive across every route.
 class UsageTrackerHost extends ConsumerStatefulWidget {
   const UsageTrackerHost({super.key, required this.child});
 
@@ -118,7 +204,6 @@ class UsageTrackerHost extends ConsumerStatefulWidget {
 
 class _UsageTrackerHostState extends ConsumerState<UsageTrackerHost>
     with WidgetsBindingObserver {
-  Timer? _timer;
   bool _sessionOpen = false;
 
   @override
@@ -145,17 +230,11 @@ class _UsageTrackerHostState extends ConsumerState<UsageTrackerHost>
     if (_sessionOpen) return;
     _sessionOpen = true;
     unawaited(ref.read(usageTrackerProvider).start());
-    _timer?.cancel();
-    _timer = Timer.periodic(_heartbeatInterval, (_) {
-      unawaited(ref.read(usageTrackerProvider).heartbeat());
-    });
   }
 
   void _closeSession() {
     if (!_sessionOpen) return;
     _sessionOpen = false;
-    _timer?.cancel();
-    _timer = null;
     unawaited(ref.read(usageTrackerProvider).end());
   }
 
