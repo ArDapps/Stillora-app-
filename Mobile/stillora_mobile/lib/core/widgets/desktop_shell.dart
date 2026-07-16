@@ -47,12 +47,6 @@ const _navItems = [
     selectedIcon: Icons.branding_watermark_rounded,
   ),
   (
-    index: 11,
-    label: 'Remove Watermark',
-    icon: Icons.auto_fix_high_outlined,
-    selectedIcon: Icons.auto_fix_high_rounded,
-  ),
-  (
     index: 5,
     label: 'Remove Silence',
     icon: Icons.content_cut_outlined,

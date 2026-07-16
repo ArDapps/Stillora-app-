@@ -1,12 +1,19 @@
-import { getStats, getUsers, getRecentExports } from "@/lib/admin-store";
+import Link from "next/link";
+
+import { getStats, getUsersPage, getRecentExports } from "@/lib/admin-store";
 import type { UserRecord, ExportRecord } from "@/lib/admin-store";
 
 export const dynamic = "force-dynamic";
 
+// The dashboard is a summary: it shows only the first page of users (the full,
+// paginated list lives at /admin/users). getUsersPage bounds the query to 10
+// rows + a COUNT, instead of loading every user row just to slice 10.
+const USERS_PREVIEW = 10;
+
 export default async function AdminDashboard() {
-  const [stats, users, exports] = await Promise.all([
+  const [stats, usersPage, exports] = await Promise.all([
     getStats(),
-    getUsers(),
+    getUsersPage(1, USERS_PREVIEW),
     getRecentExports(20),
   ]);
 
@@ -25,17 +32,23 @@ export default async function AdminDashboard() {
 
       {/* Users */}
       <section>
-        <h2 className="mb-3 text-lg font-semibold" style={{ color: "var(--color-foreground)" }}>
-          Users <span className="text-sm font-normal" style={{ color: "var(--color-muted)" }}>({users.length})</span>
-        </h2>
-        <UsersTable users={users.slice(0, 10)} />
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold" style={{ color: "var(--color-foreground)" }}>
+            Users <span className="text-sm font-normal" style={{ color: "var(--color-muted)" }}>({usersPage.total})</span>
+          </h2>
+          {usersPage.total > USERS_PREVIEW ? <ViewAllLink href="/admin/users" /> : null}
+        </div>
+        <UsersTable users={usersPage.rows} />
       </section>
 
       {/* Recent exports */}
       <section>
-        <h2 className="mb-3 text-lg font-semibold" style={{ color: "var(--color-foreground)" }}>
-          Recent Exports
-        </h2>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold" style={{ color: "var(--color-foreground)" }}>
+            Recent Exports
+          </h2>
+          {exports.length > 0 ? <ViewAllLink href="/admin/activity" /> : null}
+        </div>
         <ExportsTable exports={exports} />
       </section>
     </div>
@@ -153,6 +166,18 @@ function ExportsTable({ exports: rows }: { exports: ExportRecord[] }) {
         </tbody>
       </table>
     </div>
+  );
+}
+
+function ViewAllLink({ href }: { href: string }) {
+  return (
+    <Link
+      href={href}
+      className="shrink-0 text-sm font-semibold transition hover:underline"
+      style={{ color: "var(--color-primary)" }}
+    >
+      View all →
+    </Link>
   );
 }
 
