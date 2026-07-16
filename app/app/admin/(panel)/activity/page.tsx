@@ -8,11 +8,12 @@ const PAGE_SIZE = 25;
 export default async function AdminActivityPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const { page } = await searchParams;
+  const sp = await searchParams;
+  const pageRaw = Array.isArray(sp.page) ? sp.page[0] : sp.page;
   const [exports, stats] = await Promise.all([
-    getExportsPage(page ? parseInt(page, 10) : 1, PAGE_SIZE),
+    getExportsPage(pageRaw ? parseInt(pageRaw, 10) : 1, PAGE_SIZE),
     getStats(),
   ]);
 

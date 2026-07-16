@@ -8,10 +8,11 @@ const PAGE_SIZE = 25;
 export default async function AdminUsersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const { page } = await searchParams;
-  const users = await getUsersPage(page ? parseInt(page, 10) : 1, PAGE_SIZE);
+  const sp = await searchParams;
+  const pageRaw = Array.isArray(sp.page) ? sp.page[0] : sp.page;
+  const users = await getUsersPage(pageRaw ? parseInt(pageRaw, 10) : 1, PAGE_SIZE);
 
   return (
     <div className="space-y-6">

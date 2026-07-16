@@ -22,15 +22,20 @@ export const dynamic = "force-dynamic";
 const BASE = "/admin/analytics";
 const PAGE_SIZE = 25;
 
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
+
 export default async function AdminAnalyticsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string; sp?: string; up?: string }>;
+  searchParams: SearchParams;
 }) {
   const sp = await searchParams;
-  const range = normalizeRange(sp.range);
-  const sessionsPage = toInt(sp.sp);
-  const usersPage = toInt(sp.up);
+  const spRange = first(sp.range);
+  const spSessions = first(sp.sp);
+  const spUsers = first(sp.up);
+  const range = normalizeRange(spRange);
+  const sessionsPage = toInt(spSessions);
+  const usersPage = toInt(spUsers);
 
   const [overview, countries, platforms, screens, sessions, users] = await Promise.all([
     getAnalyticsOverview(range),
@@ -80,7 +85,7 @@ export default async function AdminAnalyticsPage({
         <UserUsageTable users={users.rows} />
         <Pagination
           basePath={BASE}
-          params={{ range, sp: sp.sp }}
+          params={{ range, sp: spSessions }}
           pageParam="up"
           page={users.page}
           pageSize={users.pageSize}
@@ -95,7 +100,7 @@ export default async function AdminAnalyticsPage({
         <SessionsTable sessions={sessions.rows} />
         <Pagination
           basePath={BASE}
-          params={{ range, up: sp.up }}
+          params={{ range, up: spUsers }}
           pageParam="sp"
           page={sessions.page}
           pageSize={sessions.pageSize}
@@ -104,6 +109,11 @@ export default async function AdminAnalyticsPage({
       </section>
     </div>
   );
+}
+
+/** Search-param values can be string | string[]; take the first string. */
+function first(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
 }
 
 function toInt(value: string | undefined): number {
