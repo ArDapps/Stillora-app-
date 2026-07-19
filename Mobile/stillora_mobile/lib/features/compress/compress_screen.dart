@@ -4,13 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_surface.dart';
 import '../../core/widgets/ad_widget.dart';
+import '../../core/widgets/section_split_view.dart';
 import '../editor/editor_state.dart' show formatFileSize;
 import '../export/export_cancellation.dart';
+import '../preview/section_video_preview.dart';
 import 'compress_state.dart';
 
 /// Standalone "Compress" section: upload a video and re-encode it to a smaller
 /// MP4 (HandBrake-style). Resolution tier + optional mute drive the file size;
-/// the card shows the source size next to the estimated compressed size.
+/// the live preview pane shows the source frame with the source size next to
+/// the estimated compressed size.
 class CompressView extends ConsumerStatefulWidget {
   const CompressView({super.key});
 
@@ -70,13 +73,50 @@ class _CompressViewState extends ConsumerState<CompressView> {
     final res = compress.outputResolution;
     final textTheme = Theme.of(context).textTheme;
 
+    // Desktop: controls on the left, the source frame plus the live size
+    // estimate pinned in the right-hand pane so every level change is reflected
+    // immediately. Phones get the same preview at the top of the column.
     return DecoratedBox(
       decoration: const BoxDecoration(gradient: stilloraBackgroundGradient),
       child: SafeArea(
         top: false,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-          children: [
+        child: SectionSplitView(
+          onStartOver: controller.reset,
+          canStartOver: compress.hasVideo && !_running,
+          previewCaption: compress.hasVideo
+              ? 'Same frame, smaller file — quality drops as the level rises'
+              : null,
+          preview: SectionVideoPreview(
+            videoPath: compress.videoPath,
+            sourceWidth: compress.sourceWidth,
+            sourceHeight: compress.sourceHeight,
+            badge: compress.hasVideo ? compress.level.label : null,
+            emptyLabel: 'Upload a video to preview it here',
+            stats: [
+              if (compress.hasVideo) ...[
+                (
+                  label: 'Before',
+                  value: compress.sourceBytes > 0
+                      ? '${formatFileSize(compress.sourceBytes)} · '
+                            '${compress.sourceWidth}×${compress.sourceHeight}'
+                      : '${compress.sourceWidth}×${compress.sourceHeight}',
+                ),
+                (
+                  label: 'After ≈',
+                  value:
+                      '${formatFileSize(compress.estimatedBytes)} · '
+                      '${res.width}×${res.height}',
+                ),
+                if (compress.savingsPercent > 0)
+                  (label: 'Saving', value: '−${compress.savingsPercent}%'),
+                (
+                  label: 'Audio',
+                  value: compress.muteAudio ? 'Dropped' : 'Kept',
+                ),
+              ],
+            ],
+          ),
+          controls: [
             Text(
               'Upload a video and shrink it to a smaller MP4 at the same '
               'resolution. Stronger compression means a smaller file — pick a '
@@ -111,14 +151,15 @@ class _CompressViewState extends ConsumerState<CompressView> {
                               : 'Upload video',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: textTheme.titleSmall
-                              ?.copyWith(fontWeight: FontWeight.w700),
+                          style: textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                         Text(
                           compress.hasVideo
                               ? '${compress.sourceDurationSeconds}s · '
-                                  '${compress.sourceWidth}×${compress.sourceHeight}'
-                                  '${compress.sourceBytes > 0 ? ' · ${formatFileSize(compress.sourceBytes)}' : ''}'
+                                    '${compress.sourceWidth}×${compress.sourceHeight}'
+                                    '${compress.sourceBytes > 0 ? ' · ${formatFileSize(compress.sourceBytes)}' : ''}'
                               : 'MP4 / MOV',
                           style: textTheme.bodySmall?.copyWith(
                             color: StilloraColors.onSurfaceVariant,
@@ -128,8 +169,10 @@ class _CompressViewState extends ConsumerState<CompressView> {
                     ),
                   ),
                   if (compress.hasVideo)
-                    const Icon(Icons.refresh_rounded,
-                        color: StilloraColors.onSurfaceVariant),
+                    const Icon(
+                      Icons.refresh_rounded,
+                      color: StilloraColors.onSurfaceVariant,
+                    ),
                 ],
               ),
             ),
@@ -147,8 +190,9 @@ class _CompressViewState extends ConsumerState<CompressView> {
                     ButtonSegment(value: l, label: Text(l.label)),
                 ],
                 selected: {compress.level},
-                onSelectionChanged:
-                    _running ? null : (v) => controller.setLevel(v.first),
+                onSelectionChanged: _running
+                    ? null
+                    : (v) => controller.setLevel(v.first),
               ),
             ),
             const SizedBox(height: 6),
@@ -168,54 +212,8 @@ class _CompressViewState extends ConsumerState<CompressView> {
               value: compress.muteAudio,
               onChanged: _running ? null : controller.setMuteAudio,
             ),
-            const SizedBox(height: 12),
-
-            // Before → after estimate
-            if (compress.hasVideo)
-              StilloraGlassCard(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _SizeColumn(
-                        label: 'Before',
-                        value: compress.sourceBytes > 0
-                            ? formatFileSize(compress.sourceBytes)
-                            : '—',
-                        sub: '${compress.sourceWidth}×${compress.sourceHeight}',
-                      ),
-                    ),
-                    const Icon(Icons.arrow_forward_rounded,
-                        color: StilloraColors.onSurfaceVariant, size: 20),
-                    Expanded(
-                      child: _SizeColumn(
-                        label: 'After ≈',
-                        value: formatFileSize(compress.estimatedBytes),
-                        sub: '${res.width}×${res.height}',
-                        highlight: true,
-                      ),
-                    ),
-                    if (compress.savingsPercent > 0)
-                      Container(
-                        margin: const EdgeInsets.only(left: 8),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: StilloraColors.accent.withValues(alpha: 0.16),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          '−${compress.savingsPercent}%',
-                          style: textTheme.labelLarge?.copyWith(
-                            color: StilloraColors.accentText,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
+            // The before → after estimate lives in the live preview pane, so it
+            // stays visible while the compression level is being changed.
             const SizedBox(height: 20),
 
             StilloraPrimaryButton(
@@ -238,54 +236,6 @@ class _CompressViewState extends ConsumerState<CompressView> {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _SizeColumn extends StatelessWidget {
-  const _SizeColumn({
-    required this.label,
-    required this.value,
-    required this.sub,
-    this.highlight = false,
-  });
-
-  final String label;
-  final String value;
-  final String sub;
-  final bool highlight;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: textTheme.bodySmall?.copyWith(
-            color: StilloraColors.onSurfaceVariant,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w800,
-            color: highlight
-                ? StilloraColors.accentText
-                : StilloraColors.onSurface,
-          ),
-        ),
-        Text(
-          sub,
-          style: textTheme.bodySmall?.copyWith(
-            color: StilloraColors.onSurfaceVariant,
-          ),
-        ),
-      ],
     );
   }
 }

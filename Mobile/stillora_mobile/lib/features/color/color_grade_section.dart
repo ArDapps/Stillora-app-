@@ -22,12 +22,17 @@ class ColorGradeSection extends StatelessWidget {
     required this.value,
     required this.onChanged,
     this.enabled = true,
+    this.showPreview = true,
   });
 
   final String? videoPath;
   final ColorAdjust value;
   final ValueChanged<ColorAdjust> onChanged;
   final bool enabled;
+
+  /// Set false when the host screen already shows the graded frame elsewhere
+  /// (the desktop right-hand preview pane), leaving only the sliders here.
+  final bool showPreview;
 
   @override
   Widget build(BuildContext context) {
@@ -38,40 +43,42 @@ class ColorGradeSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Center(
-          child: ColorGradedPreview(
-            adjust: value,
-            // A poster frame is enough to preview the grade and is cheap; the
-            // ColorFiltered wrapper repaints live as the sliders change.
-            child: VideoThumbnail(
-              key: ValueKey(path),
-              path: path,
-              width: 340,
-              height: 210,
-              radius: 16,
-              showPlayIcon: false,
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.visibility_rounded,
-              size: 14,
-              color: StilloraColors.onSurfaceVariant,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              'Live preview — how the exported video will look',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: StilloraColors.onSurfaceVariant,
+        if (showPreview) ...[
+          Center(
+            child: ColorGradedPreview(
+              adjust: value,
+              // A poster frame is enough to preview the grade and is cheap; the
+              // ColorFiltered wrapper repaints live as the sliders change.
+              child: VideoThumbnail(
+                key: ValueKey(path),
+                path: path,
+                width: 340,
+                height: 210,
+                radius: 16,
+                showPlayIcon: false,
               ),
             ),
-          ],
-        ),
-        const SizedBox(height: 12),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.visibility_rounded,
+                size: 14,
+                color: StilloraColors.onSurfaceVariant,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'Live preview — how the exported video will look',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: StilloraColors.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+        ],
         AbsorbPointer(
           absorbing: !enabled,
           child: Opacity(

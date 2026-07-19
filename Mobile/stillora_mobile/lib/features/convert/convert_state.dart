@@ -28,7 +28,16 @@ extension ConvertFormatMeta on ConvertFormat {
 /// Input image extensions the picker accepts (HEIC/HEIF included — they decode
 /// via the OS codecs on macOS/iOS/Android).
 const convertInputExtensions = <String>[
-  'heic', 'heif', 'jpg', 'jpeg', 'png', 'webp', 'bmp', 'tif', 'tiff', 'gif',
+  'heic',
+  'heif',
+  'jpg',
+  'jpeg',
+  'png',
+  'webp',
+  'bmp',
+  'tif',
+  'tiff',
+  'gif',
 ];
 
 class ConvertState extends Equatable {
@@ -99,7 +108,10 @@ class ConvertController extends Notifier<ConvertState> {
     final dir = await pickImportDirectory();
     if (dir == null || dir.isEmpty) return;
     final name = dir.split(RegExp(r'[/\\]')).last;
-    state = state.copyWith(outputDir: dir, outputDirName: name.isEmpty ? dir : name);
+    state = state.copyWith(
+      outputDir: dir,
+      outputDirName: name.isEmpty ? dir : name,
+    );
   }
 
   void clearOutputFolder() => state = state.copyWith(clearOutputDir: true);
@@ -117,7 +129,10 @@ class ConvertController extends Notifier<ConvertState> {
     ];
     if (picked.isEmpty) return;
     final existing = state.paths.toSet();
-    final next = [...state.paths, ...picked.where((p) => !existing.contains(p))];
+    final next = [
+      ...state.paths,
+      ...picked.where((p) => !existing.contains(p)),
+    ];
     state = state.copyWith(paths: next);
   }
 
@@ -135,8 +150,9 @@ class ConvertController extends Notifier<ConvertState> {
   /// sandbox never turns into a "path failed" export error.
   Future<Directory> _desktopOutputDir() async {
     Future<Directory> under(Directory base) async {
-      final dir =
-          Directory('${base.path}${Platform.pathSeparator}Stillora Converted');
+      final dir = Directory(
+        '${base.path}${Platform.pathSeparator}Stillora Converted',
+      );
       await dir.create(recursive: true);
       return dir;
     }
@@ -197,8 +213,9 @@ class ConvertController extends Notifier<ConvertState> {
         final codec = await ui.instantiateImageCodec(bytes);
         final frame = await codec.getNextFrame();
         final uiImage = frame.image;
-        final rgba =
-            await uiImage.toByteData(format: ui.ImageByteFormat.rawRgba);
+        final rgba = await uiImage.toByteData(
+          format: ui.ImageByteFormat.rawRgba,
+        );
         final w = uiImage.width;
         final h = uiImage.height;
         uiImage.dispose();

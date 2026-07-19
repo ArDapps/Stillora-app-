@@ -20,10 +20,9 @@ class PreExportPreviewScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final editor = ref.watch(editorControllerProvider);
-    final aspectRatio =
-        (editor.preset.width > 0 && editor.preset.height > 0)
-            ? editor.preset.width / editor.preset.height
-            : 9.0 / 16.0;
+    final aspectRatio = (editor.preset.width > 0 && editor.preset.height > 0)
+        ? editor.preset.width / editor.preset.height
+        : 9.0 / 16.0;
     final fitLabel = editor.resizeMode == ResizeMode.fit ? 'Fit' : 'Fill';
 
     return SidebarScaffold(
@@ -39,9 +38,7 @@ class PreExportPreviewScreen extends ConsumerWidget {
         ],
       ),
       body: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: stilloraBackgroundGradient,
-        ),
+        decoration: const BoxDecoration(gradient: stilloraBackgroundGradient),
         child: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -59,7 +56,9 @@ class PreExportPreviewScreen extends ConsumerWidget {
                         child: AspectRatio(
                           aspectRatio: aspectRatio,
                           child: ClipRRect(
-                            borderRadius: BorderRadius.circular(StilloraRadius.full),
+                            borderRadius: BorderRadius.circular(
+                              StilloraRadius.full,
+                            ),
                             // Show the colour grade so the preview matches the
                             // exported (graded) file.
                             child: ColorGradedPreview(
@@ -71,9 +70,7 @@ class PreExportPreviewScreen extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    _PlaybackBar(
-                      durationSeconds: editor.totalDurationSeconds,
-                    ),
+                    _PlaybackBar(durationSeconds: editor.totalDurationSeconds),
                     const SizedBox(height: 16),
                     StilloraGlassCard(
                       child: Column(
@@ -164,7 +161,9 @@ class _PreviewContent extends StatelessWidget {
     if (media.kind == MediaKind.image) {
       return Image.file(
         File(media.path),
-        fit: editor.resizeMode == ResizeMode.fit ? BoxFit.contain : BoxFit.cover,
+        fit: editor.resizeMode == ResizeMode.fit
+            ? BoxFit.contain
+            : BoxFit.cover,
         width: double.infinity,
         height: double.infinity,
       );
@@ -190,7 +189,9 @@ class _PlaybackBar extends StatelessWidget {
   String _fmt(int s) {
     final m = s ~/ 60;
     final r = s % 60;
-    return m == 0 ? '0:${r.toString().padLeft(2, '0')}' : '$m:${r.toString().padLeft(2, '0')}';
+    return m == 0
+        ? '0:${r.toString().padLeft(2, '0')}'
+        : '$m:${r.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -270,9 +271,9 @@ class _SummaryRow extends StatelessWidget {
               ),
               Text(
                 value,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
             ],
           ),

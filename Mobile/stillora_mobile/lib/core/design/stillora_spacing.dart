@@ -35,6 +35,7 @@ class StilloraRadius {
 
   /// Default control/card rounding used across the app.
   static const card = 16.0;
+
   /// Fully rounded (chips, badges, segmented controls).
   static const pill = 999.0;
 

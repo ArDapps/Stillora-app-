@@ -59,8 +59,9 @@ void main() {
     }
   });
 
-  testWidgets('the nav list actually scrolls to reveal the last item',
-      (tester) async {
+  testWidgets('the nav list actually scrolls to reveal the last item', (
+    tester,
+  ) async {
     // A deliberately short screen forces the list to overflow its viewport, so
     // the bottom items are only reachable by scrolling.
     tester.view.physicalSize = const Size(390, 560);

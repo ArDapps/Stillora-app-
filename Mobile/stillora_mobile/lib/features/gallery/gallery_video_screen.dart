@@ -91,7 +91,9 @@ class _GalleryVideoScreenState extends ConsumerState<GalleryVideoScreen> {
           : await MediaActions.saveToCameraRoll(widget.record.outputPath);
       switch (outcome) {
         case SaveOutcome.saved:
-          _snack(isDesktopPlatform ? 'Video saved.' : 'Saved to your Camera Roll.');
+          _snack(
+            isDesktopPlatform ? 'Video saved.' : 'Saved to your Camera Roll.',
+          );
         case SaveOutcome.missingFile:
           _snack('That video is no longer available.');
         case SaveOutcome.permissionDenied:
@@ -108,7 +110,10 @@ class _GalleryVideoScreenState extends ConsumerState<GalleryVideoScreen> {
 
   String _suggestedFileName() {
     final r = widget.record;
-    final preset = r.preset.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-');
+    final preset = r.preset.toLowerCase().replaceAll(
+      RegExp(r'[^a-z0-9]+'),
+      '-',
+    );
     return 'stillora-$preset-${r.width}x${r.height}.mp4';
   }
 

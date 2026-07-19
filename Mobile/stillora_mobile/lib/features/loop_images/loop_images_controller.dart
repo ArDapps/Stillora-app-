@@ -95,12 +95,12 @@ class LoopImagesState {
 
   /// Estimated size of EACH looped MP4 (one per image).
   int get estimatedBytesPerVideo => estimateExportBytes(
-        width: outputSize.width,
-        height: outputSize.height,
-        durationSeconds: durationSeconds,
-        hasVideo: false,
-        hasAudio: false,
-      );
+    width: outputSize.width,
+    height: outputSize.height,
+    durationSeconds: durationSeconds,
+    hasVideo: false,
+    hasAudio: false,
+  );
 
   LoopImagesState copyWith({
     List<LoopItem>? items,
@@ -164,6 +164,13 @@ class LoopImagesController extends Notifier<LoopImagesState> {
   void clear() {
     if (state.isRunning) return;
     state = state.copyWith(items: const []);
+  }
+
+  /// Drops the queued images *and* the size/duration/quality choices — what the
+  /// section's "Start over" control calls. Ignored mid-render.
+  void reset() {
+    if (state.isRunning) return;
+    state = const LoopImagesState();
   }
 
   void setSize(String id) => state = state.copyWith(sizeId: id);

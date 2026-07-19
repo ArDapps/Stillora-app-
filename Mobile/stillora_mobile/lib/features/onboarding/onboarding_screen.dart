@@ -94,9 +94,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: stilloraBackgroundGradient,
-        ),
+        decoration: const BoxDecoration(gradient: stilloraBackgroundGradient),
         child: SafeArea(
           child: Column(
             children: [
@@ -118,10 +116,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   controller: _controller,
                   itemCount: _slides.length,
                   onPageChanged: (value) => setState(() => _page = value),
-                  itemBuilder: (context, index) => _SlideView(
-                    slide: _slides[index],
-                    showMark: index == 0,
-                  ),
+                  itemBuilder: (context, index) =>
+                      _SlideView(slide: _slides[index], showMark: index == 0),
                 ),
               ),
               const SizedBox(height: StilloraSpacing.md),
@@ -139,7 +135,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         color: i == _page
                             ? null
                             : StilloraColors.outlineVariant,
-                        borderRadius: BorderRadius.circular(StilloraRadius.full),
+                        borderRadius: BorderRadius.circular(
+                          StilloraRadius.full,
+                        ),
                       ),
                     ),
                 ],
@@ -177,9 +175,7 @@ class _SlideView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: StilloraSpacing.lg,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: StilloraSpacing.lg),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -208,9 +204,9 @@ class _SlideView extends StatelessWidget {
           Text(
             slide.title,
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: StilloraSpacing.sm),
           Text(

@@ -52,8 +52,11 @@ void main() {
   test('every level targets a real reduction below the source', () {
     for (final level in CompressLevel.values) {
       final s = source.copyWith(level: level);
-      expect(s.targetBytes, lessThan(s.sourceBytes),
-          reason: '${level.label} should be smaller than the source');
+      expect(
+        s.targetBytes,
+        lessThan(s.sourceBytes),
+        reason: '${level.label} should be smaller than the source',
+      );
       expect(s.savingsPercent, greaterThan(0));
     }
   });

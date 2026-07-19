@@ -127,8 +127,9 @@ class SpeedState extends Equatable {
   ];
 }
 
-final speedControllerProvider =
-    NotifierProvider<SpeedController, SpeedState>(SpeedController.new);
+final speedControllerProvider = NotifierProvider<SpeedController, SpeedState>(
+  SpeedController.new,
+);
 
 class SpeedController extends Notifier<SpeedState> {
   final _mediaStore = LocalEditorMediaStore();
@@ -225,16 +226,16 @@ class SpeedController extends Notifier<SpeedState> {
     final res = state.outputResolution;
     final videoEngine = ref.read(videoEngineProvider);
     final base = await videoEngine.removeSilence(
-          videoPath: path,
-          width: res.width,
-          height: res.height,
-          thresholdDb: -80,
-          minSilenceMs: 3600000,
-          paddingMs: 0,
-          speed: state.speed,
-          muteAudio: state.muteAudio,
-          newAudioPath: state.newAudioPath,
-        );
+      videoPath: path,
+      width: res.width,
+      height: res.height,
+      thresholdDb: -80,
+      minSilenceMs: 3600000,
+      paddingMs: 0,
+      speed: state.speed,
+      muteAudio: state.muteAudio,
+      newAudioPath: state.newAudioPath,
+    );
     // Bake the colour grade on as a second pass (no-op when neutral).
     final result = await applyColorGrade(
       videoEngine: videoEngine,
@@ -242,7 +243,9 @@ class SpeedController extends Notifier<SpeedState> {
       color: state.color,
     );
     final now = DateTime.now();
-    await ref.read(galleryControllerProvider.notifier).addRecord(
+    await ref
+        .read(galleryControllerProvider.notifier)
+        .addRecord(
           LocalExportRecord(
             id: now.microsecondsSinceEpoch.toString(),
             outputPath: result.outputPath,

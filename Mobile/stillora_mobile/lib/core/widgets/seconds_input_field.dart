@@ -23,8 +23,9 @@ class SecondsInputField extends StatefulWidget {
 }
 
 class _SecondsInputFieldState extends State<SecondsInputField> {
-  late final TextEditingController _controller =
-      TextEditingController(text: widget.seconds.toString());
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.seconds.toString(),
+  );
 
   @override
   void didUpdateWidget(SecondsInputField oldWidget) {

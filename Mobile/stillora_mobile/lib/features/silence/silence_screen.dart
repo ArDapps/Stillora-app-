@@ -4,11 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_surface.dart';
 import '../../core/widgets/ad_widget.dart';
+import '../../core/widgets/section_split_view.dart';
 import '../audio/audio_source.dart';
 import '../color/color_grade_section.dart';
 import '../editor/editor_state.dart' show formatFileSize;
 import '../editor/video_preset.dart';
 import '../export/export_cancellation.dart';
+import '../preview/section_video_preview.dart';
 import 'silence_state.dart';
 
 /// Standalone "Remove Silence" section: upload a video, auto-cut the silent
@@ -38,7 +40,7 @@ class _SilenceViewState extends ConsumerState<SilenceView> {
             result == null
                 ? 'Nothing to export.'
                 : 'Saved to Library · ${result.durationSeconds}s '
-                    '(${result.width}×${result.height})',
+                      '(${result.width}×${result.height})',
           ),
         ),
       );
@@ -46,7 +48,9 @@ class _SilenceViewState extends ConsumerState<SilenceView> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(isExportCancellation(e) ? 'Export cancelled' : 'Failed: $e'),
+          content: Text(
+            isExportCancellation(e) ? 'Export cancelled' : 'Failed: $e',
+          ),
         ),
       );
     } finally {
@@ -70,13 +74,59 @@ class _SilenceViewState extends ConsumerState<SilenceView> {
     final controller = ref.read(silenceControllerProvider.notifier);
     final res = silence.outputResolution;
 
+    // Desktop: controls scroll on the left, the graded frame stays pinned in
+    // the right-hand pane so sensitivity / speed / colour edits are reflected
+    // straight away. Phones get the same preview at the top of the column.
     return DecoratedBox(
       decoration: const BoxDecoration(gradient: stilloraBackgroundGradient),
       child: SafeArea(
         top: false,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-          children: [
+        child: SectionSplitView(
+          onStartOver: controller.reset,
+          canStartOver: silence.hasVideo && !_running,
+          previewCaption: silence.hasVideo
+              ? 'How the exported cut will look'
+              : null,
+          preview: SectionVideoPreview(
+            videoPath: silence.videoPath,
+            sourceWidth: silence.sourceWidth,
+            sourceHeight: silence.sourceHeight,
+            color: silence.color,
+            badge: silence.speed > 1 ? '${silence.speed}x' : null,
+            emptyLabel: 'Upload a video with speech to preview it here',
+            stats: [
+              if (silence.hasVideo) ...[
+                (
+                  label: 'Source',
+                  value:
+                      '${silence.sourceDurationSeconds}s · '
+                      '${silence.sourceWidth}×${silence.sourceHeight}',
+                ),
+                (
+                  label: 'Sensitivity',
+                  value: silence.sensitivity < 0.34
+                      ? 'Gentle'
+                      : silence.sensitivity > 0.66
+                      ? 'Aggressive'
+                      : 'Balanced',
+                ),
+                (label: 'Output', value: '${res.width}×${res.height}'),
+                (
+                  label: 'Size ≈',
+                  value: formatFileSize(silence.estimatedBytes),
+                ),
+                (
+                  label: 'Audio',
+                  value: silence.hasNewAudio
+                      ? silence.newAudioName!
+                      : silence.muteAudio
+                      ? 'Muted'
+                      : 'Original',
+                ),
+              ],
+            ],
+          ),
+          controls: [
             Text(
               'Upload a video, and Stillora removes the silent gaps where no one '
               'is speaking — then merges the rest and exports it.',
@@ -105,7 +155,9 @@ class _SilenceViewState extends ConsumerState<SilenceView> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          silence.hasVideo ? silence.videoName! : 'Upload video',
+                          silence.hasVideo
+                              ? silence.videoName!
+                              : 'Upload video',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.titleSmall
@@ -114,18 +166,21 @@ class _SilenceViewState extends ConsumerState<SilenceView> {
                         Text(
                           silence.hasVideo
                               ? '${silence.sourceDurationSeconds}s · '
-                                  '${silence.sourceWidth}×${silence.sourceHeight}'
+                                    '${silence.sourceWidth}×${silence.sourceHeight}'
                               : 'MP4 / MOV with speech',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: StilloraColors.onSurfaceVariant,
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: StilloraColors.onSurfaceVariant,
+                              ),
                         ),
                       ],
                     ),
                   ),
                   if (silence.hasVideo)
-                    const Icon(Icons.refresh_rounded,
-                        color: StilloraColors.onSurfaceVariant),
+                    const Icon(
+                      Icons.refresh_rounded,
+                      color: StilloraColors.onSurfaceVariant,
+                    ),
                 ],
               ),
             ),
@@ -137,8 +192,8 @@ class _SilenceViewState extends ConsumerState<SilenceView> {
               silence.sensitivity < 0.34
                   ? 'Gentle — only clear silence is cut'
                   : silence.sensitivity > 0.66
-                      ? 'Aggressive — trims quiet pauses too'
-                      : 'Balanced',
+                  ? 'Aggressive — trims quiet pauses too'
+                  : 'Balanced',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: StilloraColors.onSurfaceVariant,
               ),
@@ -163,8 +218,9 @@ class _SilenceViewState extends ConsumerState<SilenceView> {
                   ButtonSegment(value: 4, label: Text('4x')),
                 ],
                 selected: {silence.speed},
-                onSelectionChanged:
-                    _running ? null : (v) => controller.setSpeed(v.first),
+                onSelectionChanged: _running
+                    ? null
+                    : (v) => controller.setSpeed(v.first),
               ),
             ),
             const SizedBox(height: 12),
@@ -198,12 +254,17 @@ class _SilenceViewState extends ConsumerState<SilenceView> {
               )
             else
               StilloraGlassCard(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
                 child: Row(
                   children: [
-                    const Icon(Icons.music_note_rounded,
-                        size: 20, color: StilloraColors.primary),
+                    const Icon(
+                      Icons.music_note_rounded,
+                      size: 20,
+                      color: StilloraColors.primary,
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -233,12 +294,13 @@ class _SilenceViewState extends ConsumerState<SilenceView> {
             ],
             const SizedBox(height: 12),
 
-            // Color correction (desktop) — live preview + grade the final cut.
+            // Colour correction — the graded frame lives in the preview pane.
             ColorGradeSection(
               videoPath: silence.videoPath,
               value: silence.color,
               onChanged: controller.setColor,
               enabled: !_running,
+              showPreview: false,
             ),
             const SizedBox(height: 12),
 

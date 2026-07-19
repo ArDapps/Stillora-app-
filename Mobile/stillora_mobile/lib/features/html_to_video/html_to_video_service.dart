@@ -65,7 +65,9 @@ class HtmlToVideoService {
   /// On-device render (desktop). Returns the written MP4 file.
   Future<File> _convertLocally(HtmlToVideoRequest request) async {
     try {
-      final result = await _ref.read(videoEngineProvider).renderHtml(
+      final result = await _ref
+          .read(videoEngineProvider)
+          .renderHtml(
             html: request.html,
             url: request.url,
             width: request.width,
@@ -110,9 +112,7 @@ class HtmlToVideoService {
           'audio': ?audioBase64,
         },
         options: Options(
-          headers: {
-            if (token != null) 'Authorization': 'Bearer $token',
-          },
+          headers: {if (token != null) 'Authorization': 'Bearer $token'},
           responseType: ResponseType.bytes,
           sendTimeout: const Duration(minutes: 2),
           receiveTimeout: const Duration(minutes: 5),

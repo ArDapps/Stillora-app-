@@ -148,5 +148,4 @@ ExportQuality exportQualityByName(String name) {
 ({int width, int height}) scaledResolution(
   VideoPreset preset,
   ExportQuality quality,
-) =>
-    scaleDimensionsToQuality(preset.width, preset.height, quality);
+) => scaleDimensionsToQuality(preset.width, preset.height, quality);

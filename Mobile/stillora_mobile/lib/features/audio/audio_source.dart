@@ -19,8 +19,9 @@ Future<String?> recordVoice(BuildContext context) =>
 Future<String?> uploadAudioFile() async {
   final result = await pickImportFiles(
     type: FileType.custom,
-    allowedExtensions:
-        Platform.isAndroid ? _androidAudioExtensions : _audioExtensions,
+    allowedExtensions: Platform.isAndroid
+        ? _androidAudioExtensions
+        : _audioExtensions,
   );
   return result?.files.single.path;
 }

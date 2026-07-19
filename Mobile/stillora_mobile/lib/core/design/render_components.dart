@@ -190,8 +190,12 @@ class RenderSelectTile extends StatelessWidget {
                 child: selected
                     ? const Icon(Icons.check, size: 15, color: Colors.white)
                     : (leadingIcon != null
-                        ? Icon(leadingIcon, size: 13, color: StilloraColors.outline)
-                        : null),
+                          ? Icon(
+                              leadingIcon,
+                              size: 13,
+                              color: StilloraColors.outline,
+                            )
+                          : null),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -246,8 +250,9 @@ class RenderTileGrid extends StatelessWidget {
                   Expanded(child: tiles[i]),
                   const SizedBox(width: StilloraSpacing.xs),
                   Expanded(
-                    child:
-                        i + 1 < tiles.length ? tiles[i + 1] : const SizedBox(),
+                    child: i + 1 < tiles.length
+                        ? tiles[i + 1]
+                        : const SizedBox(),
                   ),
                 ],
               ),
@@ -320,9 +325,7 @@ class _SegChip extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(StilloraRadius.sm),
             border: Border.all(
-              color: selected
-                  ? RenderTokens.accent
-                  : RenderTokens.panelBorder,
+              color: selected ? RenderTokens.accent : RenderTokens.panelBorder,
             ),
           ),
           child: Text(
@@ -431,7 +434,11 @@ class RenderHatchPainter extends CustomPainter {
       ..strokeWidth = 8;
     const gap = 26.0;
     for (double x = -size.height; x < size.width; x += gap) {
-      canvas.drawLine(Offset(x, 0), Offset(x + size.height, size.height), paint);
+      canvas.drawLine(
+        Offset(x, 0),
+        Offset(x + size.height, size.height),
+        paint,
+      );
     }
   }
 

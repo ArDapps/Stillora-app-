@@ -100,9 +100,7 @@ class _RegistrationSheetState extends ConsumerState<RegistrationSheet> {
         onPressed: () => Navigator.of(context).pop(true),
         icon: const Icon(Icons.mic_rounded),
         label: const Text('Start Recording'),
-        style: FilledButton.styleFrom(
-          minimumSize: const Size.fromHeight(52),
-        ),
+        style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
       ),
     ];
   }

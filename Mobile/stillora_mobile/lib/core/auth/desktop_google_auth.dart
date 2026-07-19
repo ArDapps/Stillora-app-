@@ -46,9 +46,7 @@ class DesktopGoogleAuth {
     final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     final redirectUri = 'http://127.0.0.1:${server.port}';
     final verifier = _randomString(64);
-    final challenge = _base64Url(
-      sha256.convert(ascii.encode(verifier)).bytes,
-    );
+    final challenge = _base64Url(sha256.convert(ascii.encode(verifier)).bytes);
     final stateToken = _randomString(24);
 
     final authUrl = Uri.parse(_authEndpoint).replace(
@@ -71,9 +69,7 @@ class DesktopGoogleAuth {
         mode: LaunchMode.externalApplication,
       );
       if (!launched) {
-        throw const AuthFailure(
-          'Could not open a browser for Google sign-in.',
-        );
+        throw const AuthFailure('Could not open a browser for Google sign-in.');
       }
 
       final HttpRequest request;

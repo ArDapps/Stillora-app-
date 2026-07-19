@@ -222,10 +222,7 @@ class _ColorSlider extends StatelessWidget {
             children: [
               Icon(icon, size: 16, color: StilloraColors.onSurfaceVariant),
               const SizedBox(width: 8),
-              Text(
-                label,
-                style: Theme.of(context).textTheme.labelMedium,
-              ),
+              Text(label, style: Theme.of(context).textTheme.labelMedium),
               const Spacer(),
               Text(
                 display,
@@ -242,8 +239,7 @@ class _ColorSlider extends StatelessWidget {
           SliderTheme(
             data: SliderTheme.of(context).copyWith(
               trackHeight: 3,
-              overlayShape:
-                  const RoundSliderOverlayShape(overlayRadius: 14),
+              overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
             ),
             child: Slider(
               value: value.clamp(min, 1),

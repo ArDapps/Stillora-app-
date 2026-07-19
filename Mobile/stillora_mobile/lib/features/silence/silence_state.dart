@@ -77,12 +77,12 @@ class SilenceState extends Equatable {
 
   /// Rough upper-bound size (the kept video is shorter once silence is cut).
   int get estimatedBytes => estimateExportBytes(
-        width: outputResolution.width,
-        height: outputResolution.height,
-        durationSeconds: sourceDurationSeconds <= 0 ? 10 : sourceDurationSeconds,
-        hasVideo: true,
-        hasAudio: true,
-      );
+    width: outputResolution.width,
+    height: outputResolution.height,
+    durationSeconds: sourceDurationSeconds <= 0 ? 10 : sourceDurationSeconds,
+    hasVideo: true,
+    hasAudio: true,
+  );
 
   SilenceState copyWith({
     String? videoPath,
@@ -227,14 +227,14 @@ class SilenceController extends Notifier<SilenceState> {
     final res = state.outputResolution;
     final videoEngine = ref.read(videoEngineProvider);
     final base = await videoEngine.removeSilence(
-          videoPath: path,
-          width: res.width,
-          height: res.height,
-          thresholdDb: state.thresholdDb,
-          speed: state.speed,
-          muteAudio: state.muteAudio,
-          newAudioPath: state.newAudioPath,
-        );
+      videoPath: path,
+      width: res.width,
+      height: res.height,
+      thresholdDb: state.thresholdDb,
+      speed: state.speed,
+      muteAudio: state.muteAudio,
+      newAudioPath: state.newAudioPath,
+    );
     // Bake the colour grade on as a second pass (no-op when neutral).
     final result = await applyColorGrade(
       videoEngine: videoEngine,
@@ -242,7 +242,9 @@ class SilenceController extends Notifier<SilenceState> {
       color: state.color,
     );
     final now = DateTime.now();
-    await ref.read(galleryControllerProvider.notifier).addRecord(
+    await ref
+        .read(galleryControllerProvider.notifier)
+        .addRecord(
           LocalExportRecord(
             id: now.microsecondsSinceEpoch.toString(),
             outputPath: result.outputPath,

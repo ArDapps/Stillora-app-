@@ -322,9 +322,9 @@ class _AdSlotWidgetState extends State<AdSlotWidget>
         overflow: TextOverflow.ellipsis,
         textAlign: TextAlign.center,
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: StilloraColors.onSurface,
-            ),
+          fontWeight: FontWeight.w700,
+          color: StilloraColors.onSurface,
+        ),
       ),
     );
   }

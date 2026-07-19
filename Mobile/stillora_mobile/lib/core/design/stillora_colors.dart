@@ -14,8 +14,10 @@ class StilloraColors {
   // ---------------------------------------------------------------------------
   /// Primary interactive accent (buttons, selection, focus). Violet.
   static const accent = Color(0xff8b5cf6);
+
   /// Readable accent tint for text/icons on dark surfaces.
   static const accentText = Color(0xffd8c9ff);
+
   /// Magenta and cyan brand-gradient stops, exposed for ambient glows.
   static const brandMagenta = Color(0xffd946ef);
   static const brandViolet = Color(0xff8b5cf6);
@@ -92,10 +94,13 @@ class StilloraColors {
   // ---------------------------------------------------------------------------
   /// Hairline stroke for glass cards and dividers.
   static const glassStroke = Color(0x2effffff);
+
   /// Soft violet halo behind glowing controls.
   static const primaryGlow = Color(0x4d8b5cf6);
+
   /// Dim scrim for pause states / image overlays.
   static const overlay = Color(0x8c05040d);
+
   /// Heavier scrim for full-bleed media chrome.
   static const scrim = Color(0xb3030208);
 }

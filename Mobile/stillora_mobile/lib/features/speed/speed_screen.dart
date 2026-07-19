@@ -4,11 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_surface.dart';
 import '../../core/widgets/ad_widget.dart';
+import '../../core/widgets/section_split_view.dart';
 import '../audio/audio_source.dart';
 import '../color/color_grade_section.dart';
 import '../editor/editor_state.dart' show formatFileSize;
 import '../editor/video_preset.dart';
 import '../export/export_cancellation.dart';
+import '../preview/section_video_preview.dart';
 import 'speed_state.dart';
 
 /// Standalone "Speed" section: upload a video, speed it up (1x–4x), optionally
@@ -38,7 +40,7 @@ class _SpeedViewState extends ConsumerState<SpeedView> {
             result == null
                 ? 'Nothing to export.'
                 : 'Saved to Library · ${result.durationSeconds}s '
-                    '(${result.width}×${result.height})',
+                      '(${result.width}×${result.height})',
           ),
         ),
       );
@@ -46,7 +48,9 @@ class _SpeedViewState extends ConsumerState<SpeedView> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(isExportCancellation(e) ? 'Export cancelled' : 'Failed: $e'),
+          content: Text(
+            isExportCancellation(e) ? 'Export cancelled' : 'Failed: $e',
+          ),
         ),
       );
     } finally {
@@ -70,13 +74,54 @@ class _SpeedViewState extends ConsumerState<SpeedView> {
     final controller = ref.read(speedControllerProvider.notifier);
     final res = speed.outputResolution;
 
+    // On desktop the controls scroll on the left while the graded frame stays
+    // pinned on the right, so speed / quality / colour edits are reflected
+    // immediately without scrolling back up. On phones the same preview simply
+    // sits at the top of the single column.
     return DecoratedBox(
       decoration: const BoxDecoration(gradient: stilloraBackgroundGradient),
       child: SafeArea(
         top: false,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-          children: [
+        child: SectionSplitView(
+          onStartOver: controller.reset,
+          canStartOver: speed.hasVideo && !_running,
+          previewCaption: speed.hasVideo
+              ? 'How the exported video will look'
+              : null,
+          preview: SectionVideoPreview(
+            videoPath: speed.videoPath,
+            sourceWidth: speed.sourceWidth,
+            sourceHeight: speed.sourceHeight,
+            color: speed.color,
+            badge: speed.speed > 1 ? '${speed.speed}x' : null,
+            emptyLabel: 'Upload a video to preview the speed-up here',
+            stats: [
+              if (speed.hasVideo) ...[
+                (
+                  label: 'Source',
+                  value:
+                      '${speed.sourceDurationSeconds}s · '
+                      '${speed.sourceWidth}×${speed.sourceHeight}',
+                ),
+                (
+                  label: 'Output ≈',
+                  value:
+                      '${speed.hasNewAudio ? speed.sourceDurationSeconds : (speed.sourceDurationSeconds / speed.speed).ceil()}s · '
+                      '${res.width}×${res.height}',
+                ),
+                (label: 'Size ≈', value: formatFileSize(speed.estimatedBytes)),
+                (
+                  label: 'Audio',
+                  value: speed.hasNewAudio
+                      ? speed.newAudioName!
+                      : speed.muteAudio
+                      ? 'Muted'
+                      : 'Original',
+                ),
+              ],
+            ],
+          ),
+          controls: [
             Text(
               'Upload a video and speed it up. Add a soundtrack and the sped '
               'video loops to match the audio length.',
@@ -114,18 +159,21 @@ class _SpeedViewState extends ConsumerState<SpeedView> {
                         Text(
                           speed.hasVideo
                               ? '${speed.sourceDurationSeconds}s · '
-                                  '${speed.sourceWidth}×${speed.sourceHeight}'
+                                    '${speed.sourceWidth}×${speed.sourceHeight}'
                               : 'MP4 / MOV',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: StilloraColors.onSurfaceVariant,
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: StilloraColors.onSurfaceVariant,
+                              ),
                         ),
                       ],
                     ),
                   ),
                   if (speed.hasVideo)
-                    const Icon(Icons.refresh_rounded,
-                        color: StilloraColors.onSurfaceVariant),
+                    const Icon(
+                      Icons.refresh_rounded,
+                      color: StilloraColors.onSurfaceVariant,
+                    ),
                 ],
               ),
             ),
@@ -145,8 +193,9 @@ class _SpeedViewState extends ConsumerState<SpeedView> {
                   ButtonSegment(value: 4, label: Text('4x')),
                 ],
                 selected: {speed.speed},
-                onSelectionChanged:
-                    _running ? null : (v) => controller.setSpeed(v.first),
+                onSelectionChanged: _running
+                    ? null
+                    : (v) => controller.setSpeed(v.first),
               ),
             ),
             const SizedBox(height: 6),
@@ -189,12 +238,17 @@ class _SpeedViewState extends ConsumerState<SpeedView> {
               )
             else
               StilloraGlassCard(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
                 child: Row(
                   children: [
-                    const Icon(Icons.music_note_rounded,
-                        size: 20, color: StilloraColors.primary),
+                    const Icon(
+                      Icons.music_note_rounded,
+                      size: 20,
+                      color: StilloraColors.primary,
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -230,6 +284,8 @@ class _SpeedViewState extends ConsumerState<SpeedView> {
               value: speed.color,
               onChanged: controller.setColor,
               enabled: !_running,
+              // The graded frame lives in the preview pane above/right.
+              showPreview: false,
             ),
             const SizedBox(height: 12),
 
@@ -245,8 +301,9 @@ class _SpeedViewState extends ConsumerState<SpeedView> {
                     ButtonSegment(value: q, label: Text(q.label)),
                 ],
                 selected: {speed.quality},
-                onSelectionChanged:
-                    _running ? null : (v) => controller.setQuality(v.first),
+                onSelectionChanged: _running
+                    ? null
+                    : (v) => controller.setQuality(v.first),
               ),
             ),
             const SizedBox(height: 10),

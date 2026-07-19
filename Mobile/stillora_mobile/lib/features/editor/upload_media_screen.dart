@@ -27,7 +27,8 @@ class UploadMediaScreen extends ConsumerWidget {
         leading: const BackButton(),
         centerTitle: true,
         title: ShaderMask(
-          shaderCallback: (bounds) => stilloraBrandGradient.createShader(bounds),
+          shaderCallback: (bounds) =>
+              stilloraBrandGradient.createShader(bounds),
           child: const Text(
             'Stillora',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
@@ -35,9 +36,7 @@ class UploadMediaScreen extends ConsumerWidget {
         ),
       ),
       body: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: stilloraBackgroundGradient,
-        ),
+        decoration: const BoxDecoration(gradient: stilloraBackgroundGradient),
         child: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -48,9 +47,8 @@ class UploadMediaScreen extends ConsumerWidget {
                   children: [
                     Text(
                       'Upload Media',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(fontWeight: FontWeight.w800),
                     ),
                     const SizedBox(height: 6),
                     Text(
@@ -75,9 +73,8 @@ class UploadMediaScreen extends ConsumerWidget {
                         children: [
                           Text(
                             'Selected Media (${editor.media.length})',
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(fontWeight: FontWeight.w700),
                           ),
                           const Spacer(),
                           TextButton(
@@ -170,10 +167,7 @@ class _UploadDropZone extends StatelessWidget {
 }
 
 class _MediaThumbnailRow extends StatelessWidget {
-  const _MediaThumbnailRow({
-    required this.media,
-    required this.controller,
-  });
+  const _MediaThumbnailRow({required this.media, required this.controller});
 
   final List<MediaItem> media;
   final EditorController controller;
@@ -216,7 +210,10 @@ class _MediaThumbnailRow extends StatelessWidget {
                   bottom: 4,
                   right: 4,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 5,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.black.withValues(alpha: 0.7),
                       borderRadius: BorderRadius.circular(4),

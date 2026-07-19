@@ -4,7 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
-import 'text_overlay_state.dart';
+import 'text_layer.dart';
 
 /// A text layer rasterised to a transparent PNG, with the pixel box it occupies
 /// so the caller can position it in the export frame.
@@ -59,17 +59,20 @@ Future<RenderedTextLayer?> renderTextLayerToPng(
   final text = layer.text;
   if (text.trim().isEmpty) return null;
 
-  final fontSize = (layer.fontScale * frameHeight).clamp(4.0, frameHeight * 1.0);
+  final fontSize = (layer.fontScale * frameHeight).clamp(
+    4.0,
+    frameHeight * 1.0,
+  );
   final op = layer.opacity.clamp(0.0, 1.0);
 
   final fillStyle = textLayerStyle(layer, fontSize: fontSize, opacityScale: op);
 
   TextPainter painter(TextStyle style) => TextPainter(
-        text: TextSpan(text: text, style: style),
-        textAlign: layer.align,
-        textDirection: TextDirection.ltr,
-        maxLines: null,
-      )..layout(maxWidth: frameWidth.toDouble());
+    text: TextSpan(text: text, style: style),
+    textAlign: layer.align,
+    textDirection: TextDirection.ltr,
+    maxLines: null,
+  )..layout(maxWidth: frameWidth.toDouble());
 
   final fill = painter(fillStyle);
 
@@ -103,10 +106,7 @@ Future<RenderedTextLayer?> renderTextLayerToPng(
       rect,
       Radius.circular(fontSize * 0.18),
     );
-    canvas.drawRRect(
-      rrect,
-      Paint()..color = bg.withValues(alpha: bg.a * op),
-    );
+    canvas.drawRRect(rrect, Paint()..color = bg.withValues(alpha: bg.a * op));
   }
 
   // 2) Stroke/outline under the fill (drawn as text with a stroke paint).

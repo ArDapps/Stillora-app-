@@ -101,8 +101,7 @@ class ColorAdjust extends Equatable {
 
   double get _ciBrightness => brightness * 0.4; // gentle additive, [-0.4, 0.4]
   double get _ciContrast => 1 + contrast; // [0, 2], 1 = neutral
-  double get _ciSaturation =>
-      (1 + saturation + 0.5 * vibrance).clamp(0.0, 3.0);
+  double get _ciSaturation => (1 + saturation + 0.5 * vibrance).clamp(0.0, 3.0);
 
   /// The derived grade the native/ffmpeg engines bake into the video.
   engine.ColorAdjustSpec toSpec() => engine.ColorAdjustSpec(

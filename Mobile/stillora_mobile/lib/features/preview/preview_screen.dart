@@ -36,7 +36,11 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final outputPath = ref.read(exportControllerProvider).asData?.value?.outputPath;
+      final outputPath = ref
+          .read(exportControllerProvider)
+          .asData
+          ?.value
+          ?.outputPath;
       if (outputPath != null && File(outputPath).existsSync()) {
         maybePromptForReview(ref);
       }
@@ -52,10 +56,7 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
       SnackBar(
         content: Text(message),
         action: offerSettings
-            ? SnackBarAction(
-                label: 'Settings',
-                onPressed: openAppSettings,
-              )
+            ? SnackBarAction(label: 'Settings', onPressed: openAppSettings)
             : null,
       ),
     );
@@ -87,10 +88,7 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
         case SaveOutcome.missingFile:
           _snack('That video is no longer available. Please export again.');
         case SaveOutcome.permissionDenied:
-          _snack(
-            'Allow photo access to save your video.',
-            offerSettings: true,
-          );
+          _snack('Allow photo access to save your video.', offerSettings: true);
         case SaveOutcome.failed:
           _snack('Could not save the video. Please try again.');
         case SaveOutcome.cancelled:
@@ -105,8 +103,7 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
   Widget build(BuildContext context) {
     final result = ref.watch(exportControllerProvider).asData?.value;
     final outputPath = result?.outputPath;
-    final fileExists =
-        outputPath != null && File(outputPath).existsSync();
+    final fileExists = outputPath != null && File(outputPath).existsSync();
 
     void openEditor() {
       ref.read(homeTabProvider.notifier).state = 0;
@@ -148,9 +145,7 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Export Complete')),
       body: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: stilloraBackgroundGradient,
-        ),
+        decoration: const BoxDecoration(gradient: stilloraBackgroundGradient),
         child: SafeArea(
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
@@ -252,9 +247,9 @@ class _SuccessHeader extends StatelessWidget {
         const SizedBox(height: 20),
         Text(
           'Export Complete!',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w800,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 6),
         Text(
@@ -316,9 +311,9 @@ class _VideoCard extends StatelessWidget {
                   _fileName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 4),
                 Text(

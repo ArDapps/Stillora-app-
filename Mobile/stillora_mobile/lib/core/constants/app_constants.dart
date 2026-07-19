@@ -34,6 +34,7 @@ class AppConstants {
     'GOOGLE_DESKTOP_CLIENT_SECRET',
     defaultValue: '',
   );
+
   /// Apple "Services ID" used for Sign in with Apple on non-Apple platforms
   /// (Android/web). On iOS/macOS the native flow uses the app's bundle id as the
   /// token audience, so this is only required for the Android web-redirect flow.

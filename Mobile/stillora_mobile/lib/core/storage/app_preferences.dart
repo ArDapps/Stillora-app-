@@ -151,8 +151,6 @@ class AppPreferences {
     return ms == null ? null : DateTime.fromMillisecondsSinceEpoch(ms);
   }
 
-  Future<void> setAnalyticsLastFlushAt(DateTime value) => _preferences.setInt(
-    _analyticsLastFlushKey,
-    value.millisecondsSinceEpoch,
-  );
+  Future<void> setAnalyticsLastFlushAt(DateTime value) =>
+      _preferences.setInt(_analyticsLastFlushKey, value.millisecondsSinceEpoch);
 }

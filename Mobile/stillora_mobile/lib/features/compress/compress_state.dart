@@ -132,30 +132,28 @@ class CompressState extends Equatable {
     int? sourceBytes,
     CompressLevel? level,
     bool? muteAudio,
-  }) =>
-      CompressState(
-        videoPath: videoPath ?? this.videoPath,
-        videoName: videoName ?? this.videoName,
-        sourceWidth: sourceWidth ?? this.sourceWidth,
-        sourceHeight: sourceHeight ?? this.sourceHeight,
-        sourceDurationSeconds:
-            sourceDurationSeconds ?? this.sourceDurationSeconds,
-        sourceBytes: sourceBytes ?? this.sourceBytes,
-        level: level ?? this.level,
-        muteAudio: muteAudio ?? this.muteAudio,
-      );
+  }) => CompressState(
+    videoPath: videoPath ?? this.videoPath,
+    videoName: videoName ?? this.videoName,
+    sourceWidth: sourceWidth ?? this.sourceWidth,
+    sourceHeight: sourceHeight ?? this.sourceHeight,
+    sourceDurationSeconds: sourceDurationSeconds ?? this.sourceDurationSeconds,
+    sourceBytes: sourceBytes ?? this.sourceBytes,
+    level: level ?? this.level,
+    muteAudio: muteAudio ?? this.muteAudio,
+  );
 
   @override
   List<Object?> get props => [
-        videoPath,
-        videoName,
-        sourceWidth,
-        sourceHeight,
-        sourceDurationSeconds,
-        sourceBytes,
-        level,
-        muteAudio,
-      ];
+    videoPath,
+    videoName,
+    sourceWidth,
+    sourceHeight,
+    sourceDurationSeconds,
+    sourceBytes,
+    level,
+    muteAudio,
+  ];
 }
 
 final compressControllerProvider =
@@ -265,7 +263,9 @@ class CompressController extends Notifier<CompressState> {
       maxOutputBytes: state.targetBytes,
     );
     final now = DateTime.now();
-    await ref.read(galleryControllerProvider.notifier).addRecord(
+    await ref
+        .read(galleryControllerProvider.notifier)
+        .addRecord(
           LocalExportRecord(
             id: now.microsecondsSinceEpoch.toString(),
             outputPath: result.outputPath,

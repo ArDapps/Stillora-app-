@@ -76,7 +76,8 @@ class ExportController extends AsyncNotifier<engine.ExportResult?> {
       // When a style is set, run a second pass that bakes the glow/fade onto the
       // finished video (the base output becomes a single full-frame layer).
       // Skipped gracefully where the platform engine can't composite.
-      final styled = exportEditor.effect != ClipEffect.none ||
+      final styled =
+          exportEditor.effect != ClipEffect.none ||
           exportEditor.transition != FrameTransition.none;
       var produced = base;
       if (styled) {
@@ -154,14 +155,16 @@ class ExportController extends AsyncNotifier<engine.ExportResult?> {
       if (token == null) {
         return;
       }
-      await ref.read(dioProvider).post<void>(
-        '/api/exports/record',
-        data: {
-          'presetId': editor.preset.id,
-          'duration': result.durationSeconds,
-        },
-        options: Options(headers: {'Authorization': 'Bearer $token'}),
-      );
+      await ref
+          .read(dioProvider)
+          .post<void>(
+            '/api/exports/record',
+            data: {
+              'presetId': editor.preset.id,
+              'duration': result.durationSeconds,
+            },
+            options: Options(headers: {'Authorization': 'Bearer $token'}),
+          );
     } catch (_) {
       // Telemetry must never disrupt the export flow.
     }

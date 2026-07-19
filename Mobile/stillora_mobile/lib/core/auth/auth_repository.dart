@@ -180,9 +180,7 @@ class AuthRepository {
     if (Platform.isIOS || Platform.isMacOS) {
       final available = await SignInWithApple.isAvailable();
       if (!available) {
-        throw const AuthFailure(
-          'Sign in with Apple requires iOS 13 or later.',
-        );
+        throw const AuthFailure('Sign in with Apple requires iOS 13 or later.');
       }
     }
 
@@ -229,8 +227,8 @@ class AuthRepository {
       final cachedName = await _tokenStorage.readAppleName();
       final cachedEmail = await _tokenStorage.readAppleEmail();
       final resolvedName = fullName.isNotEmpty ? fullName : cachedName;
-      final resolvedEmail = (credential.email != null &&
-              credential.email!.isNotEmpty)
+      final resolvedEmail =
+          (credential.email != null && credential.email!.isNotEmpty)
           ? credential.email
           : cachedEmail;
 

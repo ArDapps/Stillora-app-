@@ -167,9 +167,9 @@ class AuthErrorBanner extends StatelessWidget {
             Expanded(
               child: Text(
                 message,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: StilloraColors.error,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: StilloraColors.error),
               ),
             ),
           ],

@@ -7,45 +7,25 @@ import { AuthControls } from "@/app/components/auth-controls";
 import { readImageDimensions } from "@/app/editor/editor-utils";
 import { renderPdfFirstPage } from "./pdf";
 import {
+  BATCH_ACCEPT,
+  CONCURRENCY,
+  MAX_IMAGES,
+  baseNameOf,
+  isPdf,
+  type BatchItem,
+  type SourceKind,
+} from "./batch-utils";
+import { StatusBadge } from "./status-badge";
+import {
   DEFAULT_DURATION_SECONDS,
   FIXED_DURATION_SECONDS,
   FitMode,
-  IMAGE_ACCEPT,
   IMAGE_MIME_TYPES,
   MAX_IMAGE_BYTES,
   OUTPUT_PRESETS,
   OutputPresetId,
   formatBytes,
 } from "@/lib/stillora";
-
-const MAX_IMAGES = 30;
-const CONCURRENCY = 2;
-const BATCH_ACCEPT = `${IMAGE_ACCEPT},.pdf`;
-
-type ItemStatus = "ready" | "rendering" | "done" | "error";
-type SourceKind = "image" | "pdf";
-
-type BatchItem = {
-  id: string;
-  file: File;
-  url: string;
-  width: number;
-  height: number;
-  baseName: string;
-  source: SourceKind;
-  status: ItemStatus;
-  resultUrl?: string;
-  error?: string;
-};
-
-function isPdf(file: File) {
-  return file.type === "application/pdf" || /\.pdf$/i.test(file.name);
-}
-
-function baseNameOf(name: string) {
-  const dot = name.lastIndexOf(".");
-  return (dot > 0 ? name.slice(0, dot) : name).replace(/[^\w-]+/g, "-").slice(0, 60) || "image";
-}
 
 export function BatchTool() {
   const [items, setItems] = useState<BatchItem[]>([]);
@@ -426,26 +406,4 @@ export function BatchTool() {
       </div>
     </main>
   );
-}
-
-function StatusBadge({ status, error }: { status: ItemStatus; error?: string }) {
-  if (status === "rendering") {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-primary/90 px-2 py-0.5 text-[10px] font-bold text-white">
-        <Loader2 className="size-2.5 animate-spin" />
-        Rendering
-      </span>
-    );
-  }
-  if (status === "done") {
-    return <span className="rounded-full bg-green-500/90 px-2 py-0.5 text-[10px] font-bold text-white">Done</span>;
-  }
-  if (status === "error") {
-    return (
-      <span className="rounded-full bg-red-500/90 px-2 py-0.5 text-[10px] font-bold text-white" title={error}>
-        {error ?? "Error"}
-      </span>
-    );
-  }
-  return <span className="rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-bold text-white/80">Ready</span>;
 }

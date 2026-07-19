@@ -98,8 +98,11 @@ class _VideoThumbnailState extends State<VideoThumbnail> {
             else
               Center(
                 child: _failed
-                    ? const Icon(Icons.movie_outlined,
-                        color: StilloraColors.onSurfaceVariant, size: 22)
+                    ? const Icon(
+                        Icons.movie_outlined,
+                        color: StilloraColors.onSurfaceVariant,
+                        size: 22,
+                      )
                     : const SizedBox(
                         width: 18,
                         height: 18,

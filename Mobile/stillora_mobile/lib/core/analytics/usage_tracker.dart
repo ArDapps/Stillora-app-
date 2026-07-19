@@ -140,22 +140,22 @@ class UsageTracker {
   ) async {
     try {
       final token = _ref.read(authControllerProvider).asData?.value?.token;
-      await _ref.read(dioProvider).post<void>(
-        '/api/track',
-        data: {
-          'event': 'batch',
-          'platform': _platformName(),
-          'sessions': sent,
-        },
-        options: Options(
-          headers: {
-            if (token != null) 'Authorization': 'Bearer $token',
-          },
-          // A late batch is still worth sending, but don't hang forever.
-          sendTimeout: const Duration(seconds: 15),
-          receiveTimeout: const Duration(seconds: 15),
-        ),
-      );
+      await _ref
+          .read(dioProvider)
+          .post<void>(
+            '/api/track',
+            data: {
+              'event': 'batch',
+              'platform': _platformName(),
+              'sessions': sent,
+            },
+            options: Options(
+              headers: {if (token != null) 'Authorization': 'Bearer $token'},
+              // A late batch is still worth sending, but don't hang forever.
+              sendTimeout: const Duration(seconds: 15),
+              receiveTimeout: const Duration(seconds: 15),
+            ),
+          );
       // Drop only what we sent; a session may have been buffered mid-flush.
       final remaining = prefs.analyticsBuffer.skip(sent.length).toList();
       await prefs.setAnalyticsBuffer(remaining);
@@ -206,6 +206,11 @@ class _UsageTrackerHostState extends ConsumerState<UsageTrackerHost>
     with WidgetsBindingObserver {
   bool _sessionOpen = false;
 
+  /// Held rather than read through `ref` on demand: `dispose()` closes the
+  /// session, and reading a provider off a deactivated widget's BuildContext
+  /// throws ("Using ref when a widget is about to or has been unmounted").
+  late final UsageTracker _tracker = ref.read(usageTrackerProvider);
+
   @override
   void initState() {
     super.initState();
@@ -229,13 +234,13 @@ class _UsageTrackerHostState extends ConsumerState<UsageTrackerHost>
   void _openSession() {
     if (_sessionOpen) return;
     _sessionOpen = true;
-    unawaited(ref.read(usageTrackerProvider).start());
+    unawaited(_tracker.start());
   }
 
   void _closeSession() {
     if (!_sessionOpen) return;
     _sessionOpen = false;
-    unawaited(ref.read(usageTrackerProvider).end());
+    unawaited(_tracker.end());
   }
 
   @override

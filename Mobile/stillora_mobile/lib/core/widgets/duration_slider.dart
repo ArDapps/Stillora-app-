@@ -1,14 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../design/stillora_colors.dart';
-
-/// Formats a seconds count as a compact duration label (`45s`, `1:30`, `10m`).
-String formatDurationLabel(int seconds) {
-  if (seconds < 60) return '${seconds}s';
-  final m = seconds ~/ 60;
-  final s = seconds % 60;
-  return s == 0 ? '${m}m' : '$m:${s.toString().padLeft(2, '0')}';
-}
+import '../format/duration_label.dart';
 
 /// A clean labelled slider for picking a duration, matching the colour-correction
 /// slider style. The max grows in 5-minute steps so any length stays reachable
@@ -60,7 +53,7 @@ class DurationSlider extends StatelessWidget {
             Text(label, style: Theme.of(context).textTheme.labelMedium),
             const Spacer(),
             Text(
-              formatDurationLabel(seconds),
+              formatDurationShort(seconds),
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                 color: StilloraColors.brandViolet,
                 fontWeight: FontWeight.w700,

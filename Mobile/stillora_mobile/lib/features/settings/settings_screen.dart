@@ -26,10 +26,10 @@ class _SettingsSection extends StatelessWidget {
       child: Text(
         label.toUpperCase(),
         style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: StilloraColors.accentText,
-              letterSpacing: 1.2,
-              fontWeight: FontWeight.w800,
-            ),
+          color: StilloraColors.accentText,
+          letterSpacing: 1.2,
+          fontWeight: FontWeight.w800,
+        ),
       ),
     );
   }

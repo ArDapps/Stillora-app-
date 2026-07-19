@@ -65,9 +65,7 @@ class _ExportProgressScreenState extends ConsumerState<ExportProgressScreen> {
     }
 
     final body = DecoratedBox(
-      decoration: const BoxDecoration(
-        gradient: stilloraBackgroundGradient,
-      ),
+      decoration: const BoxDecoration(gradient: stilloraBackgroundGradient),
       child: _ExportProgressContent(
         export: export,
         message: _messageFor(export),

@@ -25,9 +25,7 @@ class ChoosePresetScreen extends ConsumerWidget {
       desktopTitle: 'Choose Format',
       appBar: AppBar(title: const Text('Choose Format')),
       body: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: stilloraBackgroundGradient,
-        ),
+        decoration: const BoxDecoration(gradient: stilloraBackgroundGradient),
         child: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -49,9 +47,8 @@ class ChoosePresetScreen extends ConsumerWidget {
                         Expanded(
                           child: Text(
                             'Presets',
-                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.w800,
-                            ),
+                            style: Theme.of(context).textTheme.headlineSmall
+                                ?.copyWith(fontWeight: FontWeight.w800),
                           ),
                         ),
                         StilloraStepBadge(label: 'Step 3'),
@@ -63,11 +60,11 @@ class ChoosePresetScreen extends ConsumerWidget {
                       physics: const NeverScrollableScrollPhysics(),
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        mainAxisSpacing: 10,
-                        crossAxisSpacing: 10,
-                        childAspectRatio: 1.45,
-                      ),
+                            crossAxisCount: 2,
+                            mainAxisSpacing: 10,
+                            crossAxisSpacing: 10,
+                            childAspectRatio: 1.45,
+                          ),
                       itemCount: videoPresets.length,
                       itemBuilder: (context, index) {
                         final preset = videoPresets[index];
@@ -89,9 +86,7 @@ class ChoosePresetScreen extends ConsumerWidget {
                               Text(
                                 preset.label,
                                 textAlign: TextAlign.center,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .labelMedium
+                                style: Theme.of(context).textTheme.labelMedium
                                     ?.copyWith(
                                       color: selected
                                           ? StilloraColors.primary
@@ -100,9 +95,7 @@ class ChoosePresetScreen extends ConsumerWidget {
                               ),
                               Text(
                                 preset.ratioLabel,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
+                                style: Theme.of(context).textTheme.bodyMedium
                                     ?.copyWith(
                                       color: StilloraColors.onSurfaceVariant,
                                     ),
@@ -120,7 +113,9 @@ class ChoosePresetScreen extends ConsumerWidget {
                     const SizedBox(height: 8),
                     RenderPillSegmented(
                       options: const ['Fit', 'Fill'],
-                      selectedIndex: editor.resizeMode == ResizeMode.fit ? 0 : 1,
+                      selectedIndex: editor.resizeMode == ResizeMode.fit
+                          ? 0
+                          : 1,
                       onSelected: (i) => controller.setResizeMode(
                         i == 0 ? ResizeMode.fit : ResizeMode.fill,
                       ),
@@ -133,8 +128,9 @@ class ChoosePresetScreen extends ConsumerWidget {
                     const SizedBox(height: 8),
                     RenderPillSegmented(
                       options: [for (final q in ExportQuality.values) q.label],
-                      selectedIndex:
-                          ExportQuality.values.indexOf(editor.exportQuality),
+                      selectedIndex: ExportQuality.values.indexOf(
+                        editor.exportQuality,
+                      ),
                       onSelected: (i) =>
                           controller.setExportQuality(ExportQuality.values[i]),
                     ),
@@ -149,9 +145,10 @@ class ChoosePresetScreen extends ConsumerWidget {
                           '${res.width} × ${res.height}'
                           '  ·  ≈ ${formatFileSize(editor.estimatedExportBytes)}'
                           '  ·  ${editor.exportQuality.note}',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: StilloraColors.onSurfaceVariant,
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: StilloraColors.onSurfaceVariant,
+                              ),
                         );
                       },
                     ),

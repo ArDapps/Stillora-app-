@@ -30,8 +30,9 @@ class _AddAudioScreenState extends ConsumerState<AddAudioScreen> {
   Future<void> _pickAudio() async {
     final result = await pickImportFiles(
       type: FileType.custom,
-      allowedExtensions:
-          Platform.isAndroid ? ['m4a', 'aac'] : ['mp3', 'm4a', 'aac', 'wav'],
+      allowedExtensions: Platform.isAndroid
+          ? ['m4a', 'aac']
+          : ['mp3', 'm4a', 'aac', 'wav'],
     );
     final path = result?.files.single.path;
     if (path != null) {
@@ -57,9 +58,7 @@ class _AddAudioScreenState extends ConsumerState<AddAudioScreen> {
       desktopTitle: 'Add Soundtrack',
       appBar: AppBar(leading: const BackButton()),
       body: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: stilloraBackgroundGradient,
-        ),
+        decoration: const BoxDecoration(gradient: stilloraBackgroundGradient),
         child: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -76,12 +75,11 @@ class _AddAudioScreenState extends ConsumerState<AddAudioScreen> {
                               stilloraBrandGradient.createShader(bounds),
                           child: Text(
                             'Stillora',
-                            style: Theme.of(
-                              context,
-                            ).textTheme.titleLarge?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w900,
-                            ),
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w900,
+                                ),
                           ),
                         ),
                       ],
@@ -126,8 +124,9 @@ class _AddAudioScreenState extends ConsumerState<AddAudioScreen> {
                       const SizedBox(height: 20),
                       Text(
                         hasNarration ? 'Your Narration' : 'Selected Track',
-                        style: Theme.of(context).textTheme.titleSmall
-                            ?.copyWith(fontWeight: FontWeight.w700),
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       _TrackCard(
@@ -253,10 +252,7 @@ class _TrackCard extends StatelessWidget {
           const SizedBox(height: 16),
           Row(
             children: [
-              Text(
-                'Volume',
-                style: Theme.of(context).textTheme.labelMedium,
-              ),
+              Text('Volume', style: Theme.of(context).textTheme.labelMedium),
               Expanded(
                 child: Slider(
                   value: volume,
@@ -314,9 +310,7 @@ class _Waveform extends StatelessWidget {
                       ],
                     )
                   : null,
-              color: played
-                  ? null
-                  : StilloraColors.surfaceContainerHigh,
+              color: played ? null : StilloraColors.surfaceContainerHigh,
               borderRadius: BorderRadius.circular(2),
             ),
           );

@@ -159,7 +159,11 @@ const _drawerNavItems = [
 /// The phone navigation drawer. Public so its scroll/overflow behaviour can be
 /// widget-tested in isolation (without the whole tab screen's gallery/ad deps).
 class AppNavDrawer extends StatelessWidget {
-  const AppNavDrawer({super.key, required this.activeView, required this.onSelect});
+  const AppNavDrawer({
+    super.key,
+    required this.activeView,
+    required this.onSelect,
+  });
 
   final int activeView;
   final ValueChanged<int> onSelect;
@@ -210,8 +214,12 @@ class AppNavDrawer extends StatelessWidget {
                 children: [
                   for (final item in _drawerNavItems)
                     if (switch (item.view) {
-                      5 || 6 || 7 || 9 || 10 || 11 =>
-                        isDesktopPlatform || isIosPlatform,
+                      5 ||
+                      6 ||
+                      7 ||
+                      9 ||
+                      10 ||
+                      11 => isDesktopPlatform || isIosPlatform,
                       _ => true,
                     })
                       _DrawerNavTile(
