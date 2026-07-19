@@ -9,6 +9,7 @@ import '../../core/platform/platform_info.dart';
 import '../../core/widgets/ad_widget.dart';
 import '../../core/widgets/section_split_view.dart';
 import 'gallery_controller.dart';
+import 'gallery_download.dart';
 import 'gallery_video_screen.dart';
 import 'local_export_record.dart';
 import 'widgets/gallery_browser_widgets.dart';
@@ -239,13 +240,20 @@ class _GalleryViewState extends ConsumerState<GalleryView> {
                         : _preview!.outputPath.split(RegExp(r'[/\\]')).last,
                     actions: _preview == null
                         ? null
-                        : OutlinedButton.icon(
-                            onPressed: () => _openFullScreen(_preview!),
-                            icon: const Icon(
-                              Icons.open_in_full_rounded,
-                              size: 18,
-                            ),
-                            label: const Text('Open full screen'),
+                        : Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              GalleryDownloadButton(record: _preview!),
+                              const SizedBox(height: StilloraSpacing.xs),
+                              OutlinedButton.icon(
+                                onPressed: () => _openFullScreen(_preview!),
+                                icon: const Icon(
+                                  Icons.open_in_full_rounded,
+                                  size: 18,
+                                ),
+                                label: const Text('Open full screen'),
+                              ),
+                            ],
                           ),
                     child: GalleryPreview(record: _preview, player: _player),
                   ),

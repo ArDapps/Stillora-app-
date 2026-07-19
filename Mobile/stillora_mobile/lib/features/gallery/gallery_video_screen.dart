@@ -11,6 +11,7 @@ import '../../core/platform/media_actions.dart';
 import '../../core/platform/platform_info.dart';
 import '../../core/widgets/stillora_video_player_panel.dart';
 import 'gallery_controller.dart';
+import 'gallery_download.dart';
 import 'local_export_record.dart';
 
 class GalleryVideoScreen extends ConsumerStatefulWidget {
@@ -81,40 +82,12 @@ class _GalleryVideoScreenState extends ConsumerState<GalleryVideoScreen> {
     if (_saving) return;
     setState(() => _saving = true);
     try {
-      // Desktop has no Camera Roll — open a native "Save As" dialog instead of
-      // asking for photo-library access (which doesn't apply on macOS/Windows).
-      final outcome = isDesktopPlatform
-          ? await MediaActions.saveVideoToFile(
-              widget.record.outputPath,
-              suggestedName: _suggestedFileName(),
-            )
-          : await MediaActions.saveToCameraRoll(widget.record.outputPath);
-      switch (outcome) {
-        case SaveOutcome.saved:
-          _snack(
-            isDesktopPlatform ? 'Video saved.' : 'Saved to your Camera Roll.',
-          );
-        case SaveOutcome.missingFile:
-          _snack('That video is no longer available.');
-        case SaveOutcome.permissionDenied:
-          _snack('Allow photo access to save your video.', offerSettings: true);
-        case SaveOutcome.failed:
-          _snack('Could not save the video. Please try again.');
-        case SaveOutcome.cancelled:
-          break; // User dismissed the save dialog.
-      }
+      // Shared with the Library's per-video download button so both routes
+      // save identically.
+      await downloadRecord(context, widget.record);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
-  }
-
-  String _suggestedFileName() {
-    final r = widget.record;
-    final preset = r.preset.toLowerCase().replaceAll(
-      RegExp(r'[^a-z0-9]+'),
-      '-',
-    );
-    return 'stillora-$preset-${r.width}x${r.height}.mp4';
   }
 
   Future<void> _delete() async {
@@ -202,7 +175,14 @@ class _GalleryVideoScreenState extends ConsumerState<GalleryVideoScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.download_rounded),
-            label: Text(_saving ? 'Saving…' : 'Save to Camera Roll'),
+            // Desktop saves via a "Save As" dialog — there is no Camera Roll.
+            label: Text(
+              _saving
+                  ? 'Saving…'
+                  : isDesktopPlatform
+                  ? 'Download'
+                  : 'Save to Camera Roll',
+            ),
           ),
           const SizedBox(height: StilloraSpacing.xs),
           OutlinedButton.icon(

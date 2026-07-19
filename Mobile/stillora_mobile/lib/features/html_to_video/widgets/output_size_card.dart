@@ -65,9 +65,9 @@ class OutputSizeCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             '${output.width} × ${output.height}  ·  ≈ ${formatFileSize(bytes)}',
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: StilloraColors.onSurfaceVariant),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: StilloraColors.onSurfaceVariant,
+            ),
           ),
         ],
       ),

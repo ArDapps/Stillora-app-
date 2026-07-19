@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/design/stillora_colors.dart';
 import '../../../core/design/stillora_spacing.dart';
 import '../../../core/widgets/video_thumbnail.dart';
+import '../gallery_download.dart';
 import '../local_export_record.dart';
 
 /// "Load more" footer shown when the Library has more videos than are currently
@@ -105,6 +106,12 @@ class GalleryCard extends StatelessWidget {
                         color: StilloraColors.onSurfaceVariant,
                       ),
                     ),
+                    // Hidden while picking videos to delete — a download in the
+                    // middle of a multi-select would be a mis-tap, not intent.
+                    if (!selecting) ...[
+                      const SizedBox(height: StilloraSpacing.xs),
+                      GalleryDownloadButton(record: record),
+                    ],
                   ],
                 ),
               ),
@@ -151,7 +158,15 @@ class GalleryTile extends StatelessWidget {
               ),
         title: Text('${record.preset} · ${record.width}×${record.height}'),
         subtitle: Text('${record.durationSeconds}s · $dateLabel'),
-        trailing: selecting ? null : const Icon(Icons.chevron_right_rounded),
+        trailing: selecting
+            ? null
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  GalleryDownloadButton(record: record, compact: true),
+                  const Icon(Icons.chevron_right_rounded),
+                ],
+              ),
         onTap: onTap,
         onLongPress: onLongPress,
       ),
