@@ -61,6 +61,12 @@ const _navItems = [
     selectedIcon: Icons.repeat_on_rounded,
   ),
   (
+    index: 11,
+    label: 'PDF Converter',
+    icon: Icons.picture_as_pdf_outlined,
+    selectedIcon: Icons.picture_as_pdf_rounded,
+  ),
+  (
     index: 2,
     label: 'HTML',
     icon: Icons.html_outlined,

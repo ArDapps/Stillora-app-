@@ -13,6 +13,7 @@ import '../speed/speed_screen.dart';
 import '../compress/compress_screen.dart';
 import '../convert/convert_screen.dart';
 import '../html_to_video/html_to_video_screen.dart';
+import '../images_to_pdf/images_to_pdf_screen.dart';
 import '../loop_images/loop_images_screen.dart';
 import '../profile/profile_screen.dart';
 import '../text_overlay/text_overlay_screen.dart';
@@ -38,6 +39,7 @@ class AppTabsScreen extends ConsumerWidget {
       'Convert',
       'Text',
       'Compress',
+      'PDF Converter',
     ];
     const views = [
       EditorView(),
@@ -51,6 +53,7 @@ class AppTabsScreen extends ConsumerWidget {
       ConvertView(),
       TextOverlayView(),
       CompressView(),
+      ImagesToPdfView(),
     ];
 
     if (useDesktopLayout(context)) {
@@ -127,6 +130,12 @@ const _drawerNavItems = [
     icon: Icons.swap_horiz_outlined,
     selectedIcon: Icons.swap_horiz_rounded,
     label: 'Convert',
+  ),
+  (
+    view: 11,
+    icon: Icons.picture_as_pdf_outlined,
+    selectedIcon: Icons.picture_as_pdf_rounded,
+    label: 'PDF Converter',
   ),
   (
     view: 2,
@@ -208,6 +217,8 @@ class AppNavDrawer extends StatelessWidget {
             //    native engine (AVFoundation's fileLengthLimit *is* honored);
             //    Windows/Linux use bundled ffmpeg. Android reuses the
             //    removeSilence pipeline it lacks, so it stays hidden there.
+            //  • 11 (PDF Converter) is pure Dart plus the printing plugin's
+            //    rasteriser, both of which ship on every platform — no gate.
             Expanded(
               child: ListView(
                 padding: EdgeInsets.zero,
@@ -218,8 +229,7 @@ class AppNavDrawer extends StatelessWidget {
                       6 ||
                       7 ||
                       9 ||
-                      10 ||
-                      11 => isDesktopPlatform || isIosPlatform,
+                      10 => isDesktopPlatform || isIosPlatform,
                       _ => true,
                     })
                       _DrawerNavTile(

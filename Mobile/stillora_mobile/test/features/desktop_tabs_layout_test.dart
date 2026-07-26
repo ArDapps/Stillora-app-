@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:stillora_mobile/features/compress/compress_screen.dart';
 import 'package:stillora_mobile/features/convert/convert_screen.dart';
+import 'package:stillora_mobile/features/images_to_pdf/images_to_pdf_screen.dart';
 import 'package:stillora_mobile/features/silence/silence_screen.dart';
 import 'package:stillora_mobile/features/speed/speed_screen.dart';
 import 'package:stillora_mobile/features/text_overlay/text_overlay_screen.dart';
@@ -22,6 +23,7 @@ void main() {
     'Convert': const ConvertView(),
     'Text': const TextOverlayView(),
     'Watermark': const WatermarkView(),
+    'PDF Converter': const ImagesToPdfView(),
   };
 
   Future<void> pump(WidgetTester tester, Widget view, Size size) async {

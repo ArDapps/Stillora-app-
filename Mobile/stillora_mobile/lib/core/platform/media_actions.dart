@@ -75,6 +75,64 @@ class MediaActions {
     return true;
   }
 
+  /// Opens the native share sheet for a PDF at [path]. On mobile this is also
+  /// how the user files it away — the sheet offers "Save to Files" / "Save to
+  /// Drive". Returns false if the file is missing so the caller can warn.
+  static Future<bool> sharePdf(
+    BuildContext context,
+    String path, {
+    String text = 'Made with Stillora',
+  }) async {
+    if (!File(path).existsSync()) {
+      return false;
+    }
+    final origin = _popoverAnchor(context);
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile(path, mimeType: 'application/pdf')],
+        text: text,
+        sharePositionOrigin: origin,
+      ),
+    );
+    return true;
+  }
+
+  /// Desktop save: open a native "Save As" dialog and write the PDF to the
+  /// chosen location. Returns [SaveOutcome.cancelled] when the user dismisses
+  /// the dialog so the caller can stay silent.
+  static Future<SaveOutcome> savePdfToFile(
+    String path, {
+    String suggestedName = 'stillora.pdf',
+  }) async {
+    final source = File(path);
+    if (!source.existsSync()) {
+      return SaveOutcome.missingFile;
+    }
+    try {
+      final bytes = await source.readAsBytes();
+      final destination = await FilePicker.platform.saveFile(
+        dialogTitle: 'Save PDF',
+        fileName: suggestedName,
+        type: FileType.custom,
+        allowedExtensions: const ['pdf'],
+        bytes: bytes,
+        initialDirectory: await lastImportDirectory(),
+      );
+      await rememberImportPath(destination);
+      if (destination == null) {
+        return SaveOutcome.cancelled;
+      }
+      // Some platforms write the bytes themselves; others only return the path.
+      final out = File(destination);
+      if (!out.existsSync() || await out.length() != bytes.length) {
+        await out.writeAsBytes(bytes, flush: true);
+      }
+      return SaveOutcome.saved;
+    } catch (_) {
+      return SaveOutcome.failed;
+    }
+  }
+
   /// Desktop save: open a native "Save As" dialog and write the MP3 to the
   /// chosen location. Returns [SaveOutcome.cancelled] when the user dismisses
   /// the dialog so the caller can stay silent.
