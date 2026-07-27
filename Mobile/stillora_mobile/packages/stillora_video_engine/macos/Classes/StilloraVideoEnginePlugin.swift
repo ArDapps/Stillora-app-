@@ -178,7 +178,8 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
           width: width, height: height, duration: totalDuration, fill: fill, outputURL: outputURL)
       } else if timelinePaths.contains(where: { isVideoFile($0) }) {
         try exportFromTimeline(
-          mediaPaths: timelinePaths, clipSeconds: clipSeconds, audioPath: audioPath, width: width,
+          mediaPaths: timelinePaths, clipSeconds: clipSeconds, clipVolumes: clipVolumes,
+          audioPath: audioPath, width: width,
           height: height, duration: totalDuration, fill: fill, outputURL: outputURL)
       } else {
         try exportFromImage(
@@ -229,20 +230,37 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
 
   // MARK: - Mixed timeline source
 
+  // One kept video clip's own audio placed on the merged timeline: its source
+  // URL, where it starts in the output, how long its slice is, and the volume
+  // (0 = muted, so it is left off the audio track entirely).
+  private struct SourceAudioClip {
+    let url: URL
+    let startSeconds: Int
+    let seconds: Int
+    let volume: Double
+  }
+
   private func exportFromTimeline(
-    mediaPaths: [String], clipSeconds: [Int]?, audioPath: String?, width: Int, height: Int,
-    duration: Int, fill: Bool, outputURL: URL
+    mediaPaths: [String], clipSeconds: [Int]?, clipVolumes: [Double], audioPath: String?,
+    width: Int, height: Int, duration: Int, fill: Bool, outputURL: URL
   ) throws {
     emit(stage: "preparingImage", percentage: 0.05, message: "Preparing media")
     // Build sources and their per-clip second counts together so that skipping
     // an unreadable item also drops its slice of the timeline.
     var sources: [TimelineSource] = []
     var seconds: [Int] = []
+    // Per-kept-clip source audio, aligned to the SAME kept set as `sources`, so
+    // a skipped unreadable item drops its audio slice too. Populated only when
+    // no external soundtrack replaces it.
+    var audioClips: [SourceAudioClip] = []
     let aligned = (clipSeconds != nil) && clipSeconds!.count == mediaPaths.count
+    let volumesAligned = clipVolumes.count == mediaPaths.count
+    var cursorSeconds = 0
     for (index, path) in mediaPaths.enumerated() {
       let clip = aligned ? max(1, clipSeconds![index]) : 0
       if isVideoFile(path) {
-        let asset = loadedAsset(URL(fileURLWithPath: path))
+        let url = URL(fileURLWithPath: path)
+        let asset = loadedAsset(url)
         guard asset.tracks(withMediaType: .video).first != nil else { continue }
         let generator = AVAssetImageGenerator(asset: asset)
         generator.appliesPreferredTrackTransform = true
@@ -250,10 +268,21 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
         generator.requestedTimeToleranceAfter = .zero
         sources.append(.video(generator, asset.duration))
         seconds.append(clip)
+        let volume = volumesAligned ? clipVolumes[index] : 1.0
+        // Only keep audio for a clip whose volume is above mute and that has a
+        // real audio track (silent recordings contribute nothing).
+        if volume > 0, asset.tracks(withMediaType: .audio).first != nil {
+          audioClips.append(
+            SourceAudioClip(
+              url: url, startSeconds: cursorSeconds, seconds: max(1, clip), volume: volume))
+        }
       } else if let cgImage = loadCGImage(path: path) {
         sources.append(.image(cgImage))
         seconds.append(clip)
+      } else {
+        continue
       }
+      cursorSeconds += max(1, clip)
     }
     guard !sources.isEmpty else { throw EngineError.missingSource }
 
@@ -264,7 +293,11 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
     let totalSeconds = aligned ? max(1, seconds.reduce(0, +)) : duration
 
     let needsAudio = (audioPath != nil) && FileManager.default.fileExists(atPath: audioPath!)
-    let videoURL = needsAudio ? try makeTempURL() : outputURL
+    // A soundtrack replaces the clips' own audio; otherwise each clip keeps its
+    // own sound when the durations line up (the frame timeline maps 1:1 to
+    // seconds only when aligned).
+    let usesSourceAudio = !needsAudio && aligned && !audioClips.isEmpty
+    let videoURL = (needsAudio || usesSourceAudio) ? try makeTempURL() : outputURL
 
     try writeTimeline(
       sources: sources, clipFrames: clipFrames, width: width, height: height, fill: fill,
@@ -276,8 +309,77 @@ public class StilloraVideoEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHa
         videoURL: videoURL, audioURL: URL(fileURLWithPath: audioPath!), duration: totalSeconds,
         to: outputURL)
       try? FileManager.default.removeItem(at: videoURL)
+    } else if usesSourceAudio {
+      emit(stage: "mergingAudio", percentage: 0.85, message: "Keeping video audio")
+      try muxTimelineSourceAudio(
+        videoURL: videoURL, clips: audioClips, duration: totalSeconds, to: outputURL)
+      try? FileManager.default.removeItem(at: videoURL)
     }
     emit(stage: "savingVideo", percentage: 0.95, message: "Saving")
+  }
+
+  /// Combines the already-rendered silent timeline video with each clip's own
+  /// audio, laid at the clip's offset and scaled by its per-clip volume, so
+  /// merging several videos keeps their sound by default.
+  private func muxTimelineSourceAudio(
+    videoURL: URL, clips: [SourceAudioClip], duration: Int, to outputURL: URL
+  ) throws {
+    let composition = AVMutableComposition()
+    let videoAsset = loadedAsset(videoURL)
+    let targetDuration = CMTime(seconds: Double(duration), preferredTimescale: 600)
+
+    if let videoSource = videoAsset.tracks(withMediaType: .video).first,
+      let videoTrack = composition.addMutableTrack(
+        withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid)
+    {
+      try videoTrack.insertTimeRange(
+        CMTimeRange(start: .zero, duration: min(targetDuration, videoAsset.duration)),
+        of: videoSource, at: .zero)
+    }
+
+    // All clips share one composition audio track: their slices are sequential
+    // (each starts at its cumulative offset), so there is no overlap. Gaps left
+    // by muted/short clips are silent automatically.
+    var mixParams: [AVMutableAudioMixInputParameters] = []
+    if let audioTrack = composition.addMutableTrack(
+      withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid)
+    {
+      for clip in clips {
+        let asset = loadedAsset(clip.url)
+        guard let source = asset.tracks(withMediaType: .audio).first else { continue }
+        let slice = min(
+          CMTime(seconds: Double(clip.seconds), preferredTimescale: 600), asset.duration)
+        if slice <= .zero { continue }
+        let at = CMTime(seconds: Double(clip.startSeconds), preferredTimescale: 600)
+        try? audioTrack.insertTimeRange(
+          CMTimeRange(start: .zero, duration: slice), of: source, at: at)
+      }
+      // A single input-parameter set with a step change at each clip's start
+      // applies that clip's volume for its window.
+      if clips.contains(where: { $0.volume < 1.0 }) {
+        let params = AVMutableAudioMixInputParameters(track: audioTrack)
+        for clip in clips {
+          let at = CMTime(seconds: Double(clip.startSeconds), preferredTimescale: 600)
+          params.setVolume(Float(clip.volume), at: at)
+        }
+        mixParams = [params]
+      }
+    }
+
+    guard
+      let export = AVAssetExportSession(
+        asset: composition, presetName: AVAssetExportPresetHighestQuality)
+    else { throw EngineError.export }
+    try? FileManager.default.removeItem(at: outputURL)
+    export.outputURL = outputURL
+    export.outputFileType = .mp4
+    if !mixParams.isEmpty {
+      let mix = AVMutableAudioMix()
+      mix.inputParameters = mixParams
+      export.audioMix = mix
+    }
+    export.shouldOptimizeForNetworkUse = true
+    try runExportSession(export)
   }
 
   /// Splits `totalSeconds` of frames across `count` clips as evenly as possible.

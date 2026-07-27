@@ -58,9 +58,9 @@ class DesktopFfmpegVideoEngine implements engine.StilloraVideoEngine {
     List<String> mediaPaths = const [],
     List<String> imagePaths = const [],
     List<int> clipDurations = const [],
-    // Desktop segments are always rendered with `-an` (no source audio), so a
-    // per-clip volume is a no-op here — clips are silent unless a soundtrack is
-    // attached. Accepted to satisfy the shared engine interface.
+    // Per-clip source-audio volume (0 = mute). Honoured when no external
+    // soundtrack is attached: each video clip keeps its own sound scaled by
+    // this. A soundtrack still replaces everything.
     List<double> clipVolumes = const [],
     String? audioPath,
     required int durationSeconds,

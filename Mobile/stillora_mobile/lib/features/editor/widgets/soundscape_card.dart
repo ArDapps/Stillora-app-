@@ -101,6 +101,34 @@ class SoundscapeCard extends StatelessWidget {
               ),
             ),
           ),
+          // When videos are in the timeline and nothing is attached, they keep
+          // their own sound — make that default explicit so users don't think
+          // the export is silent. Mute lives per-clip on the timeline.
+          if (editor.audioPath == null && editor.hasVideos) ...[
+            SizedBox(height: compact ? 6 : 10),
+            Row(
+              children: [
+                const Icon(
+                  Icons.graphic_eq_rounded,
+                  size: 15,
+                  color: StilloraColors.secondary,
+                ),
+                const SizedBox(width: StilloraSpacing.base + 2),
+                Expanded(
+                  child: Text(
+                    editor.media.length > 1
+                        ? 'Your videos keep their own sound. Add audio to '
+                              'replace it, or mute a clip on the timeline.'
+                        : 'Your video keeps its own sound. Add audio to '
+                              'replace it, or mute it on the timeline.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: StilloraColors.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
           // Two clear options when nothing is attached: record a voice-over or
           // upload an audio file (same as every other section).
           if (editor.audioPath == null) ...[

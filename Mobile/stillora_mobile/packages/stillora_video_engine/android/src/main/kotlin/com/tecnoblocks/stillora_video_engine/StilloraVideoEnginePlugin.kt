@@ -96,6 +96,12 @@ class StilloraVideoEnginePlugin :
                 else -> listOf(imagePath)
             }.distinct()
         val audioPath = call.argument<String>("audioPath")
+        // Per-clip source-audio volume (0 = muted), parallel to mediaPaths. Only
+        // mute is honoured on Android (compressed AAC is copied, not re-encoded,
+        // so partial volumes fall back to full loudness).
+        val clipVolumes = (call.argument<List<*>>("clipVolumes") ?: emptyList<Any>())
+            .filterIsInstance<Number>()
+            .map { it.toDouble() }
         val duration = (call.argument<Int>("durationSeconds") ?: 10).coerceAtLeast(1)
         val width = evenDimension(call.argument<Int>("width") ?: 1080)
         val height = evenDimension(call.argument<Int>("height") ?: 1920)
@@ -105,13 +111,26 @@ class StilloraVideoEnginePlugin :
             emit("preparingImage", 0.05, "Preparing media")
             val bitmaps = mutableListOf<Bitmap>()
             val timelineMedia = mutableListOf<StilloraTimelineMedia>()
-            for (path in mediaSourcePaths) {
+            // Ordered per-rendered-clip info (parallel to timelineMedia), used to
+            // lay each video clip's own audio back onto the merged timeline.
+            val clipPaths = mutableListOf<String>()
+            val clipIsVideo = mutableListOf<Boolean>()
+            val clipMuted = mutableListOf<Boolean>()
+            val volumesAligned = clipVolumes.size == mediaSourcePaths.size
+            for ((index, path) in mediaSourcePaths.withIndex()) {
+                val volume = if (volumesAligned) clipVolumes[index] else 1.0
                 if (isVideoFile(path)) {
                     timelineMedia.add(StilloraTimelineMedia.Video(path))
+                    clipPaths.add(path)
+                    clipIsVideo.add(true)
+                    clipMuted.add(volume <= 0.0)
                 } else {
                     decodeBitmap(path)?.let { bitmap ->
                         bitmaps.add(bitmap)
                         timelineMedia.add(StilloraTimelineMedia.Image(bitmap))
+                        clipPaths.add(path)
+                        clipIsVideo.add(false)
+                        clipMuted.add(true)
                     }
                 }
             }
@@ -123,8 +142,12 @@ class StilloraVideoEnginePlugin :
             val outputDir = outputDirectory()
             val finalPath = File(outputDir, "stillora-${UUID.randomUUID()}.mp4").absolutePath
             val hasAudio = !audioPath.isNullOrEmpty() && File(audioPath).exists()
+            // With no external soundtrack, videos keep their own sound by default.
+            val keepSourceAudio =
+                !hasAudio && clipIsVideo.withIndex().any { (i, v) -> v && !clipMuted[i] }
             val videoPath =
-                if (hasAudio) File(outputDir, "tmp-${UUID.randomUUID()}.mp4").absolutePath
+                if (hasAudio || keepSourceAudio)
+                    File(outputDir, "tmp-${UUID.randomUUID()}.mp4").absolutePath
                 else finalPath
 
             val exporter = StilloraGlExporter(
@@ -161,6 +184,15 @@ class StilloraVideoEnginePlugin :
                     )
                     return
                 }
+                File(videoPath).delete()
+            } else if (keepSourceAudio) {
+                emit("mergingAudio", 0.85, "Keeping video audio")
+                val kept = muxVideoWithSourceAudio(
+                    videoPath, clipPaths, clipIsVideo, clipMuted, duration, finalPath,
+                )
+                // No clip yielded usable audio (all muted / non-AAC / silent) —
+                // fall back to the silent render rather than failing the export.
+                if (!kept) File(videoPath).copyTo(File(finalPath), overwrite = true)
                 File(videoPath).delete()
             }
 
@@ -304,6 +336,126 @@ class StilloraVideoEnginePlugin :
             videoExtractor.release()
             audioExtractor.release()
         }
+    }
+
+    /// Lays each merged video clip's own audio back onto the rendered (silent)
+    /// timeline so combining videos keeps their sound by default. Clips share
+    /// one AAC audio track: the first usable clip fixes the format, and later
+    /// clips are appended only when their format matches (else that clip's slice
+    /// stays silent). Muted clips and images are skipped. Compressed samples are
+    /// copied, so per-clip *partial* volume is not applied — only mute.
+    ///
+    /// Returns false when no clip contributes audio, so the caller keeps the
+    /// silent render instead.
+    private fun muxVideoWithSourceAudio(
+        videoPath: String,
+        clipPaths: List<String>,
+        clipIsVideo: List<Boolean>,
+        clipMuted: List<Boolean>,
+        durationSeconds: Int,
+        outputPath: String,
+    ): Boolean {
+        val clipCount = clipPaths.size
+        if (clipCount == 0) return false
+
+        // Pick the audio format of the first usable clip for the shared track.
+        var audioFormat: MediaFormat? = null
+        for (index in clipPaths.indices) {
+            if (!clipIsVideo[index] || clipMuted[index]) continue
+            val extractor = MediaExtractor()
+            try {
+                extractor.setDataSource(clipPaths[index])
+                val track = selectTrack(extractor, "audio/")
+                if (track >= 0) {
+                    val format = extractor.getTrackFormat(track)
+                    if (format.getString(MediaFormat.KEY_MIME) == "audio/mp4a-latm") {
+                        audioFormat = format
+                    }
+                }
+            } catch (_: Exception) {
+            } finally {
+                extractor.release()
+            }
+            if (audioFormat != null) break
+        }
+        if (audioFormat == null) return false
+
+        val videoExtractor = MediaExtractor()
+        var muxer: MediaMuxer? = null
+        try {
+            videoExtractor.setDataSource(videoPath)
+            val videoTrack = selectTrack(videoExtractor, "video/")
+            if (videoTrack < 0) return false
+            videoExtractor.selectTrack(videoTrack)
+
+            muxer = MediaMuxer(outputPath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
+            val outVideo = muxer.addTrack(videoExtractor.getTrackFormat(videoTrack))
+            val outAudio = muxer.addTrack(audioFormat)
+            muxer.start()
+
+            copyTrack(videoExtractor, muxer, outVideo, Long.MAX_VALUE)
+
+            // Clips render evenly across the timeline (see encodeTimeline), so a
+            // clip's audio window starts at its even fraction of the total.
+            val buffer = ByteBuffer.allocate(1 shl 20)
+            val info = android.media.MediaCodec.BufferInfo()
+            for (index in clipPaths.indices) {
+                if (!clipIsVideo[index] || clipMuted[index]) continue
+                val windowStartUs = index.toLong() * durationSeconds * 1_000_000L / clipCount
+                val windowLenUs = durationSeconds.toLong() * 1_000_000L / clipCount
+                val extractor = MediaExtractor()
+                try {
+                    extractor.setDataSource(clipPaths[index])
+                    val track = selectTrack(extractor, "audio/")
+                    if (track < 0) continue
+                    val format = extractor.getTrackFormat(track)
+                    if (format.getString(MediaFormat.KEY_MIME) != "audio/mp4a-latm") continue
+                    if (!sameAudioConfig(format, audioFormat)) continue
+                    extractor.selectTrack(track)
+                    var firstUs = -1L
+                    while (true) {
+                        val size = extractor.readSampleData(buffer, 0)
+                        if (size < 0) break
+                        val sampleUs = extractor.sampleTime
+                        if (firstUs < 0) firstUs = sampleUs
+                        val localUs = sampleUs - firstUs
+                        if (localUs > windowLenUs) break
+                        info.offset = 0
+                        info.size = size
+                        info.presentationTimeUs = windowStartUs + localUs
+                        info.flags = extractor.sampleFlags
+                        muxer.writeSampleData(outAudio, buffer, info)
+                        extractor.advance()
+                    }
+                } catch (_: Exception) {
+                } finally {
+                    extractor.release()
+                }
+            }
+            return true
+        } catch (_: Exception) {
+            return false
+        } finally {
+            try {
+                muxer?.stop()
+            } catch (_: Exception) {
+            }
+            muxer?.release()
+            videoExtractor.release()
+        }
+    }
+
+    /// Two AAC tracks can share one muxer track only when their sample rate and
+    /// channel count match.
+    private fun sameAudioConfig(a: MediaFormat, b: MediaFormat): Boolean {
+        fun rate(f: MediaFormat) =
+            if (f.containsKey(MediaFormat.KEY_SAMPLE_RATE)) f.getInteger(MediaFormat.KEY_SAMPLE_RATE)
+            else -1
+        fun channels(f: MediaFormat) =
+            if (f.containsKey(MediaFormat.KEY_CHANNEL_COUNT))
+                f.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
+            else -1
+        return rate(a) == rate(b) && channels(a) == channels(b)
     }
 
     private fun copyTrack(

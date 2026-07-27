@@ -63,6 +63,22 @@ extension DesktopFfmpegProcessOps on DesktopFfmpegVideoEngine {
     );
   }
 
+  /// True when the media file carries at least one audio stream. Uses ffmpeg
+  /// itself (no separate ffprobe binary is bundled): `ffmpeg -i FILE` with no
+  /// output writes the stream layout to stderr and exits non-zero, which
+  /// `_runFfmpegCapture` tolerates.
+  Future<bool> _hasAudioStream(String path) async {
+    final log = await this._runFfmpegCapture(['-hide_banner', '-i', path]);
+    return log.contains(RegExp(r'Stream #\d+:\d+.*: Audio:'));
+  }
+
+  /// Renders one timeline clip to [outputPath].
+  ///
+  /// When [keepAudio] is false the segment is silent (`-an`) — used when an
+  /// external soundtrack replaces everything. When true, every segment is given
+  /// exactly one stereo AAC track so the concat demuxer sees a uniform layout:
+  /// a video clip contributes its own audio scaled by [volume] (or silence when
+  /// muted / it has none), and an image contributes silence.
   Future<void> _renderSegment({
     required String sourcePath,
     required String outputPath,
@@ -70,53 +86,68 @@ extension DesktopFfmpegProcessOps on DesktopFfmpegVideoEngine {
     required int width,
     required int height,
     required engine.ResizeMode resizeMode,
-  }) {
-    final mediaKind = mediaKindForPath(sourcePath);
+    bool keepAudio = false,
+    double volume = 1.0,
+  }) async {
+    final isImage = mediaKindForPath(sourcePath) == MediaKind.image;
     final filter = _videoFilter(width, height, resizeMode);
-    final args = mediaKind == MediaKind.image
-        ? [
-            '-y',
-            '-loop',
-            '1',
-            '-t',
-            '$durationSeconds',
-            '-i',
-            sourcePath,
-            '-vf',
-            filter,
-            '-r',
-            '30',
-            '-an',
-            '-c:v',
-            'libx264',
-            '-pix_fmt',
-            'yuv420p',
-            '-movflags',
-            '+faststart',
-            outputPath,
-          ]
-        : [
-            '-y',
-            '-stream_loop',
-            '-1',
-            '-i',
-            sourcePath,
-            '-t',
-            '$durationSeconds',
-            '-vf',
-            filter,
-            '-r',
-            '30',
-            '-an',
-            '-c:v',
-            'libx264',
-            '-pix_fmt',
-            'yuv420p',
-            '-movflags',
-            '+faststart',
-            outputPath,
-          ];
-    return this._runFfmpeg(args);
+
+    // A clip keeps its own sound only when it is a video, is not muted, and
+    // actually has an audio track; otherwise it gets a silent stereo track so
+    // concat still lines up.
+    final useSourceAudio =
+        keepAudio &&
+        !isImage &&
+        volume > 0 &&
+        await this._hasAudioStream(sourcePath);
+
+    final args = <String>['-y'];
+    if (isImage) {
+      args.addAll(['-loop', '1', '-t', '$durationSeconds', '-i', sourcePath]);
+    } else {
+      args.addAll([
+        '-stream_loop',
+        '-1',
+        '-i',
+        sourcePath,
+        '-t',
+        '$durationSeconds',
+      ]);
+    }
+    // Silent filler input when this segment supplies no source audio of its own.
+    if (keepAudio && !useSourceAudio) {
+      args.addAll([
+        '-f',
+        'lavfi',
+        '-t',
+        '$durationSeconds',
+        '-i',
+        'anullsrc=channel_layout=stereo:sample_rate=44100',
+      ]);
+    }
+    args.addAll(['-vf', filter, '-r', '30']);
+    if (keepAudio) {
+      args.addAll(['-map', '0:v:0']);
+      if (useSourceAudio) {
+        args.addAll(['-map', '0:a:0']);
+        if (volume < 1.0) args.addAll(['-af', 'volume=${_f(volume)}']);
+      } else {
+        args.addAll(['-map', '1:a:0']);
+      }
+      args.addAll(['-c:a', 'aac', '-ar', '44100', '-ac', '2', '-shortest']);
+    } else {
+      args.add('-an');
+    }
+    args.addAll([
+      '-c:v',
+      'libx264',
+      '-pix_fmt',
+      'yuv420p',
+      '-movflags',
+      '+faststart',
+      outputPath,
+    ]);
+    await this._runFfmpeg(args);
   }
 
   Future<void> _concatSegments(

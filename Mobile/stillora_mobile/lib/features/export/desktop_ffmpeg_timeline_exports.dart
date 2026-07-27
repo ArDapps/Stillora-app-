@@ -37,6 +37,12 @@ extension DesktopFfmpegTimelineExports on DesktopFfmpegVideoEngine {
     );
     final outputPath = _join(exportRoot.path, 'stillora-$stamp.mp4');
 
+    // With no external soundtrack, each clip keeps its own sound (default) at
+    // its per-clip volume. A soundtrack replaces all of it, so segments are
+    // rendered silent and the track is merged afterwards.
+    final hasExternalAudio = audioPath != null && audioPath.isNotEmpty;
+    final keepSourceAudio = !hasExternalAudio;
+
     try {
       this._emit(
         engine.ExportStage.preparingImage,
@@ -53,6 +59,8 @@ extension DesktopFfmpegTimelineExports on DesktopFfmpegVideoEngine {
           width: width,
           height: height,
           resizeMode: resizeMode,
+          keepAudio: keepSourceAudio,
+          volume: i < clipVolumes.length ? clipVolumes[i] : 1.0,
         );
         segments.add(segmentPath);
         this._emit(
@@ -65,7 +73,8 @@ extension DesktopFfmpegTimelineExports on DesktopFfmpegVideoEngine {
       final silentVideoPath = _join(workDir.path, 'timeline.mp4');
       await this._concatSegments(segments, silentVideoPath, workDir);
 
-      if (audioPath == null || audioPath.isEmpty) {
+      if (!hasExternalAudio) {
+        // Segments already carry their own (volume-scaled) audio.
         this._emit(engine.ExportStage.savingVideo, 0.9, 'Saving video');
         await File(silentVideoPath).copy(outputPath);
       } else {
