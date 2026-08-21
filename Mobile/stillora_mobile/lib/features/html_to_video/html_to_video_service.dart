@@ -1,3 +1,5 @@
+import '../../core/i18n/app_strings.dart';
+import '../../core/i18n/language_controller.dart';
 import 'dart:convert';
 import 'dart:io';
 
@@ -51,6 +53,11 @@ class HtmlToVideoService {
 
   final Ref _ref;
 
+  /// The active translation — service errors surface straight in a snack bar,
+  /// so they have to speak the user's language too.
+  AppStrings get _strings =>
+      AppStrings.of(_ref.read(languageControllerProvider));
+
   Future<File> convert(
     HtmlToVideoRequest request, {
     CancelToken? cancelToken,
@@ -78,9 +85,7 @@ class HtmlToVideoService {
           );
       return File(result.outputPath);
     } on PlatformException catch (error) {
-      throw HtmlToVideoException(
-        error.message ?? 'Could not render the HTML on this device.',
-      );
+      throw HtmlToVideoException(error.message ?? _strings.htmlErrLocalRender);
     }
   }
 
@@ -121,7 +126,7 @@ class HtmlToVideoService {
 
       final bytes = response.data;
       if (bytes == null || bytes.isEmpty) {
-        throw HtmlToVideoException('The server returned an empty video.');
+        throw HtmlToVideoException(_strings.htmlErrEmptyVideo);
       }
 
       final dir = await getTemporaryDirectory();
@@ -154,7 +159,7 @@ class HtmlToVideoService {
 
     if (error.type == DioExceptionType.receiveTimeout ||
         error.type == DioExceptionType.sendTimeout) {
-      return 'The render took too long. Try a shorter duration or lower fps.';
+      return _strings.htmlErrTimeout;
     }
 
     // No usable JSON body: surface the real HTTP status so gateway timeouts
@@ -162,18 +167,15 @@ class HtmlToVideoService {
     // reverse proxy) are distinguishable from an unreachable server.
     final status = error.response?.statusCode;
     if (status == 502 || status == 503 || status == 504) {
-      return 'The server took too long to render this page (error $status). '
-          'Try a shorter duration, a lower fps, a smaller size, or a simpler '
-          'page.';
+      return '${_strings.htmlErrGateway} ($status)';
     }
     if (status != null) {
-      return 'The server couldn’t render this page (error $status). '
-          'Please try again.';
+      return '${_strings.htmlErrStatus} ($status)';
     }
     if (error.type == DioExceptionType.connectionError ||
         error.type == DioExceptionType.connectionTimeout) {
-      return 'Couldn’t reach the server. Check your connection and try again.';
+      return _strings.htmlErrUnreachable;
     }
-    return 'Could not convert the HTML. Check your connection and try again.';
+    return _strings.htmlErrGeneric;
   }
 }

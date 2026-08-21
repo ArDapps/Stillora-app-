@@ -16,6 +16,7 @@ import 'pdf_builder.dart';
 import 'pdf_import.dart';
 import 'widgets/pdf_pages_panel.dart';
 import 'widgets/pdf_setup_cards.dart';
+import '../../core/i18n/app_strings.dart';
 
 /// "PDF Converter": drop in photos, scans and existing PDFs, put the pages in
 /// the right order, rotate the ones that came in sideways, and export the whole
@@ -52,7 +53,10 @@ class ImagesToPdfView extends ConsumerWidget {
         SnackBar(
           content: Text(message),
           action: offerSettings
-              ? SnackBarAction(label: 'Settings', onPressed: openAppSettings)
+              ? SnackBarAction(
+                  label: context.strings.openSettings,
+                  onPressed: openAppSettings,
+                )
               : null,
         ),
       );
@@ -64,16 +68,17 @@ class ImagesToPdfView extends ConsumerWidget {
       final outcome = await MediaActions.savePdfToFile(
         path,
         suggestedName: name,
+        dialogTitle: context.strings.shareSavePdf,
       );
       switch (outcome) {
         case SaveOutcome.saved:
-          snack('PDF saved.');
+          snack(context.strings.pdfSaved);
         case SaveOutcome.missingFile:
-          snack('The exported PDF is no longer available.');
+          snack(context.strings.pdfGone);
         case SaveOutcome.permissionDenied:
-          snack('Allow file access to save the PDF.', offerSettings: true);
+          snack(context.strings.pdfNeedsFileAccess, offerSettings: true);
         case SaveOutcome.failed:
-          snack('Could not save the PDF. Please try again.');
+          snack(context.strings.pdfSaveFailed);
         case SaveOutcome.cancelled:
           break; // User dismissed the dialog.
       }
@@ -82,7 +87,7 @@ class ImagesToPdfView extends ConsumerWidget {
 
     if (!context.mounted) return;
     final shared = await MediaActions.sharePdf(context, path);
-    if (!shared) snack('The exported PDF is no longer available.');
+    if (!shared) snack(context.strings.pdfGone);
   }
 
   @override
@@ -93,16 +98,14 @@ class ImagesToPdfView extends ConsumerWidget {
     return SectionSplitView(
       onStartOver: controller.reset,
       canStartOver: state.pages.isNotEmpty && !state.isBusy,
-      previewCaption:
-          'Drag the handle to reorder — page 1 at the top. Everything stays on '
-          'this device.',
+      previewCaption: context.strings.pdfReorderHint,
       previewActions: _ExportButton(onExport: () => _export(context, ref)),
       preview: PdfPagesPanel(onAdd: () => _pick(ref)),
       controls: [
-        const RenderEyebrow('PDF CONVERTER'),
+        RenderEyebrow(context.strings.pdfConverter.toUpperCase()),
         const SizedBox(height: StilloraSpacing.xs),
         Text(
-          'Images & PDFs → one PDF',
+          context.strings.pdfHeading,
           style: Theme.of(context).textTheme.displaySmall?.copyWith(
             fontWeight: FontWeight.w800,
             height: 1.05,
@@ -110,8 +113,7 @@ class ImagesToPdfView extends ConsumerWidget {
         ),
         const SizedBox(height: StilloraSpacing.xs),
         Text(
-          'Add photos, scans and existing PDFs, order the pages, rotate the '
-          'crooked ones, and export the whole set as a single file.',
+          context.strings.pdfIntro,
           style: TextStyle(color: StilloraColors.onSurfaceVariant, height: 1.4),
         ),
         const SizedBox(height: StilloraSpacing.sm),
@@ -159,9 +161,9 @@ class _ExportButton extends ConsumerWidget {
               ),
         label: Text(
           state.isExporting
-              ? 'Building PDF…'
+              ? context.strings.pdfBuilding
               : count == 0
-              ? 'Export PDF'
+              ? context.strings.pdfExport
               : 'Export $count ${count == 1 ? "page" : "pages"} as PDF',
         ),
       ),

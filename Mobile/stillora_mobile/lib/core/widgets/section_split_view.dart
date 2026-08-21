@@ -4,6 +4,7 @@ import '../design/stillora_colors.dart';
 import '../design/stillora_spacing.dart';
 import '../platform/platform_info.dart';
 import 'start_over_button.dart';
+import '../i18n/app_strings.dart';
 
 /// Desktop preview-panel width, scaled to the window so a wide display gets a
 /// genuinely useful preview instead of a thumbnail floating in empty space.
@@ -172,7 +173,7 @@ class LivePreviewPanel extends StatelessWidget {
             ),
             const SizedBox(width: 6),
             Text(
-              'LIVE PREVIEW',
+              context.strings.livePreview.toUpperCase(),
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                 color: StilloraColors.onSurfaceVariant,
                 letterSpacing: 1.4,

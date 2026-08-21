@@ -6,6 +6,7 @@ import '../../core/widgets/video_thumbnail.dart';
 import 'color_adjust.dart';
 import 'color_correction_panel.dart';
 import 'color_graded_preview.dart';
+import '../../core/i18n/app_strings.dart';
 
 /// Drop-in colour-correction block for a section screen: a live graded frame
 /// preview of [videoPath] plus the slider/preset panel. The preview updates
@@ -70,7 +71,7 @@ class ColorGradeSection extends StatelessWidget {
               ),
               const SizedBox(width: 6),
               Text(
-                'Live preview — how the exported video will look',
+                context.strings.colLivePreview,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: StilloraColors.onSurfaceVariant,
                 ),

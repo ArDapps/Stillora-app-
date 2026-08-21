@@ -6,7 +6,9 @@ import '../../../core/design/stillora_glow.dart';
 import '../../../core/design/stillora_spacing.dart';
 import '../../../core/design/stillora_surface.dart';
 import '../editor_state.dart';
+import '../video_preset.dart';
 import 'editor_shared.dart';
+import '../../../core/i18n/app_strings.dart';
 
 class DesktopExportPanel extends StatelessWidget {
   const DesktopExportPanel({
@@ -51,15 +53,17 @@ class DesktopExportPanel extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      editor.canExport ? 'Ready to export' : 'Set up export',
+                      editor.canExport
+                          ? context.strings.edReadyToExport
+                          : context.strings.edSetUpExport,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w900,
                       ),
                     ),
                     Text(
                       editor.canExport
-                          ? 'Review the desktop preview before converting.'
-                          : 'Choose media to unlock conversion.',
+                          ? context.strings.edReviewBeforeConvert
+                          : context.strings.edChooseMediaToUnlock,
                       style:
                           (compact
                                   ? Theme.of(context).textTheme.bodySmall
@@ -76,21 +80,23 @@ class DesktopExportPanel extends StatelessWidget {
           const SizedBox(height: StilloraSpacing.sm),
           _DesktopExportStat(
             icon: Icons.perm_media_rounded,
-            label: 'Assets',
+            label: context.strings.edAssets,
             value: editor.media.isEmpty
-                ? 'None selected'
+                ? context.strings.edNoneSelected
                 : '${editor.media.length} item${editor.media.length == 1 ? '' : 's'}',
             compact: compact,
           ),
           _DesktopExportStat(
             icon: Icons.aspect_ratio_rounded,
-            label: 'Preset',
-            value: '${editor.preset.label} · ${editor.preset.ratioLabel}',
+            label: context.strings.edPreset,
+            value:
+                '${editor.preset.labelOf(context.strings)} · '
+                '${editor.preset.ratioLabelOf(context.strings)}',
             compact: compact,
           ),
           _DesktopExportStat(
             icon: Icons.high_quality_rounded,
-            label: 'Quality',
+            label: context.strings.toolQuality,
             value:
                 '${editor.exportQuality.label} · '
                 '${editor.outputResolution.width}×${editor.outputResolution.height}',
@@ -98,13 +104,13 @@ class DesktopExportPanel extends StatelessWidget {
           ),
           _DesktopExportStat(
             icon: Icons.sd_storage_rounded,
-            label: 'Est. size',
+            label: context.strings.edEstSize,
             value: '≈ ${formatFileSize(editor.estimatedExportBytes)}',
             compact: compact,
           ),
           _DesktopExportStat(
             icon: Icons.timer_rounded,
-            label: 'Duration',
+            label: context.strings.edDuration,
             value: formatDurationClock(editor.totalDurationSeconds),
             compact: compact,
           ),
@@ -112,22 +118,24 @@ class DesktopExportPanel extends StatelessWidget {
             icon: isSignedIn
                 ? Icons.verified_user_rounded
                 : Icons.person_outline_rounded,
-            label: 'Account',
-            value: isSignedIn ? 'Signed in' : 'Guest',
+            label: context.strings.account,
+            value: isSignedIn
+                ? context.strings.edSignedIn
+                : context.strings.edGuest,
             compact: compact,
           ),
           SizedBox(height: compact ? 10 : StilloraSpacing.sm),
           StilloraPrimaryButton(
             onPressed: editor.canExport ? onConvert : null,
             icon: Icons.auto_fix_high_rounded,
-            label: 'Convert to MP4',
+            label: context.strings.edConvertToMp4,
           ),
           if (canReset(editor)) ...[
             const SizedBox(height: StilloraSpacing.xs),
             OutlinedButton.icon(
               onPressed: onReset,
               icon: const Icon(Icons.restart_alt_rounded, size: 18),
-              label: const Text('Start over'),
+              label: Text(context.strings.startOver),
             ),
           ],
         ],

@@ -13,6 +13,7 @@ import '../../core/widgets/stillora_video_player_panel.dart';
 import 'gallery_controller.dart';
 import 'gallery_download.dart';
 import 'local_export_record.dart';
+import '../../core/i18n/app_strings.dart';
 
 class GalleryVideoScreen extends ConsumerStatefulWidget {
   const GalleryVideoScreen({super.key, required this.record});
@@ -65,7 +66,10 @@ class _GalleryVideoScreenState extends ConsumerState<GalleryVideoScreen> {
       SnackBar(
         content: Text(message),
         action: offerSettings
-            ? SnackBarAction(label: 'Settings', onPressed: openAppSettings)
+            ? SnackBarAction(
+                label: context.strings.openSettings,
+                onPressed: openAppSettings,
+              )
             : null,
       ),
     );
@@ -74,7 +78,7 @@ class _GalleryVideoScreenState extends ConsumerState<GalleryVideoScreen> {
   Future<void> _share() async {
     final ok = await MediaActions.shareVideo(context, widget.record.outputPath);
     if (!ok) {
-      _snack('That video is no longer available.');
+      _snack(context.strings.galVideoGone);
     }
   }
 
@@ -95,19 +99,17 @@ class _GalleryVideoScreenState extends ConsumerState<GalleryVideoScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Delete local video?'),
-          content: const Text(
-            'This removes the video from your Stillora library and deletes the local file from this phone.',
-          ),
+          title: Text(context.strings.galDeleteTitle),
+          content: Text(context.strings.galDeleteOneBody),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
+              child: Text(context.strings.cancel),
             ),
             FilledButton.icon(
               onPressed: () => Navigator.of(context).pop(true),
               icon: const Icon(Icons.delete_outline_rounded),
-              label: const Text('Delete'),
+              label: Text(context.strings.delete),
             ),
           ],
         );
@@ -139,10 +141,10 @@ class _GalleryVideoScreenState extends ConsumerState<GalleryVideoScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Video'),
+        title: Text(context.strings.galVideo),
         actions: [
           IconButton(
-            tooltip: 'Delete',
+            tooltip: context.strings.delete,
             icon: const Icon(Icons.delete_outline_rounded),
             onPressed: _deleting ? null : _delete,
           ),
@@ -178,17 +180,17 @@ class _GalleryVideoScreenState extends ConsumerState<GalleryVideoScreen> {
             // Desktop saves via a "Save As" dialog — there is no Camera Roll.
             label: Text(
               _saving
-                  ? 'Saving…'
+                  ? context.strings.pvSaving
                   : isDesktopPlatform
-                  ? 'Download'
-                  : 'Save to Camera Roll',
+                  ? context.strings.galDownload
+                  : context.strings.galSaveToRoll,
             ),
           ),
           const SizedBox(height: StilloraSpacing.xs),
           OutlinedButton.icon(
             onPressed: _share,
             icon: const Icon(Icons.ios_share_rounded),
-            label: const Text('Share'),
+            label: Text(context.strings.galShare),
           ),
         ],
       ),

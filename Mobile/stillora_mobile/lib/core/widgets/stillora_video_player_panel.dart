@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
+import '../i18n/app_strings.dart';
 import '../design/stillora_colors.dart';
 import '../design/stillora_spacing.dart';
 
@@ -172,26 +173,28 @@ class _StilloraVideoPlayerPanelState extends State<StilloraVideoPlayerPanel> {
             Row(
               children: [
                 IconButton.filledTonal(
-                  tooltip: 'Restart',
+                  tooltip: context.strings.pvRestart,
                   onPressed: ready ? () => _seekTo(0) : null,
                   icon: const Icon(Icons.replay_rounded),
                 ),
                 IconButton(
-                  tooltip: 'Back 5 seconds',
+                  tooltip: context.strings.pvBack5,
                   onPressed: ready
                       ? () => _seekRelative(const Duration(seconds: -5))
                       : null,
                   icon: const Icon(Icons.replay_5_rounded),
                 ),
                 IconButton.filled(
-                  tooltip: isPlaying ? 'Pause' : 'Play',
+                  tooltip: isPlaying
+                      ? context.strings.edPause
+                      : context.strings.pvPlay,
                   onPressed: ready ? _togglePlayback : null,
                   icon: Icon(
                     isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
                   ),
                 ),
                 IconButton(
-                  tooltip: 'Forward 5 seconds',
+                  tooltip: context.strings.pvForward5,
                   onPressed: ready
                       ? () => _seekRelative(const Duration(seconds: 5))
                       : null,

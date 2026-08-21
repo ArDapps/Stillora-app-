@@ -7,6 +7,7 @@ import '../../../core/widgets/ad_widget.dart';
 import '../../../core/widgets/stillora_video_player_panel.dart';
 import '../local_export_record.dart';
 import 'gallery_cards.dart';
+import '../../../core/i18n/app_strings.dart';
 
 /// Right-hand Library pane: the picked render playing on a loop plus its specs,
 /// or a prompt while nothing is picked.
@@ -84,7 +85,10 @@ class GallerySelectionBar extends StatelessWidget {
       child: selecting
           ? Row(
               children: [
-                TextButton(onPressed: onCancel, child: const Text('Cancel')),
+                TextButton(
+                  onPressed: onCancel,
+                  child: Text(context.strings.cancel),
+                ),
                 const Spacer(),
                 Text(
                   '$selectedCount selected',
@@ -95,12 +99,16 @@ class GallerySelectionBar extends StatelessWidget {
                 TextButton.icon(
                   onPressed: onSelectAll,
                   icon: const Icon(Icons.select_all_rounded, size: 18),
-                  label: Text(selectedCount == totalCount ? 'None' : 'All'),
+                  label: Text(
+                    selectedCount == totalCount
+                        ? context.strings.galSelectNone
+                        : context.strings.galSelectAll,
+                  ),
                 ),
                 IconButton(
                   onPressed: onDelete,
                   icon: const Icon(Icons.delete_outline_rounded),
-                  tooltip: 'Delete selected',
+                  tooltip: context.strings.galDeleteSelected,
                   color: StilloraColors.error,
                 ),
               ],
@@ -110,7 +118,7 @@ class GallerySelectionBar extends StatelessWidget {
               child: TextButton.icon(
                 onPressed: onStart,
                 icon: const Icon(Icons.checklist_rounded, size: 18),
-                label: const Text('Select'),
+                label: Text(context.strings.galSelect),
               ),
             ),
     );

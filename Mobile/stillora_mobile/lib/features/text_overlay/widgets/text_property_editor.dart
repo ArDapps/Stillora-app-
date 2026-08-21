@@ -6,6 +6,7 @@ import '../../../core/format/duration_label.dart';
 import '../text_layer.dart';
 import '../text_overlay_controller.dart';
 import 'color_picker_dialog.dart';
+import '../../../core/i18n/app_strings.dart';
 
 /// Full property editor for the selected layer: content, font, size, colours,
 /// stroke, shadow, alignment, opacity, timing and fade.
@@ -36,15 +37,18 @@ class PropertyEditor extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Edit text', style: Theme.of(context).textTheme.labelMedium),
+          Text(
+            context.strings.txtEditText,
+            style: Theme.of(context).textTheme.labelMedium,
+          ),
           const SizedBox(height: 10),
           TextFormField(
             key: ValueKey('text_${layer.id}'),
             initialValue: layer.text,
             maxLines: null,
-            decoration: const InputDecoration(
-              labelText: 'Text',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: context.strings.txtText,
+              border: const OutlineInputBorder(),
               isDense: true,
             ),
             onChanged: (v) => _u((l) => l.copyWith(text: v)),
@@ -59,7 +63,9 @@ class PropertyEditor extends StatelessWidget {
             children: [
               for (final font in kTextFontFamilies)
                 ChoiceChip(
-                  label: Text(font.$1),
+                  label: Text(
+                    font.$2 == null ? context.strings.fontDefault : font.$1,
+                  ),
                   selected: layer.fontFamily == font.$2,
                   onSelected: (_) => _u((l) => l.copyWith(fontFamily: font.$2)),
                 ),
@@ -68,7 +74,7 @@ class PropertyEditor extends StatelessWidget {
           const SizedBox(height: 12),
 
           // Weight.
-          _FieldLabel('Weight'),
+          _FieldLabel(context.strings.txtWeight),
           Wrap(
             spacing: 8,
             children: [
@@ -79,7 +85,7 @@ class PropertyEditor extends StatelessWidget {
                 FontWeight.w900,
               ])
                 ChoiceChip(
-                  label: Text(_weightLabel(w)),
+                  label: Text(_weightLabel(context.strings, w)),
                   selected: layer.fontWeight == w,
                   onSelected: (_) => _u((l) => l.copyWith(fontWeight: w)),
                 ),
@@ -88,7 +94,7 @@ class PropertyEditor extends StatelessWidget {
           const SizedBox(height: 12),
 
           // Alignment.
-          _FieldLabel('Alignment'),
+          _FieldLabel(context.strings.txtAlignment),
           Wrap(
             spacing: 8,
             children: [
@@ -100,7 +106,7 @@ class PropertyEditor extends StatelessWidget {
           const SizedBox(height: 12),
 
           _SliderRow(
-            label: 'Size',
+            label: context.strings.txtSize,
             value: layer.fontScale,
             min: minFontScale,
             max: maxFontScale,
@@ -108,7 +114,7 @@ class PropertyEditor extends StatelessWidget {
             onChanged: (v) => _u((l) => l.copyWith(fontScale: v)),
           ),
           _SliderRow(
-            label: 'Opacity',
+            label: context.strings.txtOpacity,
             value: layer.opacity,
             min: 0,
             max: 1,
@@ -117,14 +123,14 @@ class PropertyEditor extends StatelessWidget {
           ),
 
           const SizedBox(height: 8),
-          _FieldLabel('Text colour'),
+          _FieldLabel(context.strings.txtTextColour),
           _SwatchRow(
             selected: layer.color,
             includeNone: false,
             onPick: (c) => _u((l) => l.copyWith(color: c!)),
           ),
           const SizedBox(height: 12),
-          _FieldLabel('Background'),
+          _FieldLabel(context.strings.txtBackground),
           _SwatchRow(
             selected: layer.backgroundColor,
             includeNone: true,
@@ -134,7 +140,7 @@ class PropertyEditor extends StatelessWidget {
 
           // Stroke.
           _SliderRow(
-            label: 'Outline',
+            label: context.strings.txtOutline,
             value: layer.strokeWidth,
             min: 0,
             max: 0.3,
@@ -144,7 +150,7 @@ class PropertyEditor extends StatelessWidget {
             onChanged: (v) => _u((l) => l.copyWith(strokeWidth: v)),
           ),
           if (layer.strokeWidth > 0) ...[
-            _FieldLabel('Outline colour'),
+            _FieldLabel(context.strings.txtOutlineColour),
             _SwatchRow(
               selected: layer.strokeColor,
               includeNone: false,
@@ -156,7 +162,7 @@ class PropertyEditor extends StatelessWidget {
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             dense: true,
-            title: const Text('Drop shadow'),
+            title: Text(context.strings.txtDropShadow),
             value: layer.shadow,
             onChanged: (v) => _u((l) => l.copyWith(shadow: v)),
           ),
@@ -179,7 +185,7 @@ class PropertyEditor extends StatelessWidget {
             onChanged: (v) => controller.setWindow(index, v.start, v.end),
           ),
           _SliderRow(
-            label: 'Fade in',
+            label: context.strings.txtFadeIn,
             value: layer.fadeIn.clamp(0.0, span <= 0 ? 1.0 : span),
             min: 0,
             max: span <= 0 ? 1.0 : span,
@@ -187,7 +193,7 @@ class PropertyEditor extends StatelessWidget {
             onChanged: (v) => _u((l) => l.copyWith(fadeIn: v)),
           ),
           _SliderRow(
-            label: 'Fade out',
+            label: context.strings.txtFadeOut,
             value: layer.fadeOut.clamp(0.0, span <= 0 ? 1.0 : span),
             min: 0,
             max: span <= 0 ? 1.0 : span,
@@ -206,12 +212,12 @@ class PropertyEditor extends StatelessWidget {
   );
 }
 
-String _weightLabel(FontWeight w) => switch (w) {
-  FontWeight.w400 => 'Regular',
-  FontWeight.w600 => 'Medium',
-  FontWeight.w700 => 'Bold',
-  FontWeight.w900 => 'Black',
-  _ => 'Bold',
+String _weightLabel(AppStrings s, FontWeight w) => switch (w) {
+  FontWeight.w400 => s.txtRegular,
+  FontWeight.w600 => s.txtMedium,
+  FontWeight.w700 => s.txtBold,
+  FontWeight.w900 => s.txtBlack,
+  _ => s.txtBold,
 };
 
 class _FieldLabel extends StatelessWidget {

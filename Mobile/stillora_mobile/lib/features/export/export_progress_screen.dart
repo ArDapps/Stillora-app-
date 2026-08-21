@@ -16,6 +16,7 @@ import '../editor/editor_state.dart';
 import '../preview/preview_screen.dart';
 import '../tabs/app_tabs_screen.dart';
 import 'export_controller.dart';
+import '../../core/i18n/app_strings.dart';
 
 class ExportProgressScreen extends ConsumerStatefulWidget {
   const ExportProgressScreen({super.key});
@@ -76,11 +77,11 @@ class _ExportProgressScreenState extends ConsumerState<ExportProgressScreen> {
     );
 
     if (isDesktop) {
-      return DesktopShell(title: 'Export', child: body);
+      return DesktopShell(title: context.strings.exExport, child: body);
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Generating')),
+      appBar: AppBar(title: Text(context.strings.exGenerating)),
       body: body,
     );
   }
@@ -88,15 +89,15 @@ class _ExportProgressScreenState extends ConsumerState<ExportProgressScreen> {
   String _messageFor(AsyncValue<Object?> export) {
     final error = export.error;
     if (error is PlatformException) {
-      return error.message ?? 'The selected media could not be exported.';
+      return error.message ?? context.strings.exMediaFailed;
     }
     if (error is FileSystemException) {
       return error.message;
     }
     if (export.hasError) {
-      return 'The selected media could not be exported.';
+      return context.strings.exMediaFailed;
     }
-    return 'Preparing media, generating video, merging audio, and saving locally.';
+    return context.strings.exPreparingBody;
   }
 }
 
@@ -136,7 +137,11 @@ class _ExportProgressContent extends StatelessWidget {
           icon: Icon(
             isRunning ? Icons.cancel_rounded : Icons.arrow_back_rounded,
           ),
-          label: Text(isRunning ? 'Cancel export' : 'Back to editor'),
+          label: Text(
+            isRunning
+                ? context.strings.exportCancel
+                : context.strings.exBackToEditor,
+          ),
         ),
       ],
     );
@@ -208,7 +213,9 @@ class _ExportStatusCard extends StatelessWidget {
           ),
           SizedBox(height: compact ? 10 : StilloraSpacing.sm),
           Text(
-            hasError ? 'Export not ready yet' : 'Generating video...',
+            hasError
+                ? context.strings.exNotReady
+                : context.strings.exGeneratingVideo,
             style:
                 (compact
                         ? Theme.of(context).textTheme.titleLarge

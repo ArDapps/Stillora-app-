@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/i18n/app_strings.dart';
 import '../../core/auth/auth_controller.dart';
 import '../../core/auth/auth_repository.dart';
 import '../../core/design/stillora_colors.dart';
@@ -104,8 +105,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                         LoginReveal(
                           animation: _step(0.2, 0.68),
                           child: Text(
-                            'Sign in to unlock Voice Narration. Basic videos '
-                            'stay free — no account needed.',
+                            context.strings.authLoginPitch,
                             textAlign: TextAlign.center,
                             style: Theme.of(context).textTheme.bodyLarge
                                 ?.copyWith(
@@ -181,6 +181,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     if (error is AuthFailure) {
       return error.message;
     }
-    return 'Sign-in failed. Please try again.';
+    return context.strings.authFailed;
   }
 }

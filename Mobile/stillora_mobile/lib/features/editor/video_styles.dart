@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../core/i18n/app_strings.dart';
+
 // The animation widgets and the chip picker row live in their own files but
 // stay part of this library's public surface for existing importers.
 export 'widgets/video_style_animators.dart';
@@ -28,12 +30,12 @@ enum FrameTransition {
 }
 
 extension ClipEffectMeta on ClipEffect {
-  String get label => switch (this) {
-    ClipEffect.none => 'None',
-    ClipEffect.glow => 'Glow',
-    ClipEffect.kenBurns => 'Pan & Zoom',
-    ClipEffect.float => 'Float',
-    ClipEffect.shake => 'Shake',
+  String label(AppStrings s) => switch (this) {
+    ClipEffect.none => s.fxNone,
+    ClipEffect.glow => s.fxGlow,
+    ClipEffect.kenBurns => s.fxPanZoom,
+    ClipEffect.float => s.fxFloat,
+    ClipEffect.shake => s.fxShake,
   };
 
   IconData get icon => switch (this) {
@@ -46,16 +48,16 @@ extension ClipEffectMeta on ClipEffect {
 }
 
 extension FrameTransitionMeta on FrameTransition {
-  String get label => switch (this) {
-    FrameTransition.none => 'None',
-    FrameTransition.fade => 'Fade',
-    FrameTransition.swipe => 'Swipe',
-    FrameTransition.zoom => 'Zoom',
-    FrameTransition.slideUp => 'Slide Up',
-    FrameTransition.slideDown => 'Slide Down',
-    FrameTransition.glitch => 'Glitch',
-    FrameTransition.flash => 'Flash',
-    FrameTransition.pulse => 'Pulse',
+  String label(AppStrings s) => switch (this) {
+    FrameTransition.none => s.fxNone,
+    FrameTransition.fade => s.trFade,
+    FrameTransition.swipe => s.trSwipe,
+    FrameTransition.zoom => s.trZoom,
+    FrameTransition.slideUp => s.trSlideUp,
+    FrameTransition.slideDown => s.trSlideDown,
+    FrameTransition.glitch => s.trGlitch,
+    FrameTransition.flash => s.trFlash,
+    FrameTransition.pulse => s.trPulse,
   };
 
   IconData get icon => switch (this) {

@@ -1,3 +1,5 @@
+import '../../core/i18n/app_strings.dart';
+
 enum InputMode { paste, file, url }
 
 /// An output canvas size offered for the HTML → MP4 render.
@@ -9,6 +11,20 @@ class SizeOption {
   final int width;
   final int height;
   double get aspect => width / height;
+}
+
+extension SizeOptionMeta on SizeOption {
+  /// Translated canvas name; the ratio doubles as the option's id.
+  String labelOf(AppStrings s) => switch (ratio) {
+    '9:16' => s.loopSizeLabel('vertical'),
+    '1:1' => s.loopSizeLabel('square'),
+    '16:9' => s.loopSizeLabel('landscape'),
+    '4:5' => s.loopSizeLabel('portrait'),
+    _ => label,
+  };
+
+  /// The chip over the preview — name plus ratio.
+  String chipOf(AppStrings s) => '${labelOf(s)} · $ratio';
 }
 
 const sizeOptions = [

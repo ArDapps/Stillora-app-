@@ -72,7 +72,8 @@ String _extension(String path) {
 }
 
 var _idCounter = 0;
-String _nextId() => 'pdfpage-${DateTime.now().microsecondsSinceEpoch}-${_idCounter++}';
+String _nextId() =>
+    'pdfpage-${DateTime.now().microsecondsSinceEpoch}-${_idCounter++}';
 
 /// No real page is bigger than this; anything past it came from a misread
 /// header rather than a photograph.

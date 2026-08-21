@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app/app.dart';
 import 'core/design/stillora_colors.dart';
+import 'core/pro/pro_store.dart';
 import 'core/storage/app_preferences.dart';
 
 Future<void> main() async {
@@ -16,19 +17,20 @@ Future<void> main() async {
   // Seed the design tokens before the first frame so the app never flashes the
   // wrong palette on launch. StilloraPaletteScope keeps them in sync afterwards.
   StilloraColors.activate(
-    StilloraPalette.forBrightness(
-      switch (appPreferences.themeMode) {
-        ThemeMode.light => Brightness.light,
-        ThemeMode.dark => Brightness.dark,
-        ThemeMode.system =>
-          WidgetsBinding.instance.platformDispatcher.platformBrightness,
-      },
-    ),
+    StilloraPalette.forBrightness(switch (appPreferences.themeMode) {
+      ThemeMode.light => Brightness.light,
+      ThemeMode.dark => Brightness.dark,
+      ThemeMode.system =>
+        WidgetsBinding.instance.platformDispatcher.platformBrightness,
+    }),
   );
   runApp(
     ProviderScope(
       overrides: [
         appPreferencesProvider.overrideWithValue(appPreferences),
+        // Lifetime-Pro entitlement + cached price, read synchronously by the
+        // sidebar and every ad slot from the first frame.
+        proStoreProvider.overrideWithValue(PreferencesProStore(appPreferences)),
       ],
       child: const StilloraApp(),
     ),

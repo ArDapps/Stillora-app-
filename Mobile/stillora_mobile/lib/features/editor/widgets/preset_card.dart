@@ -4,11 +4,13 @@ import '../../../core/format/duration_label.dart';
 import '../../../core/design/render_components.dart';
 import '../../../core/design/stillora_colors.dart';
 import '../../../core/design/stillora_spacing.dart';
+import '../../../core/pro/pro_quality_picker.dart';
 import '../../../core/widgets/duration_slider.dart';
 import '../editor_state.dart';
 import '../video_preset.dart';
 import 'duration_chip.dart';
 import 'editor_shared.dart';
+import '../../../core/i18n/app_strings.dart';
 
 class PresetCard extends StatelessWidget {
   const PresetCard({
@@ -26,7 +28,7 @@ class PresetCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return RenderStepCard(
       number: '3',
-      title: 'Presets',
+      title: context.strings.edPresets,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -34,7 +36,7 @@ class PresetCard extends StatelessWidget {
             tiles: [
               for (final preset in videoPresets)
                 RenderSelectTile(
-                  title: preset.label,
+                  title: preset.labelOf(context.strings),
                   subtitle: preset.ratioLabel,
                   selected: editor.preset == preset,
                   onTap: () => controller.setPreset(preset),
@@ -42,42 +44,48 @@ class PresetCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: StilloraSpacing.sm),
-          Text('Resize', style: Theme.of(context).textTheme.labelMedium),
+          Text(
+            context.strings.edResize,
+            style: Theme.of(context).textTheme.labelMedium,
+          ),
           const SizedBox(height: StilloraSpacing.xs),
           RenderPillSegmented(
-            options: const ['Fit', 'Fill'],
+            options: [context.strings.loopFit, context.strings.loopFill],
             selectedIndex: editor.resizeMode == ResizeMode.fit ? 0 : 1,
             onSelected: (i) => controller.setResizeMode(
               i == 0 ? ResizeMode.fit : ResizeMode.fill,
             ),
           ),
           const SizedBox(height: StilloraSpacing.sm),
-          Text('Quality', style: Theme.of(context).textTheme.labelMedium),
+          Text(
+            context.strings.toolQuality,
+            style: Theme.of(context).textTheme.labelMedium,
+          ),
           const SizedBox(height: StilloraSpacing.xs),
-          RenderPillSegmented(
-            options: [for (final q in ExportQuality.values) q.label],
-            selectedIndex: ExportQuality.values.indexOf(editor.exportQuality),
-            onSelected: (i) =>
-                controller.setExportQuality(ExportQuality.values[i]),
+          ProQualityPicker(
+            selected: editor.exportQuality,
+            onSelected: controller.setExportQuality,
           ),
           const SizedBox(height: 4),
           Text(
             '${editor.outputResolution.width} × ${editor.outputResolution.height}'
             '  ·  ≈ ${formatFileSize(editor.estimatedExportBytes)}'
-            '  ·  ${editor.exportQuality.note}',
+            '  ·  ${editor.exportQuality.note(context.strings)}',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: StilloraColors.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: StilloraSpacing.sm),
           Text(
-            editor.media.length > 1 ? 'Total duration' : 'Duration',
+            editor.media.length > 1
+                ? context.strings.edTotalDuration
+                : context.strings.edDuration,
             style: Theme.of(context).textTheme.labelMedium,
           ),
           if (editor.media.length > 1) ...[
             const SizedBox(height: 2),
             Text(
-              'Splits evenly across all clips. Tap a clip above to set its own time.',
+              context.strings.edSplitsEvenly,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: StilloraColors.onSurfaceVariant,
               ),
@@ -101,25 +109,25 @@ class PresetCard extends StatelessWidget {
                 compact: compact,
               ),
               DurationChip(
-                label: '1 min',
+                label: context.strings.durMinutes(1),
                 selected: editor.totalDurationSeconds == 60,
                 onSelected: () => controller.setDuration(60),
                 compact: compact,
               ),
               DurationChip(
-                label: '5 min',
+                label: context.strings.durMinutes(5),
                 selected: editor.totalDurationSeconds == 300,
                 onSelected: () => controller.setDuration(300),
                 compact: compact,
               ),
               DurationChip(
-                label: '10 min',
+                label: context.strings.durMinutes(10),
                 selected: editor.totalDurationSeconds == 600,
                 onSelected: () => controller.setDuration(600),
                 compact: compact,
               ),
               DurationChip(
-                label: '30 min',
+                label: context.strings.durMinutes(30),
                 selected: editor.totalDurationSeconds == 1800,
                 onSelected: () => controller.setDuration(1800),
                 compact: compact,
@@ -127,7 +135,8 @@ class PresetCard extends StatelessWidget {
               if (editor.audioDurationSeconds != null)
                 DurationChip(
                   label:
-                      'Use audio ${formatDurationClock(editor.audioDurationSeconds!)}',
+                      '${context.strings.edUseAudioLength} '
+                      '${formatDurationClock(editor.audioDurationSeconds!)}',
                   selected:
                       editor.totalDurationSeconds ==
                       editor.audioDurationSeconds,

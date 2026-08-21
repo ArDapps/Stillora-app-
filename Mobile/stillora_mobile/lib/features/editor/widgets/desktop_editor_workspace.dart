@@ -12,6 +12,7 @@ import 'preset_card.dart';
 import 'soundscape_card.dart';
 import 'source_media_card.dart';
 import 'style_card.dart';
+import '../../../core/i18n/app_strings.dart';
 
 class DesktopEditorWorkspace extends StatelessWidget {
   const DesktopEditorWorkspace({
@@ -193,7 +194,7 @@ class _DesktopStudioHeader extends StatelessWidget {
                 ),
               ),
               Text(
-                'Desktop Studio · Build your MP4 with full file access.',
+                context.strings.edDesktopStudio,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: StilloraColors.onSurfaceVariant,
                 ),

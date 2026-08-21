@@ -4,6 +4,7 @@ import '../../../core/design/stillora_colors.dart';
 import '../../../core/design/stillora_glow.dart';
 import '../../../core/design/stillora_spacing.dart';
 import '../../../core/design/stillora_surface.dart';
+import '../../../core/i18n/app_strings.dart';
 
 class VoiceNarrationPrivacyNote extends StatelessWidget {
   const VoiceNarrationPrivacyNote({super.key});
@@ -20,11 +21,7 @@ class VoiceNarrationPrivacyNote extends StatelessWidget {
         padding: const EdgeInsets.all(StilloraSpacing.sm),
         child: Row(
           children: [
-            Icon(
-              Icons.lock_rounded,
-              color: StilloraColors.brandCyan,
-              size: 20,
-            ),
+            Icon(Icons.lock_rounded, color: StilloraColors.brandCyan, size: 20),
             const SizedBox(width: StilloraSpacing.sm),
             Expanded(
               child: Text(
@@ -56,14 +53,10 @@ class VoiceNarrationPermissionDenied extends StatelessWidget {
     return StilloraGlassCard(
       child: Column(
         children: [
-          Icon(
-            Icons.mic_off_rounded,
-            color: StilloraColors.error,
-            size: 44,
-          ),
+          Icon(Icons.mic_off_rounded, color: StilloraColors.error, size: 44),
           const SizedBox(height: StilloraSpacing.sm),
           Text(
-            'Microphone access is off',
+            context.strings.edMicOff,
             style: Theme.of(
               context,
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
@@ -81,7 +74,7 @@ class VoiceNarrationPermissionDenied extends StatelessWidget {
           StilloraPrimaryButton(
             onPressed: () => onOpenSettings(),
             icon: Icons.settings_rounded,
-            label: 'Open Settings',
+            label: context.strings.edOpenSettings,
           ),
         ],
       ),
@@ -225,7 +218,7 @@ class VoiceNarrationRecordedPanel extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Your narration',
+                          context.strings.edYourNarration,
                           style: Theme.of(context).textTheme.titleSmall
                               ?.copyWith(fontWeight: FontWeight.w700),
                         ),
@@ -248,7 +241,7 @@ class VoiceNarrationRecordedPanel extends StatelessWidget {
         StilloraPrimaryButton(
           onPressed: onUse,
           icon: Icons.check_rounded,
-          label: 'Use This Recording',
+          label: context.strings.edUseRecording,
         ),
         const SizedBox(height: StilloraSpacing.xs),
         Row(
@@ -257,7 +250,7 @@ class VoiceNarrationRecordedPanel extends StatelessWidget {
               child: OutlinedButton.icon(
                 onPressed: onReRecord,
                 icon: const Icon(Icons.refresh_rounded),
-                label: const Text('Re-record'),
+                label: Text(context.strings.edReRecord),
               ),
             ),
             const SizedBox(width: StilloraSpacing.sm),
@@ -265,7 +258,7 @@ class VoiceNarrationRecordedPanel extends StatelessWidget {
               child: OutlinedButton.icon(
                 onPressed: onRemove,
                 icon: const Icon(Icons.delete_outline_rounded),
-                label: const Text('Remove Audio'),
+                label: Text(context.strings.edRemoveAudio),
               ),
             ),
           ],

@@ -20,6 +20,7 @@ import '../gallery/gallery_controller.dart';
 import '../gallery/local_export_record.dart';
 
 import 'watermark_state.dart';
+import '../../core/pro/pro_gate.dart';
 
 const _wmVideoExtensions = {
   'mp4',
@@ -49,6 +50,13 @@ class WatermarkController extends Notifier<WatermarkState> {
   Future<void> pickBaseVideo() async {
     final path = await _pickVideoPath();
     if (path == null) return;
+    await loadBaseVideo(path);
+  }
+
+  /// Loads a video from an already-chosen [path], separated from [pickBaseVideo] so
+  /// the source of the file (picker, drag-and-drop, a screenshot fixture) is
+  /// independent of what happens to it afterwards.
+  Future<void> loadBaseVideo(String path) async {
     final local = await _mediaStore.materializePath(
       path,
       kind: EditorMediaStoreKind.media,
@@ -178,6 +186,9 @@ class WatermarkController extends Notifier<WatermarkState> {
       return null;
     }
     final basePath = basePaths.first;
+    // Free exports top out at 720p. Clamp here, not just in the picker, so the
+    // tier is enforced on the output even when the picker never got built.
+    setQuality(entitledQuality(ref, state.quality));
     final res = state.outputResolution;
     final duration = state.baseDurationSeconds <= 0
         ? 5

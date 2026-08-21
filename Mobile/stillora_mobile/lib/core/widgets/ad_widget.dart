@@ -5,12 +5,15 @@ import 'dart:math';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../constants/app_constants.dart';
+import '../pro/pro_controller.dart';
 import '../design/stillora_colors.dart';
 import '../design/stillora_spacing.dart';
 import '../platform/platform_info.dart';
+import '../i18n/app_strings.dart';
 
 /// Sponsored banner served by the Loopara ad network (public, no-auth,
 /// CORS-enabled API).
@@ -25,7 +28,7 @@ import '../platform/platform_info.dart';
 /// If the pool is empty or any request fails it renders nothing — an ad error is
 /// never surfaced to the user. The [placement] is kept for call-site
 /// compatibility.
-class AdSlotWidget extends StatefulWidget {
+class AdSlotWidget extends ConsumerWidget {
   const AdSlotWidget({
     super.key,
     this.placement = '',
@@ -40,10 +43,25 @@ class AdSlotWidget extends StatefulWidget {
   final String campaignKey;
 
   @override
-  State<AdSlotWidget> createState() => _AdSlotWidgetState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Stillora Pro removes sponsored content permanently. Returning an empty
+    // box before the slot mounts means a Pro build never even fetches an ad.
+    if (ref.watch(isProProvider)) return const SizedBox.shrink();
+    return _AdSlot(placement: placement, campaignKey: campaignKey);
+  }
 }
 
-class _AdSlotWidgetState extends State<AdSlotWidget>
+class _AdSlot extends StatefulWidget {
+  const _AdSlot({required this.placement, required this.campaignKey});
+
+  final String placement;
+  final String campaignKey;
+
+  @override
+  State<_AdSlot> createState() => _AdSlotWidgetState();
+}
+
+class _AdSlotWidgetState extends State<_AdSlot>
     with SingleTickerProviderStateMixin {
   static final _dio = Dio();
 
@@ -254,8 +272,8 @@ class _AdSlotWidgetState extends State<AdSlotWidget>
                 color: Colors.black.withValues(alpha: 0.35),
                 borderRadius: BorderRadius.circular(StilloraRadius.sm),
               ),
-              child: const Text(
-                'Sponsored',
+              child: Text(
+                context.strings.sponsored,
                 style: TextStyle(fontSize: 9, color: Colors.white70),
               ),
             ),

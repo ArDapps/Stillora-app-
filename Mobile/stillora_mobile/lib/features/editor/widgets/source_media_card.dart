@@ -7,6 +7,7 @@ import '../../../core/design/stillora_spacing.dart';
 import '../editor_state.dart';
 import 'editor_shared.dart';
 import 'media_timeline.dart';
+import '../../../core/i18n/app_strings.dart';
 
 class SourceMediaCard extends StatelessWidget {
   const SourceMediaCard({
@@ -24,7 +25,7 @@ class SourceMediaCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return RenderStepCard(
       number: '1',
-      title: 'Source Media',
+      title: context.strings.edSourceMedia,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -50,7 +51,7 @@ class SourceMediaCard extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: controller.addMedia,
                     icon: const Icon(Icons.add_rounded),
-                    label: const Text('Add more'),
+                    label: Text(context.strings.edAddMore),
                   ),
                 ),
                 const SizedBox(width: StilloraSpacing.xs),
@@ -58,7 +59,7 @@ class SourceMediaCard extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: controller.pickMedia,
                     icon: const Icon(Icons.refresh_rounded),
-                    label: const Text('Replace'),
+                    label: Text(context.strings.edReplace),
                   ),
                 ),
               ],
@@ -122,14 +123,14 @@ class _MediaDropZone extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Choose photos or videos',
+                            context.strings.edChooseMedia,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.titleSmall
                                 ?.copyWith(fontWeight: FontWeight.w800),
                           ),
                           Text(
-                            'Drag to reorder after selecting media.',
+                            context.strings.edDragToReorder,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.bodySmall
@@ -152,12 +153,12 @@ class _MediaDropZone extends StatelessWidget {
                     ),
                     const SizedBox(height: StilloraSpacing.xs),
                     Text(
-                      'Choose photos or videos',
+                      context.strings.edChooseMedia,
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: StilloraSpacing.xs),
                     Text(
-                      'Select photos and videos, then drag to reorder.',
+                      context.strings.edSelectThenReorder,
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: StilloraColors.onSurfaceVariant,

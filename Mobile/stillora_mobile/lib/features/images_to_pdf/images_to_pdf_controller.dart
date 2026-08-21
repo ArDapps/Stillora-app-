@@ -119,8 +119,7 @@ class ImagesToPdfController extends Notifier<ImagesToPdfState> {
         incoming,
         remaining: state.remainingSlots,
         dpi: state.importDpi,
-        onProgress: (label) =>
-            state = state.copyWith(importingLabel: label),
+        onProgress: (label) => state = state.copyWith(importingLabel: label),
       );
       final pages = [...state.pages, ...result.pages];
       state = state.copyWith(

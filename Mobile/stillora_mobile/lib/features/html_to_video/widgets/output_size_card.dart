@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/i18n/app_strings.dart';
 import '../../../core/design/render_components.dart';
 import '../../../core/design/stillora_colors.dart';
 import '../../../core/design/stillora_spacing.dart';
+import '../../../core/pro/pro_quality_picker.dart';
 import '../../editor/editor_export_estimate.dart';
 import '../../editor/video_preset.dart';
 import '../html_to_video_options.dart';
@@ -43,7 +45,7 @@ class OutputSizeCard extends StatelessWidget {
     );
     return RenderStepCard(
       number: '2',
-      title: 'Output size',
+      title: context.strings.htmlOutputSize,
       trailing: RenderTagPill('${output.width}×${output.height}'),
       footer: 'Reels · TikTok · Stories · YouTube',
       child: Column(
@@ -55,13 +57,12 @@ class OutputSizeCard extends StatelessWidget {
             onSelected: onSizeChanged,
           ),
           const SizedBox(height: StilloraSpacing.sm),
-          Text('Quality', style: Theme.of(context).textTheme.labelMedium),
-          const SizedBox(height: StilloraSpacing.xs),
-          RenderPillSegmented(
-            options: [for (final q in ExportQuality.values) q.label],
-            selectedIndex: ExportQuality.values.indexOf(quality),
-            onSelected: (i) => onQualityChanged(ExportQuality.values[i]),
+          Text(
+            context.strings.htmlQuality,
+            style: Theme.of(context).textTheme.labelMedium,
           ),
+          const SizedBox(height: StilloraSpacing.xs),
+          ProQualityPicker(selected: quality, onSelected: onQualityChanged),
           const SizedBox(height: 4),
           Text(
             '${output.width} × ${output.height}  ·  ≈ ${formatFileSize(bytes)}',

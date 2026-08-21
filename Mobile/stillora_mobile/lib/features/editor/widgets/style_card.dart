@@ -6,6 +6,7 @@ import '../../../core/platform/platform_info.dart';
 import '../../color/color_correction_panel.dart';
 import '../editor_state.dart';
 import '../video_styles.dart';
+import '../../../core/i18n/app_strings.dart';
 
 /// Effect + transition pickers shown on the main Create screen so styles are
 /// discoverable without opening the format sub-screen. Mirrors the same
@@ -32,7 +33,7 @@ class StyleCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                'Style & effects',
+                context.strings.edStyleEffects,
                 style: Theme.of(
                   context,
                 ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
@@ -41,19 +42,19 @@ class StyleCard extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           StylePickerRow<ClipEffect>(
-            title: 'Effect',
+            title: context.strings.edEffect,
             values: ClipEffect.values,
             selected: editor.effect,
-            labelOf: (e) => e.label,
+            labelOf: (e) => e.label(context.strings),
             iconOf: (e) => e.icon,
             onSelected: controller.setEffect,
           ),
           const SizedBox(height: 14),
           StylePickerRow<FrameTransition>(
-            title: 'Transition',
+            title: context.strings.edTransition,
             values: FrameTransition.values,
             selected: editor.transition,
-            labelOf: (t) => t.label,
+            labelOf: (t) => t.label(context.strings),
             iconOf: (t) => t.icon,
             onSelected: controller.setTransition,
           ),

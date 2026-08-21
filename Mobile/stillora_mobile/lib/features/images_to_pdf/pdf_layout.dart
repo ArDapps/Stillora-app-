@@ -1,5 +1,6 @@
 import 'package:pdf/pdf.dart';
 
+import '../../core/i18n/app_strings.dart';
 import 'pdf_page_source.dart';
 
 /// Sheet size for every page of the exported document.
@@ -11,16 +12,18 @@ enum PdfSheet {
   a4,
   letter;
 
-  String get label => switch (this) {
-    PdfSheet.matchImage => 'Match image',
+  /// A4 and Letter are international paper names and stay as-is in every
+  /// language; only "Match image" and the hints are translated.
+  String label(AppStrings s) => switch (this) {
+    PdfSheet.matchImage => s.pdfMatchImage,
     PdfSheet.a4 => 'A4',
     PdfSheet.letter => 'Letter',
   };
 
-  String get hint => switch (this) {
-    PdfSheet.matchImage => 'Every page takes the shape of its own image',
-    PdfSheet.a4 => '21 × 29.7 cm · pages turn landscape to fit wide images',
-    PdfSheet.letter => '8.5 × 11 in · pages turn landscape to fit wide images',
+  String hint(AppStrings s) => switch (this) {
+    PdfSheet.matchImage => s.pdfMatchImageHint,
+    PdfSheet.a4 => s.pdfSheetA4Hint,
+    PdfSheet.letter => s.pdfSheetLetterHint,
   };
 }
 
@@ -37,10 +40,10 @@ enum PdfMarginSize {
     PdfMarginSize.wide => 45,
   };
 
-  String get label => switch (this) {
-    PdfMarginSize.none => 'None',
-    PdfMarginSize.small => 'Small',
-    PdfMarginSize.wide => 'Wide',
+  String label(AppStrings s) => switch (this) {
+    PdfMarginSize.none => s.pdfMarginNone,
+    PdfMarginSize.small => s.pdfMarginSmall,
+    PdfMarginSize.wide => s.pdfMarginWide,
   };
 }
 
@@ -93,9 +96,10 @@ PdfPageFormat sheetFormatFor(
 /// Human-readable size of the page that [page] will produce, e.g. `1200 × 1600`
 /// for a matched image or `A4 · portrait` for a fixed sheet. Used in the UI so
 /// the shape of the export is visible before rendering it.
-String pageSizeLabel(PdfPageSource page, PdfSheet sheet) {
+String pageSizeLabel(PdfPageSource page, PdfSheet sheet, AppStrings s) {
   if (sheet == PdfSheet.matchImage) {
     return '${page.displayWidth} × ${page.displayHeight}';
   }
-  return '${sheet.label} · ${page.isLandscape ? 'landscape' : 'portrait'}';
+  final orientation = page.isLandscape ? s.pdfLandscape : s.pdfPortrait;
+  return '${sheet.label(s)} · $orientation';
 }

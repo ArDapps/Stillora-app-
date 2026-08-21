@@ -97,6 +97,13 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
+  # stillora_video_engine and sign_in_with_apple have no Swift Package Manager
+  # support, and Xcode fails to resolve SPM dependencies for the macOS target
+  # because of it — which breaks `flutter build/drive -d macos` outright. Pin
+  # the project to CocoaPods until both plugins adopt SPM.
+  config:
+    enable-swift-package-manager: false
+
   assets:
     - assets/logo/
 

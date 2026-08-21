@@ -8,10 +8,11 @@ import '../../core/widgets/section_split_view.dart';
 import '../audio/audio_source.dart';
 import '../color/color_grade_section.dart';
 import '../editor/editor_state.dart' show formatFileSize;
-import '../editor/video_preset.dart';
 import '../export/export_cancellation.dart';
 import '../preview/section_video_preview.dart';
 import 'speed_state.dart';
+import '../../core/pro/pro_quality_picker.dart';
+import '../../core/i18n/app_strings.dart';
 
 /// Standalone "Speed" section: upload a video, speed it up (1x–4x), optionally
 /// mute it, and optionally add a soundtrack the sped video loops to match.
@@ -38,8 +39,8 @@ class _SpeedViewState extends ConsumerState<SpeedView> {
         SnackBar(
           content: Text(
             result == null
-                ? 'Nothing to export.'
-                : 'Saved to Library · ${result.durationSeconds}s '
+                ? context.strings.exNothingToExport
+                : '${context.strings.savedToLibrary} · ${result.durationSeconds}s '
                       '(${result.width}×${result.height})',
           ),
         ),
@@ -49,7 +50,9 @@ class _SpeedViewState extends ConsumerState<SpeedView> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            isExportCancellation(e) ? 'Export cancelled' : 'Failed: $e',
+            isExportCancellation(e)
+                ? context.strings.exportCancelled
+                : '${context.strings.exFailed}: $e',
           ),
         ),
       );
@@ -86,7 +89,7 @@ class _SpeedViewState extends ConsumerState<SpeedView> {
           onStartOver: controller.reset,
           canStartOver: speed.hasVideo && !_running,
           previewCaption: speed.hasVideo
-              ? 'How the exported video will look'
+              ? context.strings.spPreviewCaption
               : null,
           preview: SectionVideoPreview(
             videoPath: speed.videoPath,
@@ -94,37 +97,39 @@ class _SpeedViewState extends ConsumerState<SpeedView> {
             sourceHeight: speed.sourceHeight,
             color: speed.color,
             badge: speed.speed > 1 ? '${speed.speed}x' : null,
-            emptyLabel: 'Upload a video to preview the speed-up here',
+            emptyLabel: context.strings.spUploadToPreview,
             stats: [
               if (speed.hasVideo) ...[
                 (
-                  label: 'Source',
+                  label: context.strings.toolSource,
                   value:
                       '${speed.sourceDurationSeconds}s · '
                       '${speed.sourceWidth}×${speed.sourceHeight}',
                 ),
                 (
-                  label: 'Output ≈',
+                  label: context.strings.toolOutputApprox,
                   value:
                       '${speed.hasNewAudio ? speed.sourceDurationSeconds : (speed.sourceDurationSeconds / speed.speed).ceil()}s · '
                       '${res.width}×${res.height}',
                 ),
-                (label: 'Size ≈', value: formatFileSize(speed.estimatedBytes)),
                 (
-                  label: 'Audio',
+                  label: context.strings.toolSizeApprox,
+                  value: formatFileSize(speed.estimatedBytes),
+                ),
+                (
+                  label: context.strings.toolAudio,
                   value: speed.hasNewAudio
                       ? speed.newAudioName!
                       : speed.muteAudio
-                      ? 'Muted'
-                      : 'Original',
+                      ? context.strings.audMuted
+                      : context.strings.exportOriginal,
                 ),
               ],
             ],
           ),
           controls: [
             Text(
-              'Upload a video and speed it up. Add a soundtrack and the sped '
-              'video loops to match the audio length.',
+              context.strings.speedIntro,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: StilloraColors.onSurfaceVariant,
               ),
@@ -150,7 +155,9 @@ class _SpeedViewState extends ConsumerState<SpeedView> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          speed.hasVideo ? speed.videoName! : 'Upload video',
+                          speed.hasVideo
+                              ? speed.videoName!
+                              : context.strings.toolUploadVideo,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.titleSmall
@@ -180,7 +187,10 @@ class _SpeedViewState extends ConsumerState<SpeedView> {
             const SizedBox(height: 20),
 
             // Speed
-            Text('Speed', style: Theme.of(context).textTheme.labelMedium),
+            Text(
+              context.strings.toolSpeed,
+              style: Theme.of(context).textTheme.labelMedium,
+            ),
             const SizedBox(height: 8),
             SizedBox(
               width: double.infinity,
@@ -201,8 +211,9 @@ class _SpeedViewState extends ConsumerState<SpeedView> {
             const SizedBox(height: 6),
             if (speed.hasVideo && speed.speed > 1 && !speed.hasNewAudio)
               Text(
-                'Output ≈ ${((speed.sourceDurationSeconds) / speed.speed).ceil()}s '
-                'at ${speed.speed}x',
+                '${context.strings.toolOutputApprox} '
+                '${((speed.sourceDurationSeconds) / speed.speed).ceil()}s '
+                '${context.strings.spAtSpeed} ${speed.speed}x',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: StilloraColors.onSurfaceVariant,
                 ),
@@ -210,16 +221,19 @@ class _SpeedViewState extends ConsumerState<SpeedView> {
             const SizedBox(height: 12),
 
             // Audio
-            Text('Audio', style: Theme.of(context).textTheme.labelMedium),
+            Text(
+              context.strings.toolAudio,
+              style: Theme.of(context).textTheme.labelMedium,
+            ),
             const SizedBox(height: 8),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               dense: true,
-              title: const Text('Mute (remove original audio)'),
+              title: Text(context.strings.speedMute),
               subtitle: Text(
                 speed.hasNewAudio
-                    ? 'Replaced by your new audio'
-                    : 'Export the sped video with no sound',
+                    ? context.strings.audReplacedByNew
+                    : context.strings.spMuteNote,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: StilloraColors.onSurfaceVariant,
                 ),
@@ -252,7 +266,7 @@ class _SpeedViewState extends ConsumerState<SpeedView> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'New audio · ${speed.newAudioName}',
+                        '${context.strings.audNewAudio} · ${speed.newAudioName}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.titleSmall,
@@ -261,7 +275,7 @@ class _SpeedViewState extends ConsumerState<SpeedView> {
                     IconButton(
                       onPressed: _running ? null : controller.removeNewAudio,
                       icon: const Icon(Icons.delete_outline_rounded, size: 20),
-                      tooltip: 'Remove new audio',
+                      tooltip: context.strings.audRemoveNewAudio,
                       color: StilloraColors.onSurfaceVariant,
                     ),
                   ],
@@ -270,7 +284,7 @@ class _SpeedViewState extends ConsumerState<SpeedView> {
             if (speed.hasNewAudio) ...[
               const SizedBox(height: 6),
               Text(
-                'New audio plays at normal speed; the sped video loops to match it.',
+                context.strings.speedNewAudioNote,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: StilloraColors.onSurfaceVariant,
                 ),
@@ -290,27 +304,22 @@ class _SpeedViewState extends ConsumerState<SpeedView> {
             const SizedBox(height: 12),
 
             // Quality
-            Text('Quality', style: Theme.of(context).textTheme.labelMedium),
+            Text(
+              context.strings.toolQuality,
+              style: Theme.of(context).textTheme.labelMedium,
+            ),
             const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: SegmentedButton<ExportQuality>(
-                showSelectedIcon: false,
-                segments: [
-                  for (final q in ExportQuality.values)
-                    ButtonSegment(value: q, label: Text(q.label)),
-                ],
-                selected: {speed.quality},
-                onSelectionChanged: _running
-                    ? null
-                    : (v) => controller.setQuality(v.first),
-              ),
+            ProQualityPicker(
+              selected: speed.quality,
+              onSelected: controller.setQuality,
+              style: ProQualityPickerStyle.segmented,
+              enabled: !_running,
             ),
             const SizedBox(height: 10),
             if (speed.hasVideo)
               Text(
                 '${res.width} × ${res.height}  ·  ≤ '
-                '${formatFileSize(speed.estimatedBytes)}  ·  ${speed.quality.note}',
+                '${formatFileSize(speed.estimatedBytes)}  ·  ${speed.quality.note(context.strings)}',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: StilloraColors.onSurfaceVariant,
                 ),
@@ -320,7 +329,9 @@ class _SpeedViewState extends ConsumerState<SpeedView> {
             StilloraPrimaryButton(
               onPressed: speed.hasVideo && !_running ? _run : null,
               icon: Icons.fast_forward_rounded,
-              label: _running ? 'Exporting…' : 'Speed up & export',
+              label: _running
+                  ? context.strings.exportExporting
+                  : context.strings.spExportCta,
             ),
             if (_running) ...[
               const SizedBox(height: 16),
@@ -329,7 +340,11 @@ class _SpeedViewState extends ConsumerState<SpeedView> {
               OutlinedButton.icon(
                 onPressed: _cancelling ? null : _cancel,
                 icon: const Icon(Icons.close_rounded),
-                label: Text(_cancelling ? 'Cancelling…' : 'Cancel export'),
+                label: Text(
+                  _cancelling
+                      ? context.strings.exportCancelling
+                      : context.strings.exportCancel,
+                ),
               ),
             ],
             const SizedBox(height: 16),

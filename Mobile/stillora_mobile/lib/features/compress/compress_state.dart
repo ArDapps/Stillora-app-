@@ -16,21 +16,36 @@ import '../export/desktop_ffmpeg_video_engine.dart';
 import '../export/export_controller.dart' show videoEngineProvider;
 import '../gallery/gallery_controller.dart';
 import '../gallery/local_export_record.dart';
+import '../../core/i18n/app_strings.dart';
 
 /// Compression strength — how small the output should be, expressed as a target
 /// fraction of the source file size (HandBrake's "target quality" idea). Lower
 /// fractions mean a smaller file at lower quality. The engine is handed this as
 /// a hard `maxOutputBytes` cap, so the result is always smaller than the source.
 enum CompressLevel {
-  high('High quality', 'Barely visible loss', 0.70),
-  balanced('Balanced', 'Best size / quality trade', 0.45),
-  small('Small', 'Fine for sharing', 0.28),
-  tiny('Tiny', 'Smallest — lower quality', 0.16);
+  high('High quality', 0.70),
+  balanced('Balanced', 0.45),
+  small('Small', 0.28),
+  tiny('Tiny', 0.16);
 
-  const CompressLevel(this.label, this.note, this.sizeFraction);
+  const CompressLevel(this.label, this.sizeFraction);
 
+  /// English name, kept for the stored export record.
   final String label;
-  final String note;
+
+  String labelOf(AppStrings s) => switch (this) {
+    CompressLevel.high => s.cmpHigh,
+    CompressLevel.balanced => s.cmpBalanced,
+    CompressLevel.small => s.cmpSmall,
+    CompressLevel.tiny => s.cmpTiny,
+  };
+
+  String note(AppStrings s) => switch (this) {
+    CompressLevel.high => s.cmpHighNote,
+    CompressLevel.balanced => s.cmpBalancedNote,
+    CompressLevel.small => s.cmpSmallNote,
+    CompressLevel.tiny => s.cmpTinyNote,
+  };
 
   /// Target output size as a fraction of the source file size.
   final double sizeFraction;
@@ -188,6 +203,13 @@ class CompressController extends Notifier<CompressState> {
   Future<void> pickVideo() async {
     final path = await _pickVideoPath();
     if (path == null) return;
+    await loadVideo(path);
+  }
+
+  /// Loads a video from an already-chosen [path], separated from [pickVideo] so
+  /// the source of the file (picker, drag-and-drop, a screenshot fixture) is
+  /// independent of what happens to it afterwards.
+  Future<void> loadVideo(String path) async {
     final local = await _mediaStore.materializePath(
       path,
       kind: EditorMediaStoreKind.media,

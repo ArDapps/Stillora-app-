@@ -5,6 +5,7 @@ import '../../../core/design/render_components.dart';
 import '../../../core/design/stillora_colors.dart';
 import '../../../core/design/stillora_spacing.dart';
 import '../html_to_video_options.dart';
+import '../../../core/i18n/app_strings.dart';
 
 /// The right-hand preview panel: format chip, framed canvas, and spec footer.
 class PreviewPane extends StatelessWidget {
@@ -51,7 +52,7 @@ class PreviewPane extends StatelessWidget {
                   ),
                 ),
                 child: Text(
-                  size.chip,
+                  size.chipOf(context.strings),
                   style: TextStyle(
                     color: StilloraColors.accentText,
                     fontWeight: FontWeight.w700,
@@ -60,11 +61,17 @@ class PreviewPane extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              Text(
-                '${size.width} × ${size.height}',
-                style: TextStyle(
-                  color: StilloraColors.onSurfaceVariant,
-                  fontFamily: 'monospace',
+              // Phone widths leave little room next to the format chip, so the
+              // dimensions give way rather than overflowing the row.
+              Flexible(
+                child: Text(
+                  '${size.width} × ${size.height}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: StilloraColors.onSurfaceVariant,
+                    fontFamily: 'monospace',
+                  ),
                 ),
               ),
             ],
@@ -101,12 +108,16 @@ class PreviewPane extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
-                Text(
-                  '${size.height >= 1080 ? '1080p' : '720p'} · H.264 · $fps fps',
-                  style: TextStyle(
-                    color: StilloraColors.onSurfaceVariant,
-                    fontFamily: 'monospace',
-                    fontSize: 12,
+                Flexible(
+                  child: Text(
+                    '${size.height >= 1080 ? '1080p' : '720p'} · H.264 · $fps fps',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: StilloraColors.onSurfaceVariant,
+                      fontFamily: 'monospace',
+                      fontSize: 12,
+                    ),
                   ),
                 ),
               ],
@@ -136,7 +147,7 @@ class PreviewPlaceholder extends StatelessWidget {
                     CircularProgressIndicator(),
                     SizedBox(height: StilloraSpacing.sm),
                     Text(
-                      'Rendering…',
+                      context.strings.htmlRendering,
                       style: TextStyle(color: StilloraColors.onSurfaceVariant),
                     ),
                   ],

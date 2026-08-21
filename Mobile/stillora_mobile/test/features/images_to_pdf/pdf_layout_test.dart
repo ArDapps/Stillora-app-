@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pdf/pdf.dart';
 
+import 'package:stillora_mobile/core/i18n/app_locale.dart';
+import 'package:stillora_mobile/core/i18n/app_strings.dart';
 import 'package:stillora_mobile/features/images_to_pdf/pdf_layout.dart';
 import 'package:stillora_mobile/features/images_to_pdf/pdf_page_source.dart';
 
@@ -19,6 +21,9 @@ PdfPageSource page({
     quarterTurns: quarterTurns,
   );
 }
+
+/// Labels are language-dependent now; the test pins English.
+final _en = AppStrings.of(AppLanguage.english);
 
 void main() {
   group('sheetFormatFor · match image', () {
@@ -92,10 +97,10 @@ void main() {
   });
 
   test('pageSizeLabel describes what the export will produce', () {
-    expect(pageSizeLabel(page(), PdfSheet.matchImage), '1200 × 1600');
-    expect(pageSizeLabel(page(), PdfSheet.a4), 'A4 · portrait');
+    expect(pageSizeLabel(page(), PdfSheet.matchImage, _en), '1200 × 1600');
+    expect(pageSizeLabel(page(), PdfSheet.a4, _en), 'A4 · portrait');
     expect(
-      pageSizeLabel(page(quarterTurns: 1), PdfSheet.a4),
+      pageSizeLabel(page(quarterTurns: 1), PdfSheet.a4, _en),
       'A4 · landscape',
     );
   });

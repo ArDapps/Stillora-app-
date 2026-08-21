@@ -272,11 +272,17 @@ class RenderPillSegmented extends StatelessWidget {
     required this.options,
     required this.selectedIndex,
     required this.onSelected,
+    this.badges,
   });
 
   final List<String> options;
   final int selectedIndex;
   final ValueChanged<int> onSelected;
+
+  /// Optional trailing marker per option (a PRO chip, a "beta" tag, …). Index
+  /// aligns with [options]; a null entry — or a shorter/absent list — means no
+  /// badge on that chip.
+  final List<Widget?>? badges;
 
   @override
   Widget build(BuildContext context) {
@@ -290,6 +296,7 @@ class RenderPillSegmented extends StatelessWidget {
           Expanded(
             child: _SegChip(
               label: options[i],
+              badge: (badges != null && i < badges!.length) ? badges![i] : null,
               selected: i == selectedIndex,
               onTap: () => onSelected(i),
             ),
@@ -305,11 +312,13 @@ class _SegChip extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.onTap,
+    this.badge,
   });
 
   final String label;
   final bool selected;
   final VoidCallback onTap;
+  final Widget? badge;
 
   @override
   Widget build(BuildContext context) {
@@ -330,14 +339,23 @@ class _SegChip extends StatelessWidget {
               color: selected ? RenderTokens.accent : RenderTokens.panelBorder,
             ),
           ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-              color: selected
-                  ? StilloraColors.selectedOnSurface
-                  : StilloraColors.onSurfaceVariant,
-            ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  label,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: selected
+                        ? StilloraColors.selectedOnSurface
+                        : StilloraColors.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              if (badge != null) ...[const SizedBox(width: 4), badge!],
+            ],
           ),
         ),
       ),

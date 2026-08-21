@@ -1,10 +1,14 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
+import '../../core/design/preview_metrics.dart';
 import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_spacing.dart';
 import '../../core/widgets/video_thumbnail.dart';
 import '../color/color_adjust.dart';
 import '../color/color_graded_preview.dart';
+import '../../core/i18n/app_strings.dart';
 
 /// A single label/value line under the preview frame (e.g. "Output · 1080×1920").
 typedef PreviewStat = ({String label, String value});
@@ -25,7 +29,7 @@ class SectionVideoPreview extends StatelessWidget {
     this.color = ColorAdjust.identity,
     this.badge,
     this.stats = const [],
-    this.emptyLabel = 'Upload a video to preview it here',
+    this.emptyLabel,
     this.emptyIcon = Icons.movie_creation_outlined,
   });
 
@@ -40,7 +44,9 @@ class SectionVideoPreview extends StatelessWidget {
   final String? badge;
 
   final List<PreviewStat> stats;
-  final String emptyLabel;
+
+  /// Falls back to the localized default at build time.
+  final String? emptyLabel;
   final IconData emptyIcon;
 
   double get _aspectRatio =>
@@ -49,14 +55,16 @@ class SectionVideoPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Fit the frame inside the pane on both axes so a portrait clip never
-    // pushes the stats out of view. In a scrolling column (unbounded height)
-    // the frame is simply sized from the width instead.
+    // pushes the stats out of view.
     final frame = LayoutBuilder(
       builder: (context, constraints) {
         final maxW = constraints.maxWidth;
+        // Stacked (phone/iPad) the height is unbounded, so sizing the frame
+        // from the column width alone would make a portrait clip taller than
+        // the screen. Cap it to the shared mobile preview budget.
         final maxH = constraints.hasBoundedHeight
             ? constraints.maxHeight
-            : maxW / _aspectRatio;
+            : math.min(maxW / _aspectRatio, mobilePreviewMaxHeight(context));
         var w = maxW;
         var h = w / _aspectRatio;
         if (h > maxH) {
@@ -71,7 +79,7 @@ class SectionVideoPreview extends StatelessWidget {
               videoPath: videoPath,
               color: color,
               badge: badge,
-              emptyLabel: emptyLabel,
+              emptyLabel: emptyLabel ?? context.strings.pvUploadToPreview,
               emptyIcon: emptyIcon,
               width: w,
               height: h,
@@ -130,13 +138,15 @@ class PreviewStage extends StatelessWidget {
     super.key,
     required this.aspectRatio,
     this.child,
-    this.emptyLabel = 'Load a video to preview it here',
+    this.emptyLabel,
     this.emptyIcon = Icons.movie_creation_outlined,
   });
 
   final double aspectRatio;
   final Widget? child;
-  final String emptyLabel;
+
+  /// Falls back to the localized default at build time.
+  final String? emptyLabel;
   final IconData emptyIcon;
 
   @override
@@ -148,7 +158,7 @@ class PreviewStage extends StatelessWidget {
         final maxW = constraints.maxWidth;
         final maxH = constraints.hasBoundedHeight
             ? constraints.maxHeight
-            : maxW / ratio;
+            : math.min(maxW / ratio, mobilePreviewMaxHeight(context));
         var w = maxW;
         var h = w / ratio;
         if (h > maxH) {
@@ -186,7 +196,7 @@ class PreviewStage extends StatelessWidget {
                             ),
                             const SizedBox(height: StilloraSpacing.xs),
                             Text(
-                              emptyLabel,
+                              emptyLabel ?? context.strings.pvLoadToPreview,
                               textAlign: TextAlign.center,
                               style: Theme.of(context).textTheme.bodySmall
                                   ?.copyWith(

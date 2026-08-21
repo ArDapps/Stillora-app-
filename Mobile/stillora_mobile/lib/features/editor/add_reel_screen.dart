@@ -3,11 +3,13 @@ import '../../core/platform/import_directory.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/design/preview_metrics.dart';
 import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_spacing.dart';
 import 'reel_state.dart';
 import 'widgets/add_reel_preview.dart';
 import 'widgets/add_reel_widgets.dart';
+import '../../core/i18n/app_strings.dart';
 
 const _reelAudioExtensions = ['mp3', 'm4a', 'aac', 'wav', 'ogg'];
 
@@ -41,14 +43,17 @@ class ReelView extends ConsumerWidget {
         SnackBar(
           content: Text(
             result == null
-                ? 'Add an app video before exporting.'
-                : 'Saved to Library - ${result.width}x${result.height}',
+                ? context.strings.rlNeedAppVideo
+                : '${context.strings.savedToLibrary} · '
+                      '${result.width}×${result.height}',
           ),
         ),
       );
     } catch (error) {
       if (context.mounted) Navigator.of(context).pop();
-      messenger.showSnackBar(SnackBar(content: Text('Export failed: $error')));
+      messenger.showSnackBar(
+        SnackBar(content: Text('${context.strings.txtExportFailed}: $error')),
+      );
     }
   }
 
@@ -67,8 +72,8 @@ class ReelView extends ConsumerWidget {
             const SizedBox(height: 16),
             Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(
-                  maxHeight: 420,
+                constraints: BoxConstraints(
+                  maxHeight: mobilePreviewMaxHeight(context),
                   maxWidth: 460,
                 ),
                 child: AspectRatio(
@@ -100,7 +105,9 @@ class ReelView extends ConsumerWidget {
                 onPressed: controller.addMedia,
                 icon: const Icon(Icons.video_call_rounded),
                 label: Text(
-                  reel.isMockupMode ? 'Replace app video' : 'Replace media',
+                  reel.isMockupMode
+                      ? context.strings.rlReplaceAppVideo
+                      : context.strings.rlReplaceMedia,
                 ),
               ),
               const SizedBox(height: 12),
@@ -121,7 +128,7 @@ class ReelView extends ConsumerWidget {
                 child: TextButton.icon(
                   onPressed: controller.reset,
                   icon: const Icon(Icons.restart_alt_rounded, size: 18),
-                  label: const Text('Clear reel'),
+                  label: Text(context.strings.edClearReel),
                 ),
               ),
             ] else

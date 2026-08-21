@@ -12,9 +12,10 @@ import '../../core/platform/platform_info.dart';
 import '../../core/widgets/render_panel.dart';
 import '../../core/widgets/start_over_button.dart';
 import '../editor/editor_state.dart';
-import '../editor/video_preset.dart';
 import 'loop_images_controller.dart';
 import 'widgets/loop_images_panel.dart';
+import '../../core/pro/pro_quality_picker.dart';
+import '../../core/i18n/app_strings.dart';
 
 /// "Loop images" — add many images, pick one size + one duration, and render a
 /// SEPARATE MP4 per image (never merged). Styled to match the HTML → Video tab.
@@ -40,9 +41,7 @@ class LoopImagesView extends ConsumerWidget {
       child: StartOverButton(
         onReset: ref.read(loopImagesControllerProvider.notifier).reset,
         enabled: state.items.isNotEmpty && !state.isRunning,
-        confirmMessage:
-            'This clears the queued images and the size, duration and quality '
-            'choices. This cannot be undone.',
+        confirmMessage: context.strings.loopClearWarning,
       ),
     );
 
@@ -99,10 +98,10 @@ class LoopImagesView extends ConsumerWidget {
     final controller = ref.read(loopImagesControllerProvider.notifier);
 
     return [
-      const RenderEyebrow('BATCH RENDER'),
+      RenderEyebrow(context.strings.loopBatchRender.toUpperCase()),
       const SizedBox(height: StilloraSpacing.sm),
       Text(
-        'Loop images to videos',
+        context.strings.loopHeading,
         style: Theme.of(context).textTheme.displayMedium?.copyWith(
           fontWeight: FontWeight.w800,
           height: 1.05,
@@ -110,18 +109,17 @@ class LoopImagesView extends ConsumerWidget {
       ),
       const SizedBox(height: StilloraSpacing.xs),
       Text(
-        'Add up to $kLoopMaxImages images, pick one size and one duration. Each '
-        'image becomes its own MP4 of that length — they are not merged.',
+        context.strings.loopIntro,
         style: TextStyle(color: StilloraColors.onSurfaceVariant, height: 1.4),
       ),
       const SizedBox(height: StilloraSpacing.md),
       RenderStepCard(
         number: '1',
-        title: 'Output size',
+        title: context.strings.loopOutputSize,
         trailing: RenderTagPill(
           '${state.outputSize.width}×${state.outputSize.height}',
         ),
-        footer: 'Reels · TikTok · Stories · YouTube',
+        footer: context.strings.loopFormatsFooter,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -130,18 +128,19 @@ class LoopImagesView extends ConsumerWidget {
               onSelected: controller.setSize,
             ),
             const SizedBox(height: StilloraSpacing.sm),
-            Text('Quality', style: Theme.of(context).textTheme.labelMedium),
+            Text(
+              context.strings.loopQuality,
+              style: Theme.of(context).textTheme.labelMedium,
+            ),
             const SizedBox(height: StilloraSpacing.xs),
-            RenderPillSegmented(
-              options: [for (final q in ExportQuality.values) q.label],
-              selectedIndex: ExportQuality.values.indexOf(state.exportQuality),
-              onSelected: (i) =>
-                  controller.setExportQuality(ExportQuality.values[i]),
+            ProQualityPicker(
+              selected: state.exportQuality,
+              onSelected: controller.setExportQuality,
             ),
             const SizedBox(height: 4),
             Text(
               '${state.outputSize.width} × ${state.outputSize.height}'
-              '  ·  ≈ ${formatFileSize(state.estimatedBytesPerVideo)} each',
+              '  ·  ≈ ${formatFileSize(state.estimatedBytesPerVideo)} ${context.strings.loopEach}',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: StilloraColors.onSurfaceVariant,
               ),
@@ -152,8 +151,8 @@ class LoopImagesView extends ConsumerWidget {
       const SizedBox(height: StilloraSpacing.sm),
       RenderStepCard(
         number: '2',
-        title: 'Duration',
-        trailing: const RenderTagPill('each clip'),
+        title: context.strings.loopDuration,
+        trailing: RenderTagPill(context.strings.loopEachClip),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -169,7 +168,7 @@ class LoopImagesView extends ConsumerWidget {
                 ),
                 const Spacer(),
                 Text(
-                  'type any duration',
+                  context.strings.loopTypeDuration,
                   style: TextStyle(color: StilloraColors.onSurfaceVariant),
                 ),
               ],
@@ -178,13 +177,13 @@ class LoopImagesView extends ConsumerWidget {
               spacing: StilloraSpacing.xs,
               runSpacing: StilloraSpacing.xs,
               children: [
-                for (final option in const [
+                for (final option in [
                   (10, '10s'),
                   (30, '30s'),
-                  (60, '1 min'),
-                  (300, '5 min'),
-                  (600, '10 min'),
-                  (1800, '30 min'),
+                  (60, context.strings.durMinutes(1)),
+                  (300, context.strings.durMinutes(5)),
+                  (600, context.strings.durMinutes(10)),
+                  (1800, context.strings.durMinutes(30)),
                 ])
                   ChoiceChip(
                     label: Text(option.$2),
@@ -197,7 +196,7 @@ class LoopImagesView extends ConsumerWidget {
             DurationSlider(
               seconds: state.durationSeconds,
               min: minDurationSeconds,
-              label: 'Each output',
+              label: context.strings.loopEachOutput,
               onChanged: controller.setDuration,
             ),
           ],
@@ -206,9 +205,9 @@ class LoopImagesView extends ConsumerWidget {
       const SizedBox(height: StilloraSpacing.sm),
       RenderStepCard(
         number: '3',
-        title: 'Image mode',
+        title: context.strings.loopImageMode,
         child: RenderPillSegmented(
-          options: const ['Fit', 'Fill'],
+          options: [context.strings.loopFit, context.strings.loopFill],
           selectedIndex: state.resizeMode == engine.ResizeMode.fit ? 0 : 1,
           onSelected: (i) => controller.setResizeMode(
             i == 0 ? engine.ResizeMode.fit : engine.ResizeMode.fill,
@@ -242,8 +241,8 @@ class LoopImagesView extends ConsumerWidget {
             : const Icon(Icons.movie_creation_outlined),
         label: Text(
           state.isRunning
-              ? 'Converting…'
-              : 'Convert ${state.items.length} ${state.items.length == 1 ? "image" : "images"}',
+              ? context.strings.loopConverting
+              : context.strings.loopConvertCount(state.items.length),
         ),
       ),
     );
@@ -254,7 +253,11 @@ class LoopImagesView extends ConsumerWidget {
           child: OutlinedButton.icon(
             onPressed: state.isRunning ? null : () => _pick(ref),
             icon: const Icon(Icons.add_photo_alternate_outlined),
-            label: Text(state.items.isEmpty ? 'Add images' : 'Add more'),
+            label: Text(
+              state.items.isEmpty
+                  ? context.strings.loopAddImages
+                  : context.strings.loopAddMore,
+            ),
           ),
         ),
         if (state.items.isNotEmpty && !state.isRunning) ...[
@@ -262,7 +265,7 @@ class LoopImagesView extends ConsumerWidget {
           OutlinedButton.icon(
             onPressed: controller.clear,
             icon: const Icon(Icons.delete_outline_rounded),
-            label: const Text('Clear'),
+            label: Text(context.strings.loopClear),
           ),
         ],
       ],
@@ -279,11 +282,8 @@ class LoopImagesView extends ConsumerWidget {
         if (state.doneCount > 0) ...[
           const SizedBox(height: StilloraSpacing.xs),
           Text(
-            '${state.doneCount} of ${state.items.length} saved to Library',
-            style: TextStyle(
-              color: StilloraColors.secondary,
-              fontSize: 12,
-            ),
+            context.strings.loopSavedCount(state.doneCount, state.items.length),
+            style: TextStyle(color: StilloraColors.secondary, fontSize: 12),
           ),
         ],
         const SizedBox(height: 16),

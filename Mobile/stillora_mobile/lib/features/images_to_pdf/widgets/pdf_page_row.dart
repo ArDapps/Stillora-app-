@@ -6,6 +6,7 @@ import '../../../core/design/stillora_colors.dart';
 import '../../../core/design/stillora_spacing.dart';
 import '../pdf_layout.dart';
 import '../pdf_page_source.dart';
+import '../../../core/i18n/app_strings.dart';
 
 /// One row of the page list: where it lands in the finished document, what it
 /// will look like, and the controls to turn or drop it.
@@ -63,10 +64,7 @@ class PdfPageRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          if (dragHandle != null) ...[
-            dragHandle!,
-            const SizedBox(width: 2),
-          ],
+          if (dragHandle != null) ...[dragHandle!, const SizedBox(width: 2)],
           _PageNumber(index + 1),
           const SizedBox(width: StilloraSpacing.xs),
           _Thumbnail(page: page),
@@ -89,7 +87,7 @@ class PdfPageRow extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   '${fromPdf ? 'PDF page' : 'Image'} · '
-                  '${pageSizeLabel(page, sheet)}'
+                  '${pageSizeLabel(page, sheet, context.strings)}'
                   '${page.quarterTurns == 0 ? '' : ' · ${page.quarterTurns * 90}°'}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -103,27 +101,27 @@ class PdfPageRow extends StatelessWidget {
           ),
           _RowAction(
             icon: Icons.rotate_left_rounded,
-            tooltip: 'Rotate left',
+            tooltip: context.strings.pdfRotateLeft,
             onTap: enabled ? () => onRotate(-1) : null,
           ),
           _RowAction(
             icon: Icons.rotate_right_rounded,
-            tooltip: 'Rotate right',
+            tooltip: context.strings.pdfRotateRight,
             onTap: enabled ? () => onRotate(1) : null,
           ),
           _RowAction(
             icon: Icons.keyboard_arrow_up_rounded,
-            tooltip: 'Move up',
+            tooltip: context.strings.pdfMoveUp,
             onTap: enabled && index > 0 ? () => onShift(-1) : null,
           ),
           _RowAction(
             icon: Icons.keyboard_arrow_down_rounded,
-            tooltip: 'Move down',
+            tooltip: context.strings.pdfMoveDown,
             onTap: enabled && index < total - 1 ? () => onShift(1) : null,
           ),
           _RowAction(
             icon: Icons.close_rounded,
-            tooltip: 'Remove page',
+            tooltip: context.strings.pdfRemovePage,
             danger: true,
             onTap: enabled ? onRemove : null,
           ),

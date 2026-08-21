@@ -14,6 +14,7 @@ import '../../core/design/stillora_surface.dart';
 import '../../core/widgets/desktop_shell.dart';
 import 'editor_state.dart';
 import 'voice_narration_screen.dart';
+import '../../core/i18n/app_strings.dart';
 
 class AddAudioScreen extends ConsumerStatefulWidget {
   const AddAudioScreen({super.key});
@@ -55,7 +56,7 @@ class _AddAudioScreenState extends ConsumerState<AddAudioScreen> {
     final hasNarration = editor.audioIsNarration && hasAudio;
 
     return SidebarScaffold(
-      desktopTitle: 'Add Soundtrack',
+      desktopTitle: context.strings.edAddSoundtrack,
       appBar: AppBar(leading: const BackButton()),
       body: DecoratedBox(
         decoration: BoxDecoration(gradient: stilloraBackgroundGradient),
@@ -86,14 +87,13 @@ class _AddAudioScreenState extends ConsumerState<AddAudioScreen> {
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      'Add Soundtrack (Optional)',
+                      context.strings.edSoundtrack,
                       style: Theme.of(context).textTheme.headlineSmall
                           ?.copyWith(fontWeight: FontWeight.w800),
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Record your voice or upload an audio file to play with '
-                      'your video.',
+                      context.strings.edRecordOrUpload,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: StilloraColors.onSurfaceVariant,
                       ),
@@ -107,7 +107,7 @@ class _AddAudioScreenState extends ConsumerState<AddAudioScreen> {
                           child: OutlinedButton.icon(
                             onPressed: _openRecorder,
                             icon: const Icon(Icons.mic_rounded),
-                            label: const Text('Record voice'),
+                            label: Text(context.strings.edRecordVoice),
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -115,7 +115,7 @@ class _AddAudioScreenState extends ConsumerState<AddAudioScreen> {
                           child: OutlinedButton.icon(
                             onPressed: _pickAudio,
                             icon: const Icon(Icons.upload_file_rounded),
-                            label: const Text('Upload audio'),
+                            label: Text(context.strings.edUploadAudio),
                           ),
                         ),
                       ],
@@ -123,7 +123,9 @@ class _AddAudioScreenState extends ConsumerState<AddAudioScreen> {
                     if (hasAudio) ...[
                       const SizedBox(height: 20),
                       Text(
-                        hasNarration ? 'Your Narration' : 'Selected Track',
+                        hasNarration
+                            ? context.strings.edYourNarration
+                            : context.strings.edSelectedTrack,
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
@@ -147,7 +149,7 @@ class _AddAudioScreenState extends ConsumerState<AddAudioScreen> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            'Your audio is secured and used only for this conversion.',
+                            context.strings.edAudioSecured,
                             style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(
                                   color: StilloraColors.onSurfaceVariant,
@@ -164,7 +166,7 @@ class _AddAudioScreenState extends ConsumerState<AddAudioScreen> {
                 child: StilloraPrimaryButton(
                   onPressed: () => context.pop(),
                   icon: Icons.check_rounded,
-                  label: 'Continue',
+                  label: context.strings.edContinue,
                 ),
               ),
             ],
@@ -252,7 +254,10 @@ class _TrackCard extends StatelessWidget {
           const SizedBox(height: 16),
           Row(
             children: [
-              Text('Volume', style: Theme.of(context).textTheme.labelMedium),
+              Text(
+                context.strings.edVolume,
+                style: Theme.of(context).textTheme.labelMedium,
+              ),
               Expanded(
                 child: Slider(
                   value: volume,

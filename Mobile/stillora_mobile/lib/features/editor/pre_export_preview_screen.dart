@@ -11,6 +11,7 @@ import '../../core/widgets/desktop_shell.dart';
 import '../color/color_graded_preview.dart';
 import '../export/export_progress_screen.dart';
 import 'editor_state.dart';
+import '../../core/i18n/app_strings.dart';
 
 class PreExportPreviewScreen extends ConsumerWidget {
   const PreExportPreviewScreen({super.key});
@@ -23,17 +24,19 @@ class PreExportPreviewScreen extends ConsumerWidget {
     final aspectRatio = (editor.preset.width > 0 && editor.preset.height > 0)
         ? editor.preset.width / editor.preset.height
         : 9.0 / 16.0;
-    final fitLabel = editor.resizeMode == ResizeMode.fit ? 'Fit' : 'Fill';
+    final fitLabel = editor.resizeMode == ResizeMode.fit
+        ? context.strings.loopFit
+        : context.strings.loopFill;
 
     return SidebarScaffold(
-      desktopTitle: 'Preview',
+      desktopTitle: context.strings.edPreview,
       appBar: AppBar(
-        title: const Text('Preview'),
+        title: Text(context.strings.edPreview),
         actions: [
           IconButton(
             icon: const Icon(Icons.ios_share_rounded),
             onPressed: null,
-            tooltip: 'Export first to share',
+            tooltip: context.strings.edExportFirstToShare,
           ),
         ],
       ),
@@ -77,42 +80,42 @@ class PreExportPreviewScreen extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Text(
-                            'Project Summary',
+                            context.strings.edProjectSummary,
                             style: Theme.of(context).textTheme.titleMedium
                                 ?.copyWith(fontWeight: FontWeight.w800),
                           ),
                           const SizedBox(height: 12),
                           _SummaryRow(
                             icon: Icons.timer_outlined,
-                            label: 'Duration',
+                            label: context.strings.edDuration,
                             value: '${editor.totalDurationSeconds}s',
                           ),
                           _SummaryRow(
                             icon: Icons.fit_screen_rounded,
-                            label: 'Fit',
+                            label: context.strings.loopFit,
                             value: fitLabel,
                           ),
                           _SummaryRow(
                             icon: Icons.photo_size_select_actual_outlined,
-                            label: 'Resolution',
+                            label: context.strings.exportResolution,
                             value:
                                 '${editor.preset.ratioLabel} · '
                                 '${editor.outputResolution.width}×${editor.outputResolution.height}',
                           ),
                           _SummaryRow(
                             icon: Icons.high_quality_outlined,
-                            label: 'Quality',
+                            label: context.strings.toolQuality,
                             value: editor.exportQuality.label,
                           ),
                           _SummaryRow(
                             icon: Icons.sd_storage_outlined,
-                            label: 'Est. size',
+                            label: context.strings.edEstSize,
                             value:
                                 '≈ ${formatFileSize(editor.estimatedExportBytes)}',
                           ),
                           _SummaryRow(
                             icon: Icons.insert_drive_file_outlined,
-                            label: 'File Type',
+                            label: context.strings.edFileType,
                             value: 'MP4',
                             isLast: true,
                           ),
@@ -127,7 +130,7 @@ class PreExportPreviewScreen extends ConsumerWidget {
                 child: StilloraPrimaryButton(
                   onPressed: () => context.push(ExportProgressScreen.routePath),
                   icon: Icons.ios_share_rounded,
-                  label: 'Export MP4',
+                  label: context.strings.edExportMp4,
                 ),
               ),
             ],
@@ -278,8 +281,7 @@ class _SummaryRow extends StatelessWidget {
             ],
           ),
         ),
-        if (!isLast)
-          Divider(height: 0, color: StilloraColors.glassStroke),
+        if (!isLast) Divider(height: 0, color: StilloraColors.glassStroke),
       ],
     );
   }

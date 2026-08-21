@@ -4,6 +4,7 @@ import '../../../core/design/render_components.dart';
 import '../../../core/design/stillora_colors.dart';
 import '../../../core/design/stillora_spacing.dart';
 import '../html_to_video_options.dart';
+import '../../../core/i18n/app_strings.dart';
 
 class ModeSelector extends StatelessWidget {
   const ModeSelector({super.key, required this.mode, required this.onChanged});
@@ -14,7 +15,11 @@ class ModeSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return RenderPillSegmented(
-      options: const ['Paste', 'File', 'URL'],
+      options: [
+        context.strings.htmlPaste,
+        context.strings.htmlFile,
+        context.strings.htmlUrl,
+      ],
       selectedIndex: InputMode.values.indexOf(mode),
       onSelected: (i) => onChanged(InputMode.values[i]),
     );
@@ -78,8 +83,8 @@ class HtmlSourceInput extends StatelessWidget {
         );
       case InputMode.file:
         return RenderDropZone(
-          title: pickedFileName ?? 'Drop an .html file',
-          hint: 'or click to browse · .html .htm',
+          title: pickedFileName ?? context.strings.htmlDropFile,
+          hint: context.strings.htmlDropFileHint,
           icon: Icons.description_outlined,
           onTap: onPickFile,
         );

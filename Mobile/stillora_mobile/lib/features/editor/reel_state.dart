@@ -1,3 +1,4 @@
+import '../../core/i18n/app_strings.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -18,6 +19,7 @@ import 'editor_state.dart'
     show MediaKind, estimateExportBytes, mediaKindForPath;
 import 'local_editor_media_store.dart';
 import 'video_preset.dart';
+import '../../core/pro/pro_gate.dart';
 
 const _reelVideoExtensions = {
   'mp4',
@@ -35,14 +37,21 @@ const _reelMediaExtensions = [..._reelImageExtensions, ..._reelVideoExtensions];
 enum ReelMockup { none, iphoneTitanium, androidGraphite }
 
 extension ReelMockupMeta on ReelMockup {
-  String get label => switch (this) {
-    ReelMockup.none => 'Layer reel',
+  String label(AppStrings s) => switch (this) {
+    ReelMockup.none => s.rlLayerReel,
     ReelMockup.iphoneTitanium => 'iPhone 3D',
     ReelMockup.androidGraphite => 'Android 3D',
   };
 
+  /// English short form — also what the stored export record uses.
   String get shortLabel => switch (this) {
     ReelMockup.none => 'Layers',
+    ReelMockup.iphoneTitanium => 'iPhone',
+    ReelMockup.androidGraphite => 'Android',
+  };
+
+  String shortLabelOf(AppStrings s) => switch (this) {
+    ReelMockup.none => s.rlLayers,
     ReelMockup.iphoneTitanium => 'iPhone',
     ReelMockup.androidGraphite => 'Android',
   };
@@ -303,6 +312,11 @@ class ReelController extends Notifier<ReelState> {
     final mediaPaths = await _mediaStore.materializeMediaPaths([base.path]);
     if (mediaPaths.isEmpty) return null;
     final audioPath = await _mediaStore.materializeAudioPath(state.audioPath);
+    // Free exports top out at 720p. Clamp here, not just in the picker, so the
+    // tier is enforced on the output even when the picker never got built.
+    state = state.copyWith(
+      exportQuality: entitledQuality(ref, state.exportQuality)!,
+    );
     final res = state.outputResolution;
     final duration = state.outputDurationSeconds <= 0
         ? 5

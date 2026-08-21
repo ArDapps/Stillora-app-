@@ -14,6 +14,7 @@ import '../../core/design/stillora_spacing.dart';
 import '../../core/design/stillora_surface.dart';
 import '../../core/widgets/desktop_shell.dart';
 import 'widgets/voice_narration_widgets.dart';
+import '../../core/i18n/app_strings.dart';
 
 enum _Phase { idle, permissionDenied, recording, paused, recorded }
 
@@ -168,7 +169,7 @@ class _VoiceNarrationScreenState extends ConsumerState<VoiceNarrationScreen> {
     } catch (e, s) {
       debugPrint('[VoiceNarration] start failed: $e\n$s');
       if (mounted) {
-        _showError('Recording could not start: $e');
+        _showError('${context.strings.edRecordingFailed}: $e');
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -280,8 +281,8 @@ class _VoiceNarrationScreenState extends ConsumerState<VoiceNarrationScreen> {
   @override
   Widget build(BuildContext context) {
     return SidebarScaffold(
-      desktopTitle: 'Voice Narration',
-      appBar: AppBar(title: const Text('Voice Narration')),
+      desktopTitle: context.strings.edVoiceNarration,
+      appBar: AppBar(title: Text(context.strings.edVoiceNarration)),
       body: DecoratedBox(
         decoration: BoxDecoration(gradient: stilloraBackgroundGradient),
         child: SafeArea(
@@ -318,15 +319,14 @@ class _VoiceNarrationScreenState extends ConsumerState<VoiceNarrationScreen> {
         const VoiceNarrationMicCircle(active: false),
         const SizedBox(height: StilloraSpacing.lg),
         Text(
-          'Record your voice',
+          context.strings.edRecordYourVoice,
           style: Theme.of(
             context,
           ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: StilloraSpacing.xs),
         Text(
-          'Tap the button and start speaking. You can pause, re-record, or '
-          'remove it before adding it to your video.',
+          context.strings.edRecordingHint,
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: StilloraColors.onSurfaceVariant,
@@ -336,7 +336,7 @@ class _VoiceNarrationScreenState extends ConsumerState<VoiceNarrationScreen> {
         StilloraPrimaryButton(
           onPressed: _busy ? null : _startRecording,
           icon: Icons.fiber_manual_record_rounded,
-          label: 'Start Recording',
+          label: context.strings.edStartRecording,
         ),
       ],
     );
@@ -356,7 +356,7 @@ class _VoiceNarrationScreenState extends ConsumerState<VoiceNarrationScreen> {
         ),
         const SizedBox(height: StilloraSpacing.xs),
         Text(
-          isPaused ? 'Paused' : 'Recording…',
+          isPaused ? context.strings.edPaused : context.strings.edRecording,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: StilloraColors.onSurfaceVariant,
           ),
@@ -372,7 +372,9 @@ class _VoiceNarrationScreenState extends ConsumerState<VoiceNarrationScreen> {
                 icon: Icon(
                   isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
                 ),
-                label: Text(isPaused ? 'Resume' : 'Pause'),
+                label: Text(
+                  isPaused ? context.strings.edResume : context.strings.edPause,
+                ),
               ),
             ),
             const SizedBox(width: StilloraSpacing.sm),
@@ -380,7 +382,7 @@ class _VoiceNarrationScreenState extends ConsumerState<VoiceNarrationScreen> {
               child: FilledButton.icon(
                 onPressed: _stop,
                 icon: const Icon(Icons.stop_rounded),
-                label: const Text('Stop'),
+                label: Text(context.strings.edStop),
               ),
             ),
           ],
@@ -389,7 +391,7 @@ class _VoiceNarrationScreenState extends ConsumerState<VoiceNarrationScreen> {
         TextButton.icon(
           onPressed: _cancel,
           icon: const Icon(Icons.close_rounded),
-          label: const Text('Cancel'),
+          label: Text(context.strings.cancel),
         ),
       ],
     );

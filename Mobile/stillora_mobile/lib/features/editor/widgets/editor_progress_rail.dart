@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/i18n/app_strings.dart';
 import '../../../core/design/stillora_colors.dart';
 import '../../../core/design/stillora_glow.dart';
 import '../../../core/design/stillora_spacing.dart';
@@ -16,21 +17,21 @@ class ProgressRail extends StatelessWidget {
       children: [
         _ProgressStep(
           index: '1',
-          label: 'Upload',
+          label: context.strings.edUpload,
           color: StilloraColors.brandMagenta,
           compact: compact,
         ),
         _ProgressLine(compact: compact),
         _ProgressStep(
           index: '2',
-          label: 'Audio',
+          label: context.strings.edAudio,
           color: StilloraColors.accent,
           compact: compact,
         ),
         _ProgressLine(compact: compact),
         _ProgressStep(
           index: '3',
-          label: 'Export',
+          label: context.strings.edExport,
           color: StilloraColors.brandCyan,
           compact: compact,
         ),

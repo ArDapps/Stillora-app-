@@ -4,6 +4,7 @@ import '../../../core/design/stillora_colors.dart';
 import '../../../core/design/stillora_spacing.dart';
 import '../../../core/design/render_components.dart';
 import '../../audio/audio_source.dart';
+import '../../../core/i18n/app_strings.dart';
 
 /// Step 5: the optional soundtrack / voice-over muxed onto the render.
 class AudioStepCard extends StatelessWidget {
@@ -26,10 +27,9 @@ class AudioStepCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return RenderStepCard(
       number: '5',
-      title: 'Audio',
+      title: context.strings.htmlAudio,
       trailing: const RenderTagPill('optional'),
-      footer:
-          'Voice-over or music mixed onto the video · trimmed to its length',
+      footer: context.strings.htmlAudioHint,
       child: hasAudio
           ? Material(
               color: StilloraColors.accent.withValues(alpha: 0.12),
@@ -53,7 +53,7 @@ class AudioStepCard extends StatelessWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        audioName ?? 'Audio',
+                        audioName ?? context.strings.htmlAudio,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -65,7 +65,7 @@ class AudioStepCard extends StatelessWidget {
                     IconButton(
                       onPressed: converting ? null : onRemove,
                       icon: const Icon(Icons.delete_outline_rounded, size: 20),
-                      tooltip: 'Remove audio',
+                      tooltip: context.strings.htmlRemoveAudio,
                       color: StilloraColors.onSurfaceVariant,
                     ),
                   ],

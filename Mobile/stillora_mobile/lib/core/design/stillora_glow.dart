@@ -120,14 +120,21 @@ class StilloraGlowButton extends StatelessWidget {
                             : StilloraColors.onSurfaceVariant,
                       ),
                       const SizedBox(width: StilloraSpacing.xs),
-                      Text(
-                        label,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: enabled
-                              ? Colors.white
-                              : StilloraColors.onSurfaceVariant,
+                      // Flexible, not bare: labels carry variable content —
+                      // a localized store price, a file name — and a long one
+                      // used to overflow the row on a narrow phone.
+                      Flexible(
+                        child: Text(
+                          label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: enabled
+                                ? Colors.white
+                                : StilloraColors.onSurfaceVariant,
+                          ),
                         ),
                       ),
                     ],

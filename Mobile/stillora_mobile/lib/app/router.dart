@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/analytics/usage_tracker.dart';
+import '../core/pro/pro_gate.dart';
 import '../features/editor/add_audio_screen.dart';
 import '../features/editor/choose_preset_screen.dart';
 import '../features/editor/editor_screen.dart';
@@ -14,6 +15,7 @@ import '../features/export/export_progress_screen.dart';
 import '../features/gallery/gallery_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
 import '../features/preview/preview_screen.dart';
+import '../features/pro/pro_screen.dart';
 import '../features/profile/profile_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/splash/splash_screen.dart';
@@ -84,6 +86,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: SettingsScreen.routePath,
         builder: (context, state) => const SettingsScreen(),
+      ),
+      // Contextual paywall. Pushed (never redirected to) by gated controls,
+      // which pass the triggering feature as `extra` so the page can say why
+      // it opened.
+      GoRoute(
+        path: ProScreen.routePath,
+        builder: (context, state) => ProScreen(
+          reason: state.extra is ProFeature
+              ? state.extra! as ProFeature
+              : ProFeature.proMenu,
+        ),
       ),
     ],
   );

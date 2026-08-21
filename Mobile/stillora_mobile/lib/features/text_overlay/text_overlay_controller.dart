@@ -1,3 +1,4 @@
+import '../../core/i18n/app_strings.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -19,6 +20,7 @@ import '../gallery/local_export_record.dart';
 import 'text_layer.dart';
 import 'text_layer_renderer.dart';
 import 'text_overlay_state.dart';
+import '../../core/pro/pro_gate.dart';
 
 const _txtVideoExtensions = {
   'mp4',
@@ -48,6 +50,13 @@ class TextOverlayController extends Notifier<TextOverlayState> {
   Future<void> pickBaseVideo() async {
     final path = await _pickVideoPath();
     if (path == null) return;
+    await loadBaseVideo(path);
+  }
+
+  /// Loads a video from an already-chosen [path], separated from [pickBaseVideo] so
+  /// the source of the file (picker, drag-and-drop, a screenshot fixture) is
+  /// independent of what happens to it afterwards.
+  Future<void> loadBaseVideo(String path) async {
     final local = await _mediaStore.materializePath(
       path,
       kind: EditorMediaStoreKind.media,
@@ -65,23 +74,27 @@ class TextOverlayController extends Notifier<TextOverlayState> {
 
   /// Adds a new text layer, optionally seeded from a [preset]. It spans the
   /// whole clip by default and is centred on the frame.
-  void addText([TextPreset? preset]) {
+  void addText(AppStrings strings, [TextPreset? preset]) {
     if (!state.hasBase) return;
     final full = state.baseDurationSeconds.toDouble();
-    final layer = _seedLayer(preset, full);
+    final layer = _seedLayer(strings, preset, full);
     state = state.copyWith(
       layers: [...state.layers, layer],
       selected: state.layers.length,
     );
   }
 
-  TextLayer _seedLayer(TextPreset? preset, double fullWindow) {
+  TextLayer _seedLayer(
+    AppStrings strings,
+    TextPreset? preset,
+    double fullWindow,
+  ) {
     final id = _nextId();
     switch (preset) {
       case TextPreset.title:
         return TextLayer(
           id: id,
-          text: preset!.seedText,
+          text: preset!.seedText(strings),
           y: 0.28,
           fontScale: 0.13,
           fontWeight: FontWeight.w900,
@@ -91,7 +104,7 @@ class TextOverlayController extends Notifier<TextOverlayState> {
       case TextPreset.subtitle:
         return TextLayer(
           id: id,
-          text: preset!.seedText,
+          text: preset!.seedText(strings),
           y: 0.44,
           fontScale: 0.07,
           fontWeight: FontWeight.w600,
@@ -101,7 +114,7 @@ class TextOverlayController extends Notifier<TextOverlayState> {
       case TextPreset.caption:
         return TextLayer(
           id: id,
-          text: preset!.seedText,
+          text: preset!.seedText(strings),
           y: 0.86,
           fontScale: 0.045,
           fontWeight: FontWeight.w500,
@@ -111,7 +124,7 @@ class TextOverlayController extends Notifier<TextOverlayState> {
       case TextPreset.cta:
         return TextLayer(
           id: id,
-          text: preset!.seedText,
+          text: preset!.seedText(strings),
           y: 0.8,
           fontScale: 0.06,
           fontWeight: FontWeight.w800,
@@ -120,7 +133,7 @@ class TextOverlayController extends Notifier<TextOverlayState> {
           end: fullWindow,
         );
       case null:
-        return TextLayer(id: id, end: fullWindow);
+        return TextLayer(id: id, text: strings.txtYourText, end: fullWindow);
     }
   }
 
@@ -215,6 +228,9 @@ class TextOverlayController extends Notifier<TextOverlayState> {
     ]);
     if (basePaths.isEmpty) return null;
     final basePath = basePaths.first;
+    // Free exports top out at 720p. Clamp here, not just in the picker, so the
+    // tier is enforced on the output even when the picker never got built.
+    setQuality(entitledQuality(ref, state.quality));
     final res = state.outputResolution;
     final duration = state.baseDurationSeconds <= 0
         ? 5

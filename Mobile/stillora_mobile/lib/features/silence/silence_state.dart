@@ -17,6 +17,7 @@ import '../editor/video_preset.dart';
 import '../export/export_controller.dart' show videoEngineProvider;
 import '../gallery/gallery_controller.dart';
 import '../gallery/local_export_record.dart';
+import '../../core/pro/pro_gate.dart';
 
 class SilenceState extends Equatable {
   const SilenceState({
@@ -142,6 +143,13 @@ class SilenceController extends Notifier<SilenceState> {
   Future<void> pickVideo() async {
     final path = await _pickVideoPath();
     if (path == null) return;
+    await loadVideo(path);
+  }
+
+  /// Loads a video from an already-chosen [path], separated from [pickVideo] so
+  /// the source of the file (picker, drag-and-drop, a screenshot fixture) is
+  /// independent of what happens to it afterwards.
+  Future<void> loadVideo(String path) async {
     final local = await _mediaStore.materializePath(
       path,
       kind: EditorMediaStoreKind.media,
@@ -224,6 +232,9 @@ class SilenceController extends Notifier<SilenceState> {
   Future<engine.ExportResult?> run() async {
     final path = state.videoPath;
     if (path == null) return null;
+    // Free exports top out at 720p. Clamp here, not just in the picker, so the
+    // tier is enforced on the output even when the picker never got built.
+    state = state.copyWith(quality: entitledQuality(ref, state.quality));
     final res = state.outputResolution;
     final videoEngine = ref.read(videoEngineProvider);
     final base = await videoEngine.removeSilence(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/i18n/app_strings.dart';
 import '../../core/auth/auth_controller.dart';
 import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_glow.dart';
@@ -56,10 +57,8 @@ class _RegistrationSheetState extends ConsumerState<RegistrationSheet> {
     return [
       _Header(
         icon: Icons.mic_rounded,
-        title: 'Unlock Voice Narration',
-        subtitle:
-            'Sign in to record your voice and add a personal narration to your '
-            'videos. Your recording stays on your device.',
+        title: context.strings.authUnlockNarration,
+        subtitle: context.strings.authUnlockNarrationBody,
       ),
       const SizedBox(height: StilloraSpacing.md),
       if (appleSignInSupported) ...[
@@ -77,12 +76,12 @@ class _RegistrationSheetState extends ConsumerState<RegistrationSheet> {
       ),
       if (auth.hasError) ...[
         const SizedBox(height: StilloraSpacing.sm),
-        AuthErrorBanner(message: authErrorMessage(auth.error)),
+        AuthErrorBanner(message: authErrorMessage(context.strings, auth.error)),
       ],
       const SizedBox(height: StilloraSpacing.xs),
       TextButton(
         onPressed: loading ? null : () => Navigator.of(context).pop(false),
-        child: const Text('Not Now'),
+        child: Text(context.strings.authNotNow),
       ),
     ];
   }
@@ -91,15 +90,14 @@ class _RegistrationSheetState extends ConsumerState<RegistrationSheet> {
     return [
       _Header(
         icon: Icons.check_circle_rounded,
-        title: 'Voice Narration Unlocked',
-        subtitle:
-            'You can now record your voice and use it in your next video.',
+        title: context.strings.authNarrationUnlocked,
+        subtitle: context.strings.authNarrationUnlockedBody,
       ),
       const SizedBox(height: StilloraSpacing.md),
       FilledButton.icon(
         onPressed: () => Navigator.of(context).pop(true),
         icon: const Icon(Icons.mic_rounded),
-        label: const Text('Start Recording'),
+        label: Text(context.strings.authStartRecording),
         style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
       ),
     ];

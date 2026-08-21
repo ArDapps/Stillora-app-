@@ -6,6 +6,7 @@ import '../../../core/design/stillora_surface.dart';
 import '../text_layer.dart';
 import '../text_overlay_controller.dart';
 import '../text_overlay_state.dart';
+import '../../../core/i18n/app_strings.dart';
 
 /// "Add Text" plus one-tap style presets (Title / Subtitle / Caption / CTA).
 class AddTextRow extends StatelessWidget {
@@ -19,9 +20,9 @@ class AddTextRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         OutlinedButton.icon(
-          onPressed: () => controller.addText(),
+          onPressed: () => controller.addText(context.strings),
           icon: const Icon(Icons.add_rounded),
-          label: const Text('Add text'),
+          label: Text(context.strings.txtAddText),
         ),
         const SizedBox(height: 8),
         Wrap(
@@ -31,8 +32,8 @@ class AddTextRow extends StatelessWidget {
             for (final preset in TextPreset.values)
               ActionChip(
                 avatar: const Icon(Icons.title_rounded, size: 16),
-                label: Text(preset.label),
-                onPressed: () => controller.addText(preset),
+                label: Text(preset.label(context.strings)),
+                onPressed: () => controller.addText(context.strings, preset),
               ),
           ],
         ),
@@ -57,7 +58,10 @@ class TimelineStrip extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Timeline', style: Theme.of(context).textTheme.labelMedium),
+        Text(
+          context.strings.txtTimeline,
+          style: Theme.of(context).textTheme.labelMedium,
+        ),
         const SizedBox(height: 8),
         for (var i = 0; i < st.layers.length; i++)
           Padding(
@@ -149,7 +153,10 @@ class LayerList extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Layers', style: Theme.of(context).textTheme.labelMedium),
+        Text(
+          context.strings.txtLayers,
+          style: Theme.of(context).textTheme.labelMedium,
+        ),
         const SizedBox(height: 8),
         for (var i = 0; i < st.layers.length; i++)
           Padding(
@@ -170,7 +177,7 @@ class LayerList extends StatelessWidget {
                   Expanded(
                     child: Text(
                       st.layers[i].text.isEmpty
-                          ? 'Empty text'
+                          ? context.strings.txtEmptyText
                           : st.layers[i].text,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -184,7 +191,7 @@ class LayerList extends StatelessWidget {
                         ? null
                         : () => controller.reorder(i, i - 1),
                     icon: const Icon(Icons.arrow_upward_rounded, size: 18),
-                    tooltip: 'Move up',
+                    tooltip: context.strings.txtMoveUp,
                     visualDensity: VisualDensity.compact,
                     color: StilloraColors.onSurfaceVariant,
                   ),
@@ -193,21 +200,21 @@ class LayerList extends StatelessWidget {
                         ? null
                         : () => controller.reorder(i, i + 2),
                     icon: const Icon(Icons.arrow_downward_rounded, size: 18),
-                    tooltip: 'Move down',
+                    tooltip: context.strings.txtMoveDown,
                     visualDensity: VisualDensity.compact,
                     color: StilloraColors.onSurfaceVariant,
                   ),
                   IconButton(
                     onPressed: () => controller.duplicateLayer(i),
                     icon: const Icon(Icons.copy_rounded, size: 18),
-                    tooltip: 'Duplicate',
+                    tooltip: context.strings.txtDuplicate,
                     visualDensity: VisualDensity.compact,
                     color: StilloraColors.onSurfaceVariant,
                   ),
                   IconButton(
                     onPressed: () => controller.removeLayer(i),
                     icon: const Icon(Icons.delete_outline_rounded, size: 18),
-                    tooltip: 'Remove',
+                    tooltip: context.strings.txtRemove,
                     visualDensity: VisualDensity.compact,
                     color: StilloraColors.onSurfaceVariant,
                   ),

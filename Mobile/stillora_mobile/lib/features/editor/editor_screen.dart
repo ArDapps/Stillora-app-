@@ -13,6 +13,7 @@ import 'pre_export_preview_screen.dart';
 import 'widgets/desktop_editor_workspace.dart';
 import 'widgets/editor_shared.dart';
 import 'widgets/mobile_editor_flow.dart';
+import '../../core/i18n/app_strings.dart';
 
 class EditorScreen extends ConsumerWidget {
   const EditorScreen({super.key});
@@ -22,7 +23,7 @@ class EditorScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Create')),
+      appBar: AppBar(title: Text(context.strings.create)),
       body: const EditorView(),
     );
   }
@@ -69,18 +70,16 @@ class EditorView extends ConsumerWidget {
     final shouldReset = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Start over?'),
-        content: const Text(
-          'This clears your media, audio, and settings. This cannot be undone.',
-        ),
+        title: Text(context.strings.startOverConfirm),
+        content: Text(context.strings.edClearWarning),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
+            child: Text(context.strings.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Reset'),
+            child: Text(context.strings.reset),
           ),
         ],
       ),

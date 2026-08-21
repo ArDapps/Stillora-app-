@@ -1,13 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/design/stillora_colors.dart';
+import '../../core/i18n/app_strings.dart';
 import '../../core/design/stillora_glow.dart';
 import '../../core/design/stillora_spacing.dart';
 import '../../core/design/stillora_surface.dart';
 import '../../core/storage/app_preferences.dart';
 import '../../core/widgets/stillora_mark.dart';
+import '../pro/paywall_scheduler.dart';
 import '../tabs/app_tabs_screen.dart';
 
 class _OnboardingSlide {
@@ -24,28 +28,26 @@ class _OnboardingSlide {
   final Color color;
 }
 
-// A getter rather than a `const`/`final` list: the slide accents come from the
-// active palette, so they have to be rebuilt when the theme flips.
-List<_OnboardingSlide> get _slides => [
+// A function rather than a `const`/`final` list: the slide accents come from
+// the active palette, and the copy comes from the active language, so both have
+// to be rebuilt when either flips.
+List<_OnboardingSlide> _buildSlides(AppStrings s) => [
   _OnboardingSlide(
     icon: Icons.perm_media_rounded,
-    title: 'Upload your media',
-    body:
-        'Pick one or many photos and videos. Drag to reorder them into the perfect sequence.',
+    title: s.obUploadTitle,
+    body: s.obUploadBody,
     color: StilloraColors.brandMagenta,
   ),
   _OnboardingSlide(
     icon: Icons.timer_rounded,
-    title: 'Time each clip',
-    body:
-        'Set how long the whole video runs, or tap any clip to give it its own duration.',
+    title: s.obTimeTitle,
+    body: s.obTimeBody,
     color: StilloraColors.accent,
   ),
   _OnboardingSlide(
     icon: Icons.music_note_rounded,
-    title: 'Add sound & export',
-    body:
-        'Drop in an optional soundtrack, choose a format, and export a ready-to-share MP4.',
+    title: s.obExportTitle,
+    body: s.obExportBody,
     color: StilloraColors.brandCyan,
   ),
 ];
@@ -71,14 +73,20 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     super.dispose();
   }
 
-  bool get _isLast => _page == _slides.length - 1;
+  bool get _isLast => _page == _buildSlides(context.strings).length - 1;
 
   Future<void> _finish() async {
     await ref.read(appPreferencesProvider).setHasSeenOnboarding(true);
     if (!mounted) {
       return;
     }
+    // Captured before the `go()` below, which takes this screen off the stack.
+    final router = GoRouter.of(context);
     context.go(AppTabsScreen.routePath);
+    // Pushed on top of Create, so dismissing it lands on the app rather than
+    // back here. Fires for Skip and Get started alike — both mean "onboarding
+    // is done", which is the moment the offer makes sense.
+    unawaited(showPaywallAfterOnboarding(router, ref));
   }
 
   void _next() {
@@ -94,6 +102,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final slides = _buildSlides(context.strings);
     return Scaffold(
       body: DecoratedBox(
         decoration: BoxDecoration(gradient: stilloraBackgroundGradient),
@@ -109,24 +118,24 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   ),
                   child: TextButton(
                     onPressed: _finish,
-                    child: const Text('Skip'),
+                    child: Text(context.strings.obSkip),
                   ),
                 ),
               ),
               Expanded(
                 child: PageView.builder(
                   controller: _controller,
-                  itemCount: _slides.length,
+                  itemCount: slides.length,
                   onPageChanged: (value) => setState(() => _page = value),
                   itemBuilder: (context, index) =>
-                      _SlideView(slide: _slides[index], showMark: index == 0),
+                      _SlideView(slide: slides[index], showMark: index == 0),
                 ),
               ),
               const SizedBox(height: StilloraSpacing.md),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  for (var i = 0; i < _slides.length; i++)
+                  for (var i = 0; i < slides.length; i++)
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 240),
                       margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -157,7 +166,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   icon: _isLast
                       ? Icons.auto_fix_high_rounded
                       : Icons.arrow_forward_rounded,
-                  label: _isLast ? 'Get started' : 'Next',
+                  label: _isLast
+                      ? context.strings.obGetStarted
+                      : context.strings.obNext,
                 ),
               ),
             ],
@@ -185,23 +196,7 @@ class _SlideView extends StatelessWidget {
             const StilloraMark(size: 56),
             const SizedBox(height: StilloraSpacing.lg),
           ],
-          Container(
-            width: 112,
-            height: 112,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: slide.color.withValues(alpha: 0.16),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: slide.color.withValues(alpha: 0.4),
-                  blurRadius: 32,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-            child: Icon(slide.icon, size: 52, color: slide.color),
-          ),
+          _AnimatedSlideIcon(icon: slide.icon, color: slide.color),
           const SizedBox(height: StilloraSpacing.lg),
           Text(
             slide.title,
@@ -220,6 +215,106 @@ class _SlideView extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// The onboarding slide icon: a halo that breathes continuously, plus a
+/// settle-in of the glyph itself.
+///
+/// The entrance replays whenever the icon changes, because each slide builds a
+/// new one — swiping therefore *feels* like arriving somewhere rather than
+/// sliding a static card. Both motions are suppressed under
+/// `MediaQuery.disableAnimations` (Reduce Motion), which leaves the same
+/// composition sitting still rather than a different layout.
+class _AnimatedSlideIcon extends StatefulWidget {
+  const _AnimatedSlideIcon({required this.icon, required this.color});
+
+  final IconData icon;
+  final Color color;
+
+  @override
+  State<_AnimatedSlideIcon> createState() => _AnimatedSlideIconState();
+}
+
+class _AnimatedSlideIconState extends State<_AnimatedSlideIcon>
+    with TickerProviderStateMixin {
+  /// Never-ending halo pulse.
+  late final AnimationController _halo = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2600),
+  );
+
+  /// One-shot entrance: the glyph scales up and fades in.
+  late final AnimationController _enter = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 520),
+  );
+
+  late final Animation<double> _scale = CurvedAnimation(
+    parent: _enter,
+    // A touch of overshoot so the glyph lands rather than merely appears.
+    curve: Curves.easeOutBack,
+  );
+  late final Animation<double> _fade = CurvedAnimation(
+    parent: _enter,
+    curve: Curves.easeOut,
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _halo.repeat(reverse: true);
+    _enter.forward();
+  }
+
+  @override
+  void didUpdateWidget(covariant _AnimatedSlideIcon oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.icon != widget.icon) _enter.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _halo.dispose();
+    _enter.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final still = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+
+    return AnimatedBuilder(
+      animation: Listenable.merge([_halo, _enter]),
+      builder: (context, child) {
+        final pulse = still ? 0.5 : _halo.value;
+        return Container(
+          width: 112,
+          height: 112,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: widget.color.withValues(alpha: 0.16),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: widget.color.withValues(alpha: 0.28 + pulse * 0.24),
+                blurRadius: 24 + pulse * 22,
+                spreadRadius: 1 + pulse * 4,
+              ),
+            ],
+          ),
+          child: Transform.scale(
+            scale: still ? 1 : 0.72 + _scale.value * 0.28,
+            child: Opacity(
+              opacity: still ? 1 : _fade.value.clamp(0.0, 1.0),
+              child: child,
+            ),
+          ),
+        );
+      },
+      // Built once and reused every frame — the glyph itself never changes.
+      child: Icon(widget.icon, size: 52, color: widget.color),
     );
   }
 }

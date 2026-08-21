@@ -10,6 +10,7 @@ import '../../core/design/stillora_spacing.dart';
 import '../../core/design/stillora_surface.dart';
 import '../../core/widgets/desktop_shell.dart';
 import 'editor_state.dart';
+import '../../core/i18n/app_strings.dart';
 
 class UploadMediaScreen extends ConsumerWidget {
   const UploadMediaScreen({super.key});
@@ -22,7 +23,7 @@ class UploadMediaScreen extends ConsumerWidget {
     final controller = ref.read(editorControllerProvider.notifier);
 
     return SidebarScaffold(
-      desktopTitle: 'Upload Media',
+      desktopTitle: context.strings.edUploadMedia,
       appBar: AppBar(
         leading: const BackButton(),
         centerTitle: true,
@@ -46,13 +47,13 @@ class UploadMediaScreen extends ConsumerWidget {
                   padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
                   children: [
                     Text(
-                      'Upload Media',
+                      context.strings.edUploadMedia,
                       style: Theme.of(context).textTheme.headlineMedium
                           ?.copyWith(fontWeight: FontWeight.w800),
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Add photos, images, or a short clip to get started.',
+                      context.strings.edUploadIntro,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: StilloraColors.onSurfaceVariant,
                       ),
@@ -72,14 +73,14 @@ class UploadMediaScreen extends ConsumerWidget {
                       Row(
                         children: [
                           Text(
-                            'Selected Media (${editor.media.length})',
+                            '${context.strings.edSelectedMedia} (${editor.media.length})',
                             style: Theme.of(context).textTheme.titleSmall
                                 ?.copyWith(fontWeight: FontWeight.w700),
                           ),
                           const Spacer(),
                           TextButton(
                             onPressed: controller.pickMedia,
-                            child: const Text('Edit'),
+                            child: Text(context.strings.edEdit),
                           ),
                         ],
                       ),
@@ -90,10 +91,7 @@ class UploadMediaScreen extends ConsumerWidget {
                       ),
                     ],
                     const SizedBox(height: 20),
-                    const _PrivacyNote(
-                      text:
-                          'Your media stays on your device and is only used to create your video.',
-                    ),
+                    _PrivacyNote(text: context.strings.edMediaStaysLocal),
                   ],
                 ),
               ),
@@ -102,7 +100,7 @@ class UploadMediaScreen extends ConsumerWidget {
                 child: StilloraPrimaryButton(
                   onPressed: editor.hasMedia ? () => context.pop() : null,
                   icon: Icons.arrow_forward_rounded,
-                  label: 'Continue',
+                  label: context.strings.edContinue,
                 ),
               ),
             ],
@@ -142,19 +140,19 @@ class _UploadDropZone extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'Tap to upload\nor drag and drop',
+              context.strings.edTapToUpload,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 6),
             Text(
-              'Photos, images, or short clips',
+              context.strings.edPhotosOrClips,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: StilloraColors.onSurfaceVariant,
               ),
             ),
             Text(
-              'JPG, PNG, HEIC, MOV, MP4',
+              context.strings.edFileTypes,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: StilloraColors.onSurfaceVariant,
               ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/design/stillora_colors.dart';
+import '../../../core/i18n/app_strings.dart';
 
 /// A dependency-free colour picker: RGB sliders plus a hex field, with a live
 /// preview. Returns the chosen [Color] (opaque) via `Navigator.pop`.
@@ -58,7 +59,7 @@ class _ColorPickerDialogState extends State<ColorPickerDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       backgroundColor: StilloraColors.surfaceContainer,
-      title: const Text('Pick a colour'),
+      title: Text(context.strings.txtPickColour),
       content: SizedBox(
         width: 320,
         child: Column(
@@ -108,11 +109,11 @@ class _ColorPickerDialogState extends State<ColorPickerDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(context.strings.cancel),
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(_color),
-          child: const Text('Use colour'),
+          child: Text(context.strings.txtUseColour),
         ),
       ],
     );

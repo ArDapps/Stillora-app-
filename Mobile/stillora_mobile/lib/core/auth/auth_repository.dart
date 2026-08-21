@@ -1,3 +1,6 @@
+import '../i18n/app_locale.dart';
+import '../i18n/app_strings.dart';
+import '../i18n/language_controller.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
@@ -20,6 +23,7 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
     dio: ref.watch(dioProvider),
     tokenStorage: ref.watch(tokenStorageProvider),
     googleSignIn: GoogleSignIn.instance,
+    strings: () => AppStrings.of(ref.read(languageControllerProvider)),
   );
 });
 
@@ -28,13 +32,21 @@ class AuthRepository {
     required Dio dio,
     required TokenStorage tokenStorage,
     required GoogleSignIn googleSignIn,
+    AppStrings Function()? strings,
   }) : _dio = dio,
        _tokenStorage = tokenStorage,
-       _googleSignIn = googleSignIn;
+       _googleSignIn = googleSignIn,
+       _strings = strings ?? _englishStrings;
 
   final Dio _dio;
   final TokenStorage _tokenStorage;
   final GoogleSignIn _googleSignIn;
+
+  /// Resolved lazily so every failure message is worded in the language the
+  /// user is reading the app in, not the one active when the repo was built.
+  final AppStrings Function() _strings;
+
+  static AppStrings _englishStrings() => AppStrings.of(AppLanguage.english);
   static const _googleProfileScopes = ['openid', 'email', 'profile'];
 
   Future<AuthSession?> restoreSession() async {
@@ -94,7 +106,7 @@ class AuthRepository {
           );
       final accessToken = authorization.accessToken;
       if ((idToken == null || idToken.isEmpty) && accessToken.isEmpty) {
-        throw const AuthFailure('Google sign-in was cancelled.');
+        throw AuthFailure(_strings().authGoogleCancelled);
       }
 
       final response = await _dio.post<Map<String, dynamic>>(
@@ -109,7 +121,7 @@ class AuthRepository {
       final token = data['token'] as String?;
       final userJson = data['user'];
       if (token == null || userJson is! Map<String, dynamic>) {
-        throw const AuthFailure('Google sign-in failed.');
+        throw AuthFailure(_strings().authGoogleFailed);
       }
 
       await _tokenStorage.saveToken(token);
@@ -119,13 +131,13 @@ class AuthRepository {
     } on GoogleSignInException catch (error) {
       throw AuthFailure(_googleSignInMessage(error));
     } on PlatformException catch (error) {
-      throw AuthFailure(error.message ?? 'Google sign-in failed.');
+      throw AuthFailure(error.message ?? _strings().authGoogleFailed);
     } on DioException catch (error) {
       throw AuthFailure(
         error.response?.data is Map
             ? (error.response!.data as Map)['error'] as String? ??
-                  'Stillora could not verify your Google account.'
-            : 'Stillora could not verify your Google account.',
+                  _strings().authVerifyFailedGoogle
+            : _strings().authVerifyFailedGoogle,
       );
     }
   }
@@ -154,7 +166,7 @@ class AuthRepository {
       final token = data['token'] as String?;
       final userJson = data['user'];
       if (token == null || userJson is! Map<String, dynamic>) {
-        throw const AuthFailure('Google sign-in failed.');
+        throw AuthFailure(_strings().authGoogleFailed);
       }
 
       await _tokenStorage.saveToken(token);
@@ -165,22 +177,20 @@ class AuthRepository {
       throw AuthFailure(
         error.response?.data is Map
             ? (error.response!.data as Map)['error'] as String? ??
-                  'Stillora could not verify your Google account.'
-            : 'Stillora could not verify your Google account.',
+                  _strings().authVerifyFailedGoogle
+            : _strings().authVerifyFailedGoogle,
       );
     }
   }
 
   Future<AuthSession> signInWithApple() async {
     if (!Platform.isIOS && !Platform.isMacOS && !Platform.isAndroid) {
-      throw const AuthFailure(
-        'Sign in with Apple is not supported on this platform yet.',
-      );
+      throw AuthFailure(_strings().authAppleUnsupported);
     }
     if (Platform.isIOS || Platform.isMacOS) {
       final available = await SignInWithApple.isAvailable();
       if (!available) {
-        throw const AuthFailure('Sign in with Apple requires iOS 13 or later.');
+        throw AuthFailure(_strings().authAppleNeedsIos13);
       }
     }
 
@@ -206,7 +216,7 @@ class AuthRepository {
 
       final identityToken = credential.identityToken;
       if (identityToken == null || identityToken.isEmpty) {
-        throw const AuthFailure('Sign in with Apple failed. Please try again.');
+        throw AuthFailure(_strings().authAppleRetry);
       }
 
       // Apple sends name/email only on the very first authorization. Cache them
@@ -252,7 +262,7 @@ class AuthRepository {
       final token = data['token'] as String?;
       final userJson = data['user'];
       if (token == null || userJson is! Map<String, dynamic>) {
-        throw const AuthFailure('Sign in with Apple failed.');
+        throw AuthFailure(_strings().authAppleFailed);
       }
 
       await _tokenStorage.saveToken(token);
@@ -262,7 +272,7 @@ class AuthRepository {
     } on SignInWithAppleAuthorizationException catch (error) {
       throw AuthFailure(_appleSignInMessage(error));
     } on SignInWithAppleException {
-      throw const AuthFailure('Sign in with Apple failed. Please try again.');
+      throw AuthFailure(_strings().authAppleRetry);
     } on DioException catch (error) {
       throw AuthFailure(_dioMessage(error, fallbackProvider: 'Apple'));
     }
@@ -317,14 +327,13 @@ class AuthRepository {
 
   String _appleSignInMessage(SignInWithAppleAuthorizationException error) {
     if (error.code == AuthorizationErrorCode.canceled) {
-      return 'Sign in with Apple was cancelled.';
+      return _strings().authAppleCancelled;
     }
     if (error.code == AuthorizationErrorCode.notInteractive ||
         error.code == AuthorizationErrorCode.notHandled) {
-      return 'Sign in with Apple is unavailable right now. Please try again.';
+      return _strings().authAppleUnavailable;
     }
-    return 'Sign in with Apple failed. Please check your connection and '
-        'try again.';
+    return _strings().authAppleConnection;
   }
 
   String _dioMessage(DioException error, {required String fallbackProvider}) {
@@ -332,7 +341,9 @@ class AuthRepository {
     if (data is Map && data['error'] is String) {
       return data['error'] as String;
     }
-    return 'Stillora could not verify your $fallbackProvider account.';
+    return fallbackProvider == 'Apple'
+        ? _strings().authVerifyFailedApple
+        : _strings().authVerifyFailedGoogle;
   }
 
   static String _generateNonce([int length = 32]) {
@@ -347,7 +358,7 @@ class AuthRepository {
 
   String _googleSignInMessage(GoogleSignInException error) {
     if (error.code == GoogleSignInExceptionCode.canceled) {
-      return 'Google sign-in was cancelled.';
+      return _strings().authGoogleCancelled;
     }
 
     final description = error.description;
@@ -357,10 +368,10 @@ class AuthRepository {
 
     if (error.code == GoogleSignInExceptionCode.clientConfigurationError ||
         error.code == GoogleSignInExceptionCode.providerConfigurationError) {
-      return 'Google sign-in is not configured correctly for this app.';
+      return _strings().authGoogleMisconfigured;
     }
 
-    return 'Google sign-in failed. Please try again.';
+    return _strings().authGoogleRetry;
   }
 }
 

@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/design/preview_metrics.dart';
 import '../../../core/design/stillora_colors.dart';
 import '../../../core/design/stillora_spacing.dart';
 import '../../../core/widgets/render_panel.dart';
 import '../images_to_pdf_controller.dart';
 import '../pdf_import.dart';
 import 'pdf_page_row.dart';
+import '../../../core/i18n/app_strings.dart';
 
-/// Tallest the page list grows to inside the phone layout's scroll column —
-/// about five rows, enough to work with while keeping the setup cards below it
-/// within reach.
-const double _phoneListMax = 420;
+/// Tallest the page list grows to inside the phone/tablet scroll column —
+/// four or five rows, enough to work with while keeping the setup cards below
+/// it within reach. Shares the live-preview height budget so every section's
+/// stacked preview is about the same size.
+double _phoneListMax(BuildContext context) =>
+    mobilePreviewBoxHeight(context, chrome: 60);
 
 /// The document being assembled, top to bottom in export order.
 ///
@@ -86,7 +90,9 @@ class PdfPagesPanel extends ConsumerWidget {
               // would push "Page size" and the file name fifty rows down the
               // screen, so the list caps out and scrolls inside itself instead.
               : ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: _phoneListMax),
+                  constraints: BoxConstraints(
+                    maxHeight: _phoneListMax(context),
+                  ),
                   child: list,
                 ));
 
@@ -98,15 +104,15 @@ class PdfPagesPanel extends ConsumerWidget {
           children: [
             RenderTagPill(
               pages.isEmpty
-                  ? 'No pages yet'
-                  : '${pages.length} ${pages.length == 1 ? "page" : "pages"}',
+                  ? context.strings.pdfNoPages
+                  : context.strings.pdfPageCount(pages.length),
             ),
             const SizedBox(width: StilloraSpacing.base),
             if (pages.isNotEmpty)
               Expanded(
                 child: Text(
-                  '${state.imageCount} from images · '
-                  '${state.pdfPageCount} from PDFs',
+                  '${state.imageCount} ${context.strings.pdfFromImages} · '
+                  '${state.pdfPageCount} ${context.strings.pdfFromPdfs}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -142,8 +148,9 @@ class _EmptyQueue extends StatelessWidget {
   Widget build(BuildContext context) {
     final zone = RenderDropZone(
       icon: Icons.picture_as_pdf_outlined,
-      title: 'Add images or PDFs',
-      hint: 'JPG · PNG · WebP · HEIC · PDF — up to $kPdfMaxPages pages',
+      title: context.strings.pdfAddFiles,
+      hint:
+          '${context.strings.pdfAddFilesHint} — ${context.strings.pdfPageCount(kPdfMaxPages)}',
       onTap: onAdd,
     );
     return expand ? Expanded(child: Center(child: zone)) : zone;

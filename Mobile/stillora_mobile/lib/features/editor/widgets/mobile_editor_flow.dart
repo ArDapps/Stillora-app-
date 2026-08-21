@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/design/preview_metrics.dart';
 import '../../../core/design/stillora_colors.dart';
 import '../../../core/design/stillora_glow.dart';
 import '../../../core/design/stillora_spacing.dart';
@@ -10,12 +11,14 @@ import '../../../core/widgets/ad_widget.dart';
 import '../add_audio_screen.dart';
 import '../choose_preset_screen.dart';
 import '../editor_state.dart';
+import '../video_preset.dart';
 import '../upload_media_screen.dart';
 import 'editor_preview.dart';
 import 'editor_progress_rail.dart';
 import 'editor_shared.dart';
 import 'media_timeline.dart';
 import 'style_card.dart';
+import '../../../core/i18n/app_strings.dart';
 
 class MobileEditorFlow extends StatelessWidget {
   const MobileEditorFlow({
@@ -55,7 +58,7 @@ class MobileEditorFlow extends StatelessWidget {
             child: TextButton.icon(
               onPressed: onReset,
               icon: const Icon(Icons.restart_alt_rounded, size: 18),
-              label: const Text('Start over'),
+              label: Text(context.strings.startOver),
             ),
           ),
           const SizedBox(height: StilloraSpacing.xs),
@@ -69,20 +72,22 @@ class MobileEditorFlow extends StatelessWidget {
               ? Icons.mic_rounded
               : Icons.music_note_rounded,
           label: editor.audioPath == null
-              ? 'Add Soundtrack'
+              ? context.strings.edAddSoundtrack
               : editor.audioIsNarration
-              ? 'Voice narration'
+              ? context.strings.edVoiceNarration
               : _audioName(editor.audioPath!),
           subtitle: editor.audioPath == null
-              ? 'Soundtrack or voice narration'
-              : 'Tap to change',
+              ? context.strings.edSoundtrackOrNarration
+              : context.strings.edTapToChange,
           onTap: () => context.push(AddAudioScreen.routePath),
         ),
         const SizedBox(height: StilloraSpacing.xs),
         _StepRow(
           icon: Icons.aspect_ratio_rounded,
-          label: 'Choose Preset',
-          subtitle: '${editor.preset.label} · ${editor.preset.ratioLabel}',
+          label: context.strings.edChoosePreset,
+          subtitle:
+              '${editor.preset.labelOf(context.strings)} · '
+              '${editor.preset.ratioLabelOf(context.strings)}',
           onTap: () => context.push(ChoosePresetScreen.routePath),
         ),
         const SizedBox(height: StilloraSpacing.sm),
@@ -91,7 +96,7 @@ class MobileEditorFlow extends StatelessWidget {
         StilloraPrimaryButton(
           onPressed: editor.canExport ? onConvert : null,
           icon: Icons.auto_fix_high_rounded,
-          label: 'Create MP4',
+          label: context.strings.edCreateMp4,
         ),
         const SizedBox(height: StilloraSpacing.md),
         const AdSlotWidget(placement: 'USER_DASHBOARD_LEFT'),
@@ -149,7 +154,7 @@ class _StudioHeader extends StatelessWidget {
         ),
         const SizedBox(height: StilloraSpacing.xs),
         Text(
-          'Transform static memories into social videos in three simple steps.',
+          context.strings.edThreeSteps,
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
             color: StilloraColors.onSurfaceVariant,
@@ -250,7 +255,7 @@ class _MobilePreviewPanel extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'MP4 Preview',
+                      context.strings.edMp4Preview,
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     Text(
@@ -265,7 +270,7 @@ class _MobilePreviewPanel extends StatelessWidget {
               ),
               TextButton(
                 onPressed: () => context.push(ChoosePresetScreen.routePath),
-                child: const Text('Change'),
+                child: Text(context.strings.edChange),
               ),
             ],
           ),
@@ -276,8 +281,8 @@ class _MobilePreviewPanel extends StatelessWidget {
                 : () => context.push(UploadMediaScreen.routePath),
             child: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(
-                  maxHeight: 320,
+                constraints: BoxConstraints(
+                  maxHeight: mobilePreviewMaxHeight(context),
                   maxWidth: 400,
                 ),
                 child: AspectRatio(
@@ -309,7 +314,7 @@ class _MobilePreviewPanel extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: () => context.push(UploadMediaScreen.routePath),
                     icon: const Icon(Icons.add_rounded),
-                    label: const Text('Add more'),
+                    label: Text(context.strings.edAddMore),
                   ),
                 ),
                 const SizedBox(width: StilloraSpacing.xs),
@@ -317,7 +322,7 @@ class _MobilePreviewPanel extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: controller.pickMedia,
                     icon: const Icon(Icons.refresh_rounded),
-                    label: const Text('Replace'),
+                    label: Text(context.strings.edReplace),
                   ),
                 ),
               ],

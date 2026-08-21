@@ -1,6 +1,8 @@
 import 'package:equatable/equatable.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
+import '../../core/i18n/app_strings.dart';
+
 class VideoPreset extends Equatable {
   const VideoPreset({
     required this.id,
@@ -13,6 +15,8 @@ class VideoPreset extends Equatable {
   });
 
   final String id;
+
+  /// English fallback; [labelOf] returns the translated name.
   final String label;
   final int width;
   final int height;
@@ -86,6 +90,26 @@ const defaultVideoPreset = VideoPreset(
   icon: FontAwesomeIcons.instagram,
 );
 
+extension VideoPresetMeta on VideoPreset {
+  /// Translated preset name for the chips and summary rows.
+  String labelOf(AppStrings s) => switch (id) {
+    'reels' => s.vpReels,
+    'square' => s.vpSquarePost,
+    'portrait' => s.vpPortraitPost,
+    'landscape' => s.vpYoutube,
+    'original' => s.vpOriginalSize,
+    _ => label,
+  };
+
+  /// Short form used where the full preset name would not fit.
+  String shortLabelOf(AppStrings s) =>
+      id == 'reels' ? s.vpReelsShort : labelOf(s);
+
+  /// The aspect chip — a ratio like `9:16`, or the translated "Original".
+  String ratioLabelOf(AppStrings s) =>
+      usesOriginalSize ? s.colOriginal : ratioLabel;
+}
+
 VideoPreset presetById(String id) {
   return videoPresets.firstWhere(
     (preset) => preset.id == id,
@@ -99,15 +123,22 @@ VideoPreset presetById(String id) {
 /// Presets are authored at 1080p, so [shortSide] is the target for the smaller
 /// of the two dimensions.
 enum ExportQuality {
-  hd720('720p', 'Smallest file', 720),
-  fhd1080('1080p', 'Recommended', 1080),
-  qhd1440('2K', 'Sharper', 1440),
-  uhd2160('4K', 'Largest file', 2160);
+  hd720('720p', 720),
+  fhd1080('1080p', 1080),
+  qhd1440('2K', 1440),
+  uhd2160('4K', 2160);
 
-  const ExportQuality(this.label, this.note, this.shortSide);
+  const ExportQuality(this.label, this.shortSide);
 
+  /// A resolution tier name — the same in every language.
   final String label;
-  final String note;
+
+  String note(AppStrings s) => switch (this) {
+    ExportQuality.hd720 => s.eqSmallestFile,
+    ExportQuality.fhd1080 => s.eqRecommended,
+    ExportQuality.qhd1440 => s.eqSharper,
+    ExportQuality.uhd2160 => s.eqLargestFile,
+  };
 
   /// Target pixel length of the shorter edge of the exported video.
   final int shortSide;

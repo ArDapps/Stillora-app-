@@ -230,62 +230,58 @@ ThemeData buildStilloraThemeFor(
         borderSide: BorderSide(color: palette.accent, width: 2),
       ),
     ),
-    textTheme:
-        const TextTheme(
-          displayLarge: TextStyle(
-            fontSize: 56,
-            height: 64 / 56,
-            fontWeight: FontWeight.w700,
-          ),
-          displayMedium: TextStyle(
-            fontSize: 40,
-            height: 48 / 40,
-            fontWeight: FontWeight.w600,
-          ),
-          headlineLarge: TextStyle(
-            fontSize: 32,
-            height: 40 / 32,
-            fontWeight: FontWeight.w600,
-          ),
-          headlineMedium: TextStyle(
-            fontSize: 28,
-            height: 36 / 28,
-            fontWeight: FontWeight.w600,
-          ),
-          headlineSmall: TextStyle(
-            fontSize: 24,
-            height: 32 / 24,
-            fontWeight: FontWeight.w600,
-          ),
-          titleLarge: TextStyle(
-            fontSize: 20,
-            height: 28 / 20,
-            fontWeight: FontWeight.w500,
-          ),
-          titleMedium: TextStyle(
-            fontSize: 16,
-            height: 24 / 16,
-            fontWeight: FontWeight.w600,
-          ),
-          bodyLarge: TextStyle(
-            fontSize: 16,
-            height: 24 / 16,
-            fontWeight: FontWeight.w400,
-          ),
-          bodyMedium: TextStyle(
-            fontSize: 14,
-            height: 20 / 14,
-            fontWeight: FontWeight.w400,
-          ),
-          labelMedium: TextStyle(
-            fontSize: 12,
-            height: 16 / 12,
-            fontWeight: FontWeight.w600,
-          ),
-        ).apply(
-          bodyColor: palette.onSurface,
-          displayColor: palette.onSurface,
-        ),
+    textTheme: const TextTheme(
+      displayLarge: TextStyle(
+        fontSize: 56,
+        height: 64 / 56,
+        fontWeight: FontWeight.w700,
+      ),
+      displayMedium: TextStyle(
+        fontSize: 40,
+        height: 48 / 40,
+        fontWeight: FontWeight.w600,
+      ),
+      headlineLarge: TextStyle(
+        fontSize: 32,
+        height: 40 / 32,
+        fontWeight: FontWeight.w600,
+      ),
+      headlineMedium: TextStyle(
+        fontSize: 28,
+        height: 36 / 28,
+        fontWeight: FontWeight.w600,
+      ),
+      headlineSmall: TextStyle(
+        fontSize: 24,
+        height: 32 / 24,
+        fontWeight: FontWeight.w600,
+      ),
+      titleLarge: TextStyle(
+        fontSize: 20,
+        height: 28 / 20,
+        fontWeight: FontWeight.w500,
+      ),
+      titleMedium: TextStyle(
+        fontSize: 16,
+        height: 24 / 16,
+        fontWeight: FontWeight.w600,
+      ),
+      bodyLarge: TextStyle(
+        fontSize: 16,
+        height: 24 / 16,
+        fontWeight: FontWeight.w400,
+      ),
+      bodyMedium: TextStyle(
+        fontSize: 14,
+        height: 20 / 14,
+        fontWeight: FontWeight.w400,
+      ),
+      labelMedium: TextStyle(
+        fontSize: 12,
+        height: 16 / 12,
+        fontWeight: FontWeight.w600,
+      ),
+    ).apply(bodyColor: palette.onSurface, displayColor: palette.onSurface),
   );
 }
 
@@ -311,9 +307,7 @@ class _StilloraPaletteScopeState extends State<StilloraPaletteScope> {
 
   @override
   Widget build(BuildContext context) {
-    final palette = StilloraPalette.forBrightness(
-      Theme.of(context).brightness,
-    );
+    final palette = StilloraPalette.forBrightness(Theme.of(context).brightness);
     if (StilloraColors.activate(palette) && !_rebuildScheduled) {
       // Can't mark the tree dirty mid-build; do it as soon as this frame ends.
       _rebuildScheduled = true;

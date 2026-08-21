@@ -6,6 +6,7 @@ import '../../../core/design/stillora_colors.dart';
 import '../../../core/design/stillora_spacing.dart';
 import '../editor_state.dart';
 import 'editor_shared.dart';
+import '../../../core/i18n/app_strings.dart';
 
 class SoundscapeCard extends StatelessWidget {
   const SoundscapeCard({
@@ -37,7 +38,7 @@ class SoundscapeCard extends StatelessWidget {
 
     return RenderStepCard(
       number: '2',
-      title: 'Soundscape',
+      title: context.strings.edSoundscape,
       trailing: const RenderTagPill('optional'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -71,8 +72,8 @@ class SoundscapeCard extends StatelessWidget {
                       children: [
                         Text(
                           editor.audioPath == null
-                              ? 'Optional Audio'
-                              : 'Audio Attached',
+                              ? context.strings.edOptionalAudio
+                              : context.strings.edAudioAttached,
                           style:
                               (compact
                                       ? Theme.of(context).textTheme.labelLarge
@@ -93,7 +94,7 @@ class SoundscapeCard extends StatelessWidget {
                   ),
                   if (editor.audioPath != null)
                     IconButton(
-                      tooltip: 'Remove audio',
+                      tooltip: context.strings.edRemoveAudio,
                       onPressed: onRemoveAudio,
                       icon: const Icon(Icons.close_rounded),
                     ),
@@ -117,10 +118,8 @@ class SoundscapeCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     editor.media.length > 1
-                        ? 'Your videos keep their own sound. Add audio to '
-                              'replace it, or mute a clip on the timeline.'
-                        : 'Your video keeps its own sound. Add audio to '
-                              'replace it, or mute it on the timeline.',
+                        ? context.strings.edKeepsOwnSoundMany
+                        : context.strings.edKeepsOwnSoundOne,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: StilloraColors.onSurfaceVariant,
                     ),
@@ -139,7 +138,7 @@ class SoundscapeCard extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: onRecordAudio,
                     icon: const Icon(Icons.mic_rounded),
-                    label: const Text('Record voice'),
+                    label: Text(context.strings.edRecordVoice),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -147,7 +146,7 @@ class SoundscapeCard extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: onPickAudio,
                     icon: const Icon(Icons.upload_file_rounded),
-                    label: const Text('Upload audio'),
+                    label: Text(context.strings.edUploadAudio),
                   ),
                 ),
               ],

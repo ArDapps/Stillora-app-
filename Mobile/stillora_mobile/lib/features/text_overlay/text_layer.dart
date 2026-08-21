@@ -1,6 +1,8 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/i18n/app_strings.dart';
+
 /// Font-size range as a fraction of the frame height (responsive across export
 /// resolutions). 0.03 ≈ a caption, 0.16 ≈ a big title.
 const minFontScale = 0.02;
@@ -23,19 +25,19 @@ const kTextFontFamilies = <(String label, String? family)>[
 enum TextPreset { title, subtitle, caption, cta }
 
 extension TextPresetX on TextPreset {
-  String get label => switch (this) {
-    TextPreset.title => 'Title',
-    TextPreset.subtitle => 'Subtitle',
-    TextPreset.caption => 'Caption',
+  String label(AppStrings s) => switch (this) {
+    TextPreset.title => s.txtYourTitle,
+    TextPreset.subtitle => s.txtSubtitleStyle,
+    TextPreset.caption => s.txtCaptionStyle,
     TextPreset.cta => 'CTA',
   };
 
   /// The default text shown when the preset seeds a fresh layer.
-  String get seedText => switch (this) {
-    TextPreset.title => 'Your Title',
-    TextPreset.subtitle => 'Your subtitle here',
-    TextPreset.caption => 'caption text',
-    TextPreset.cta => 'Tap to learn more',
+  String seedText(AppStrings s) => switch (this) {
+    TextPreset.title => s.txtYourTitle,
+    TextPreset.subtitle => s.txtYourSubtitle,
+    TextPreset.caption => s.txtCaptionStyle,
+    TextPreset.cta => s.txtTapToLearn,
   };
 }
 

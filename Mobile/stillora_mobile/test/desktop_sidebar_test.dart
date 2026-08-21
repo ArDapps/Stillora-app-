@@ -57,6 +57,43 @@ void main() {
     }
   });
 
+  // The ACCOUNT / APP group (Stillora Pro + Info) is pinned below the scrolling
+  // tool list, so it eats fixed height that the tools no longer get. On a short
+  // window the tools must give way, not the footer — and nothing may overflow.
+  for (final height in [900.0, 700.0, 600.0, 520.0]) {
+    testWidgets('the pinned footer survives a ${height.toInt()}px window', (
+      tester,
+    ) async {
+      tester.view.physicalSize = Size(1400, height);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      try {
+        await tester.runAsync(() async {
+          await tester.pumpWidget(
+            harness(
+              const SidebarScaffold(
+                desktopTitle: 'Preview',
+                body: Text('EXPORT_BODY'),
+              ),
+            ),
+          );
+        });
+        await tester.pump();
+
+        expect(tester.takeException(), isNull);
+        expect(find.text('Stillora Pro'), findsOneWidget);
+        expect(find.text('Info'), findsOneWidget);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+  }
+
   testWidgets('hides the sidebar on a phone surface', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;

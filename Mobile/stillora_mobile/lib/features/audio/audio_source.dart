@@ -1,3 +1,4 @@
+import '../../core/i18n/app_strings.dart';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
@@ -55,7 +56,7 @@ class AudioSourceButtons extends StatelessWidget {
           child: OutlinedButton.icon(
             onPressed: enabled ? () => pick(() => recordVoice(context)) : null,
             icon: const Icon(Icons.mic_rounded),
-            label: const Text('Record voice'),
+            label: Text(context.strings.edRecordVoice),
           ),
         ),
         const SizedBox(width: 10),
@@ -63,7 +64,7 @@ class AudioSourceButtons extends StatelessWidget {
           child: OutlinedButton.icon(
             onPressed: enabled ? () => pick(uploadAudioFile) : null,
             icon: const Icon(Icons.upload_file_rounded),
-            label: const Text('Upload audio'),
+            label: Text(context.strings.edUploadAudio),
           ),
         ),
       ],

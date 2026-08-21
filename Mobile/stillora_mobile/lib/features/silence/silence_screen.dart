@@ -8,10 +8,12 @@ import '../../core/widgets/section_split_view.dart';
 import '../audio/audio_source.dart';
 import '../color/color_grade_section.dart';
 import '../editor/editor_state.dart' show formatFileSize;
-import '../editor/video_preset.dart';
 import '../export/export_cancellation.dart';
 import '../preview/section_video_preview.dart';
 import 'silence_state.dart';
+import '../../core/pro/pro_quality_picker.dart';
+import '../../core/pro/pro_gate.dart';
+import '../../core/i18n/app_strings.dart';
 
 /// Standalone "Remove Silence" section: upload a video, auto-cut the silent
 /// (non-speech) stretches, merge what's left, and export at a quality tier.
@@ -38,8 +40,8 @@ class _SilenceViewState extends ConsumerState<SilenceView> {
         SnackBar(
           content: Text(
             result == null
-                ? 'Nothing to export.'
-                : 'Saved to Library · ${result.durationSeconds}s '
+                ? context.strings.exNothingToExport
+                : '${context.strings.savedToLibrary} · ${result.durationSeconds}s '
                       '(${result.width}×${result.height})',
           ),
         ),
@@ -49,7 +51,9 @@ class _SilenceViewState extends ConsumerState<SilenceView> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            isExportCancellation(e) ? 'Export cancelled' : 'Failed: $e',
+            isExportCancellation(e)
+                ? context.strings.exportCancelled
+                : '${context.strings.exFailed}: $e',
           ),
         ),
       );
@@ -85,7 +89,7 @@ class _SilenceViewState extends ConsumerState<SilenceView> {
           onStartOver: controller.reset,
           canStartOver: silence.hasVideo && !_running,
           previewCaption: silence.hasVideo
-              ? 'How the exported cut will look'
+              ? context.strings.slPreviewCaption
               : null,
           preview: SectionVideoPreview(
             videoPath: silence.videoPath,
@@ -93,43 +97,45 @@ class _SilenceViewState extends ConsumerState<SilenceView> {
             sourceHeight: silence.sourceHeight,
             color: silence.color,
             badge: silence.speed > 1 ? '${silence.speed}x' : null,
-            emptyLabel: 'Upload a video with speech to preview it here',
+            emptyLabel: context.strings.slUploadToPreview,
             stats: [
               if (silence.hasVideo) ...[
                 (
-                  label: 'Source',
+                  label: context.strings.toolSource,
                   value:
                       '${silence.sourceDurationSeconds}s · '
                       '${silence.sourceWidth}×${silence.sourceHeight}',
                 ),
                 (
-                  label: 'Sensitivity',
+                  label: context.strings.silenceSensitivity,
                   value: silence.sensitivity < 0.34
-                      ? 'Gentle'
+                      ? context.strings.slGentle
                       : silence.sensitivity > 0.66
-                      ? 'Aggressive'
-                      : 'Balanced',
+                      ? context.strings.slAggressive
+                      : context.strings.cmpBalanced,
                 ),
-                (label: 'Output', value: '${res.width}×${res.height}'),
                 (
-                  label: 'Size ≈',
+                  label: context.strings.toolOutput,
+                  value: '${res.width}×${res.height}',
+                ),
+                (
+                  label: context.strings.toolSizeApprox,
                   value: formatFileSize(silence.estimatedBytes),
                 ),
                 (
-                  label: 'Audio',
+                  label: context.strings.toolAudio,
                   value: silence.hasNewAudio
                       ? silence.newAudioName!
                       : silence.muteAudio
-                      ? 'Muted'
-                      : 'Original',
+                      ? context.strings.audMuted
+                      : context.strings.exportOriginal,
                 ),
               ],
             ],
           ),
           controls: [
             Text(
-              'Upload a video, and Stillora removes the silent gaps where no one '
-              'is speaking — then merges the rest and exports it.',
+              context.strings.silenceIntro,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: StilloraColors.onSurfaceVariant,
               ),
@@ -157,7 +163,7 @@ class _SilenceViewState extends ConsumerState<SilenceView> {
                         Text(
                           silence.hasVideo
                               ? silence.videoName!
-                              : 'Upload video',
+                              : context.strings.toolUploadVideo,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.titleSmall
@@ -167,7 +173,7 @@ class _SilenceViewState extends ConsumerState<SilenceView> {
                           silence.hasVideo
                               ? '${silence.sourceDurationSeconds}s · '
                                     '${silence.sourceWidth}×${silence.sourceHeight}'
-                              : 'MP4 / MOV with speech',
+                              : context.strings.slSourceHint,
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(
                                 color: StilloraColors.onSurfaceVariant,
@@ -186,26 +192,32 @@ class _SilenceViewState extends ConsumerState<SilenceView> {
             ),
             const SizedBox(height: 20),
 
-            // Sensitivity
-            Text('Sensitivity', style: Theme.of(context).textTheme.labelMedium),
+            // Sensitivity — the silence-detection threshold. Free users get
+            // automatic balanced detection; tuning it is a Pro control.
+            ProControlLabel(context.strings.silenceSensitivity),
             Text(
               silence.sensitivity < 0.34
-                  ? 'Gentle — only clear silence is cut'
+                  ? context.strings.slGentleNote
                   : silence.sensitivity > 0.66
-                  ? 'Aggressive — trims quiet pauses too'
-                  : 'Balanced',
+                  ? context.strings.slAggressiveNote
+                  : context.strings.cmpBalanced,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: StilloraColors.onSurfaceVariant,
               ),
             ),
-            Slider(
-              value: silence.sensitivity,
-              onChanged: _running ? null : controller.setSensitivity,
+            ProLockedControl(
+              child: Slider(
+                value: silence.sensitivity,
+                onChanged: _running ? null : controller.setSensitivity,
+              ),
             ),
             const SizedBox(height: 12),
 
             // Speed
-            Text('Speed', style: Theme.of(context).textTheme.labelMedium),
+            Text(
+              context.strings.toolSpeed,
+              style: Theme.of(context).textTheme.labelMedium,
+            ),
             const SizedBox(height: 8),
             SizedBox(
               width: double.infinity,
@@ -226,16 +238,19 @@ class _SilenceViewState extends ConsumerState<SilenceView> {
             const SizedBox(height: 12),
 
             // Audio
-            Text('Audio', style: Theme.of(context).textTheme.labelMedium),
+            Text(
+              context.strings.toolAudio,
+              style: Theme.of(context).textTheme.labelMedium,
+            ),
             const SizedBox(height: 8),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               dense: true,
-              title: const Text('Remove original audio'),
+              title: Text(context.strings.silenceRemoveAudio),
               subtitle: Text(
                 silence.hasNewAudio
-                    ? 'Replaced by your new audio'
-                    : 'Export the trimmed video with no sound',
+                    ? context.strings.audReplacedByNew
+                    : context.strings.slMuteNote,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: StilloraColors.onSurfaceVariant,
                 ),
@@ -268,7 +283,7 @@ class _SilenceViewState extends ConsumerState<SilenceView> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'New audio · ${silence.newAudioName}',
+                        '${context.strings.audNewAudio} · ${silence.newAudioName}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.titleSmall,
@@ -277,7 +292,7 @@ class _SilenceViewState extends ConsumerState<SilenceView> {
                     IconButton(
                       onPressed: _running ? null : controller.removeNewAudio,
                       icon: const Icon(Icons.delete_outline_rounded, size: 20),
-                      tooltip: 'Remove new audio',
+                      tooltip: context.strings.audRemoveNewAudio,
                       color: StilloraColors.onSurfaceVariant,
                     ),
                   ],
@@ -286,7 +301,7 @@ class _SilenceViewState extends ConsumerState<SilenceView> {
             if (silence.hasNewAudio) ...[
               const SizedBox(height: 6),
               Text(
-                'New audio plays at normal speed; the video loops to match it.',
+                context.strings.silenceNewAudioNote,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: StilloraColors.onSurfaceVariant,
                 ),
@@ -305,27 +320,22 @@ class _SilenceViewState extends ConsumerState<SilenceView> {
             const SizedBox(height: 12),
 
             // Quality
-            Text('Quality', style: Theme.of(context).textTheme.labelMedium),
+            Text(
+              context.strings.toolQuality,
+              style: Theme.of(context).textTheme.labelMedium,
+            ),
             const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: SegmentedButton<ExportQuality>(
-                showSelectedIcon: false,
-                segments: [
-                  for (final q in ExportQuality.values)
-                    ButtonSegment(value: q, label: Text(q.label)),
-                ],
-                selected: {silence.quality},
-                onSelectionChanged: _running
-                    ? null
-                    : (v) => controller.setQuality(v.first),
-              ),
+            ProQualityPicker(
+              selected: silence.quality,
+              onSelected: controller.setQuality,
+              style: ProQualityPickerStyle.segmented,
+              enabled: !_running,
             ),
             const SizedBox(height: 10),
             if (silence.hasVideo)
               Text(
                 '${res.width} × ${res.height}  ·  ≤ '
-                '${formatFileSize(silence.estimatedBytes)}  ·  ${silence.quality.note}',
+                '${formatFileSize(silence.estimatedBytes)}  ·  ${silence.quality.note(context.strings)}',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: StilloraColors.onSurfaceVariant,
                 ),
@@ -335,7 +345,9 @@ class _SilenceViewState extends ConsumerState<SilenceView> {
             StilloraPrimaryButton(
               onPressed: silence.hasVideo && !_running ? _run : null,
               icon: Icons.content_cut_rounded,
-              label: _running ? 'Removing silence…' : 'Remove silence & export',
+              label: _running
+                  ? context.strings.slExporting
+                  : context.strings.slExportCta,
             ),
             if (_running) ...[
               const SizedBox(height: 16),
@@ -344,7 +356,11 @@ class _SilenceViewState extends ConsumerState<SilenceView> {
               OutlinedButton.icon(
                 onPressed: _cancelling ? null : _cancel,
                 icon: const Icon(Icons.close_rounded),
-                label: Text(_cancelling ? 'Cancelling…' : 'Cancel export'),
+                label: Text(
+                  _cancelling
+                      ? context.strings.exportCancelling
+                      : context.strings.exportCancel,
+                ),
               ),
             ],
             const SizedBox(height: 16),

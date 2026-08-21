@@ -1,8 +1,10 @@
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/design/preview_metrics.dart';
 import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_spacing.dart';
 import '../../core/design/stillora_surface.dart';
@@ -10,6 +12,7 @@ import '../../core/platform/platform_info.dart';
 import '../../core/widgets/ad_widget.dart';
 import '../../core/widgets/section_split_view.dart';
 import 'convert_state.dart';
+import '../../core/i18n/app_strings.dart';
 
 /// Standalone "Convert" section: pick a batch of images (HEIC, WebP, TIFF, …)
 /// and convert them all to JPEG or PNG. Saved to Photos on mobile and to a
@@ -30,9 +33,9 @@ class _ConvertViewState extends ConsumerState<ConvertView> {
       final result = await ref.read(convertControllerProvider.notifier).run();
       if (!mounted) return;
       final msg = result.converted == 0
-          ? 'Nothing converted.'
-          : 'Converted ${result.converted} → ${result.destination}'
-                '${result.failed > 0 ? ' · ${result.failed} failed' : ''}';
+          ? context.strings.cvNothingConverted
+          : '${context.strings.cvConvertedCount} ${result.converted} → ${result.destination}'
+                '${result.failed > 0 ? ' · ${result.failed} ${context.strings.cvFailedCount}' : ''}';
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     } catch (e) {
       if (!mounted) return;
@@ -89,7 +92,9 @@ class _ConvertViewState extends ConsumerState<ConvertView> {
                   const SizedBox(width: 14),
                   Expanded(
                     child: Text(
-                      convert.hasImages ? 'Add more images' : 'Select images',
+                      convert.hasImages
+                          ? context.strings.cvAddMoreImages
+                          : context.strings.cvSelectImages,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
@@ -121,7 +126,7 @@ class _ConvertViewState extends ConsumerState<ConvertView> {
 
               // Output format
               Text(
-                'Convert to',
+                context.strings.cvConvertTo,
                 style: Theme.of(context).textTheme.labelMedium,
               ),
               const SizedBox(height: 8),
@@ -145,7 +150,10 @@ class _ConvertViewState extends ConsumerState<ConvertView> {
               const SizedBox(height: 12),
 
               // Export destination
-              Text('Export to', style: Theme.of(context).textTheme.labelMedium),
+              Text(
+                context.strings.cvExportTo,
+                style: Theme.of(context).textTheme.labelMedium,
+              ),
               const SizedBox(height: 8),
               StilloraGlassCard(
                 onTap: _running ? null : controller.pickOutputFolder,
@@ -170,7 +178,7 @@ class _ConvertViewState extends ConsumerState<ConvertView> {
                           Text(
                             convert.hasOutputDir
                                 ? convert.outputDirName!
-                                : 'Default location',
+                                : context.strings.cvDefaultLocation,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.titleSmall,
@@ -180,7 +188,7 @@ class _ConvertViewState extends ConsumerState<ConvertView> {
                                 ? convert.outputDir!
                                 : (isDesktopPlatform
                                       ? 'Downloads › Stillora Converted'
-                                      : 'Saved to Photos'),
+                                      : context.strings.cvSavedToPhotos),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.bodySmall
@@ -197,7 +205,7 @@ class _ConvertViewState extends ConsumerState<ConvertView> {
                             ? null
                             : controller.clearOutputFolder,
                         icon: const Icon(Icons.close_rounded, size: 18),
-                        tooltip: 'Use default location',
+                        tooltip: context.strings.cvUseDefaultLocation,
                         color: StilloraColors.onSurfaceVariant,
                       )
                     else
@@ -214,8 +222,9 @@ class _ConvertViewState extends ConsumerState<ConvertView> {
                 onPressed: _running ? null : _run,
                 icon: Icons.transform_rounded,
                 label: _running
-                    ? 'Converting…'
-                    : 'Convert ${convert.paths.length} to ${convert.format.label}',
+                    ? context.strings.loopConverting
+                    : '${context.strings.cvConvertTo2} ${convert.paths.length} '
+                          '${context.strings.cvTo} ${convert.format.label}',
               ),
               if (_running) ...[
                 const SizedBox(height: 16),
@@ -249,7 +258,9 @@ class _ConvertPreview extends StatelessWidget {
           border: Border.all(color: StilloraColors.glassStroke),
         ),
         child: SizedBox(
-          height: 220,
+          // The placeholder never needs the full preview budget — keep it the
+          // shorter of the two so an empty section stays compact.
+          height: math.min(220.0, mobilePreviewMaxHeight(context)),
           child: Center(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -263,7 +274,7 @@ class _ConvertPreview extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Select images to see them here',
+                    context.strings.cvEmpty,
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: StilloraColors.onSurfaceVariant,
@@ -277,7 +288,7 @@ class _ConvertPreview extends StatelessWidget {
       );
     }
 
-    return GridView.builder(
+    final grid = GridView.builder(
       shrinkWrap: true,
       primary: false,
       padding: EdgeInsets.zero,
@@ -307,6 +318,20 @@ class _ConvertPreview extends StatelessWidget {
         ),
       ),
     );
+
+    // Stacked layout: a fifty-image batch would otherwise grow the thumbnail
+    // grid past the bottom of the screen. Cap it and let it scroll in place —
+    // in the desktop pane the height is already bounded.
+    return LayoutBuilder(
+      builder: (context, constraints) => constraints.hasBoundedHeight
+          ? grid
+          : ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: mobilePreviewMaxHeight(context),
+              ),
+              child: grid,
+            ),
+    );
   }
 }
 
@@ -325,11 +350,7 @@ class _ImageRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         child: Row(
           children: [
-            Icon(
-              Icons.image_outlined,
-              size: 20,
-              color: StilloraColors.primary,
-            ),
+            Icon(Icons.image_outlined, size: 20, color: StilloraColors.primary),
             const SizedBox(width: 12),
             Expanded(
               child: Text(

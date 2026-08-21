@@ -2,6 +2,8 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'package:stillora_video_engine/stillora_video_engine.dart' as engine;
 
+import '../../core/i18n/app_strings.dart';
+
 /// A user-facing colour grade: eight sliders, each normalised so `0` is neutral.
 ///
 /// This is the single source of truth for the colour maths. It derives an
@@ -220,6 +222,21 @@ class ColorPreset {
   final String label;
   final IconData icon;
   final ColorAdjust adjust;
+}
+
+extension ColorPresetMeta on ColorPreset {
+  /// Translated grade name for the preset chips.
+  String labelOf(AppStrings s) => switch (id) {
+    'original' => s.colOriginal,
+    'warm' => s.colWarm,
+    'cool' => s.colCool,
+    'vivid' => s.colVivid,
+    'cinematic' => s.colCinematic,
+    'bright' => s.colBright,
+    'vintage' => s.colVintage,
+    'bw' => s.colBw,
+    _ => label,
+  };
 }
 
 const colorPresets = <ColorPreset>[

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/i18n/app_strings.dart';
 import '../../../core/widgets/render_panel.dart';
 import '../html_to_video_options.dart';
 
@@ -23,7 +24,7 @@ class FormatGrid extends StatelessWidget {
       tiles: [
         for (final option in options)
           RenderFormatTile(
-            label: option.label,
+            label: option.labelOf(context.strings),
             ratio: option.ratio,
             selected: option == selected,
             onTap: () => onSelected(option),

@@ -14,6 +14,7 @@ import '../gallery/gallery_screen.dart';
 import '../html_to_video/html_to_video_screen.dart';
 import '../images_to_pdf/images_to_pdf_screen.dart';
 import '../loop_images/loop_images_screen.dart';
+import '../pro/pro_screen.dart';
 import '../settings/settings_screen.dart';
 import '../silence/silence_screen.dart';
 import '../speed/speed_screen.dart';
@@ -40,6 +41,7 @@ class AppTabsScreen extends ConsumerWidget {
     TextOverlayView(),
     CompressView(),
     ImagesToPdfView(),
+    ProView(),
   ];
 
   @override
@@ -122,18 +124,40 @@ class AppNavDrawer extends StatelessWidget {
               child: ListView(
                 padding: EdgeInsets.zero,
                 children: [
-                  for (final section in mobileNavOrder)
-                    if (section.isAvailable)
-                      _DrawerNavTile(
-                        selected: section.viewIndex == activeView,
-                        icon: section.icon,
-                        selectedIcon: section.selectedIcon,
-                        label: section.title(strings),
-                        onTap: () {
-                          Navigator.of(context).pop();
-                          onSelect(section.viewIndex);
-                        },
+                  // Same grouping as the desktop sidebar, from the same source
+                  // of truth, so the two navigations can't drift apart.
+                  for (final group in navGroups)
+                    if (group.availableSections.isNotEmpty) ...[
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          StilloraSpacing.md,
+                          StilloraSpacing.snug,
+                          StilloraSpacing.md,
+                          StilloraSpacing.base,
+                        ),
+                        child: Text(
+                          group.group.label(strings).toUpperCase(),
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                color: StilloraColors.onSurfaceVariant,
+                                letterSpacing: 1.4,
+                                fontWeight: FontWeight.w800,
+                              ),
+                        ),
                       ),
+                      for (final section in group.availableSections)
+                        _DrawerNavTile(
+                          selected: section.viewIndex == activeView,
+                          icon: section.icon,
+                          selectedIcon: section.selectedIcon,
+                          label: section.title(strings),
+                          premium: section == AppSection.stilloraPro,
+                          onTap: () {
+                            Navigator.of(context).pop();
+                            onSelect(section.viewIndex);
+                          },
+                        ),
+                    ],
                 ],
               ),
             ),
@@ -172,6 +196,7 @@ class _DrawerNavTile extends StatelessWidget {
     required this.selectedIcon,
     required this.label,
     required this.onTap,
+    this.premium = false,
   });
 
   final bool selected;
@@ -180,10 +205,16 @@ class _DrawerNavTile extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
 
+  /// Marks the Stillora Pro entry with the premium tint (see the desktop
+  /// sidebar's equivalent).
+  final bool premium;
+
   @override
   Widget build(BuildContext context) {
     final fg = selected
         ? StilloraColors.onSurface
+        : premium
+        ? StilloraColors.brandCyan
         : StilloraColors.onSurfaceVariant;
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -217,7 +248,9 @@ class _DrawerNavTile extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                      fontWeight: selected || premium
+                          ? FontWeight.w800
+                          : FontWeight.w600,
                       color: fg,
                     ),
                   ),

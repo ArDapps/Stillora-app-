@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../core/design/preview_metrics.dart';
 import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_spacing.dart';
 import '../../core/widgets/render_panel.dart';
@@ -22,6 +23,7 @@ import 'widgets/html_input_controls.dart';
 import 'widgets/html_preview_pane.dart';
 import 'widgets/output_size_card.dart';
 import 'widgets/render_controls.dart';
+import '../../core/i18n/app_strings.dart';
 
 /// "HTML → Video" tab: paste markup, pick an .html file, or enter a URL, then
 /// render an animated HTML page into a share-ready MP4 via the backend.
@@ -69,7 +71,7 @@ class _HtmlToVideoViewState extends ConsumerState<HtmlToVideoView> {
 
   String _convertErrorMessage(Object? error) => error is HtmlToVideoException
       ? error.message
-      : 'Something went wrong. Try again.';
+      : context.strings.htmlFailed;
 
   @override
   void dispose() {
@@ -145,14 +147,14 @@ class _HtmlToVideoViewState extends ConsumerState<HtmlToVideoView> {
     final url = _mode == InputMode.url ? _urlController.text.trim() : null;
 
     if (_mode == InputMode.url && (url == null || url.isEmpty)) {
-      setState(() => _validationError = 'Enter a URL to render.');
+      setState(() => _validationError = context.strings.htmlNeedUrl);
       return;
     }
     if (_mode != InputMode.url && (html == null || html.isEmpty)) {
       setState(() {
         _validationError = _mode == InputMode.file
-            ? 'Pick an .html file first.'
-            : 'Paste some HTML first.';
+            ? context.strings.htmlNeedFile
+            : context.strings.htmlNeedMarkup;
       });
       return;
     }
@@ -218,9 +220,7 @@ class _HtmlToVideoViewState extends ConsumerState<HtmlToVideoView> {
       child: StartOverButton(
         onReset: _startOver,
         enabled: _hasInput && !_converting,
-        confirmMessage:
-            'This clears the HTML/URL, audio, output settings and the last '
-            'render. This cannot be undone.',
+        confirmMessage: context.strings.htmlClearWarning,
       ),
     );
 
@@ -263,9 +263,11 @@ class _HtmlToVideoViewState extends ConsumerState<HtmlToVideoView> {
           ..._leftColumn(desktop: false),
           const SizedBox(height: StilloraSpacing.md),
           // Bounded height on mobile: PreviewPane uses an Expanded internally,
-          // which needs a finite height inside the scrolling ListView.
+          // which needs a finite height inside the scrolling ListView. Sized
+          // off the shared live-preview budget so the canvas here is in the
+          // same league as every other section's stacked preview.
           SizedBox(
-            height: 380,
+            height: mobilePreviewBoxHeight(context, chrome: 80),
             child: PreviewPane(
               size: _size,
               fps: _fps,
@@ -290,7 +292,7 @@ class _HtmlToVideoViewState extends ConsumerState<HtmlToVideoView> {
   List<Widget> _leftColumn({required bool desktop}) {
     final durationCard = RenderStepCard(
       number: '3',
-      title: 'Duration',
+      title: context.strings.htmlDuration,
       child: DurationSlider(
         seconds: _durationSeconds,
         min: 1,
@@ -302,7 +304,7 @@ class _HtmlToVideoViewState extends ConsumerState<HtmlToVideoView> {
 
     final fpsCard = RenderStepCard(
       number: '4',
-      title: 'Frame rate',
+      title: context.strings.htmlFrameRate,
       child: RenderPillSegmented(
         options: [for (final f in fpsChoices) '$f'],
         selectedIndex: fpsChoices.indexOf(_fps),
@@ -322,10 +324,10 @@ class _HtmlToVideoViewState extends ConsumerState<HtmlToVideoView> {
     );
 
     return [
-      const RenderEyebrow('NEW RENDER'),
+      RenderEyebrow(context.strings.htmlNewRender.toUpperCase()),
       const SizedBox(height: StilloraSpacing.sm),
       Text(
-        'HTML to share-ready video',
+        context.strings.htmlHeading,
         style: Theme.of(context).textTheme.displayMedium?.copyWith(
           fontWeight: FontWeight.w800,
           height: 1.05,
@@ -333,14 +335,13 @@ class _HtmlToVideoViewState extends ConsumerState<HtmlToVideoView> {
       ),
       const SizedBox(height: StilloraSpacing.xs),
       Text(
-        'Paste markup, drop an .html file, or enter a URL — pick a size and '
-        'duration, export a clean MP4 in seconds.',
+        context.strings.htmlIntro,
         style: TextStyle(color: StilloraColors.onSurfaceVariant, height: 1.4),
       ),
       const SizedBox(height: StilloraSpacing.md),
       RenderStepCard(
         number: '1',
-        title: 'Source',
+        title: context.strings.htmlSource,
         trailing: const RenderTagPill('required'),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -433,7 +434,7 @@ class _HtmlToVideoViewState extends ConsumerState<HtmlToVideoView> {
     ref.read(htmlToVideoControllerProvider.notifier).cancel();
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('Conversion cancelled')));
+    ).showSnackBar(SnackBar(content: Text(context.strings.htmlCancelled)));
   }
 
   Widget _resultActions() {

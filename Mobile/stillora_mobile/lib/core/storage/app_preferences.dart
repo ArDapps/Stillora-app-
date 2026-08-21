@@ -66,6 +66,53 @@ class AppPreferences {
   Future<void> setLanguage(AppLanguage value) =>
       _preferences.setString(_languageKey, value.code);
 
+  // ── Stillora Pro (lifetime, one-time purchase) ─────────────────────────────
+
+  static const _proUnlockedKey = 'stillora.pro.lifetimeUnlocked';
+  static const _proConfigKey = 'stillora.pro.config.v1';
+  static const _proPaywallLastShownKey = 'stillora.pro.paywallLastShownMs';
+
+  /// Whether the lifetime unlock has been purchased/restored on this device.
+  /// There is no expiry: Pro is a one-time purchase, never a subscription.
+  bool get isProUnlocked => _preferences.getBool(_proUnlockedKey) ?? false;
+
+  Future<void> setProUnlocked(bool value) =>
+      _preferences.setBool(_proUnlockedKey, value);
+
+  /// Last Pro price/product payload fetched from the backend, so the paywall
+  /// shows the right price on an offline launch instead of a stale build-time
+  /// default.
+  Map<String, dynamic>? get cachedProConfig {
+    final raw = _preferences.getString(_proConfigKey);
+    if (raw == null) return null;
+    try {
+      return (jsonDecode(raw) as Map).cast<String, dynamic>();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> setCachedProConfig(Map<String, dynamic> value) =>
+      _preferences.setString(_proConfigKey, jsonEncode(value));
+
+  /// When the paywall was last opened *uninvited* — after onboarding, or by the
+  /// recurring reminder. Null until the first one fires.
+  ///
+  /// Only the automatic paywalls stamp this. Opening Pro from the menu or from
+  /// a gated control is the user asking, and must not push the next reminder
+  /// out by two days.
+  DateTime? get proPaywallLastShownAt {
+    final ms = _preferences.getInt(_proPaywallLastShownKey);
+    return ms == null ? null : DateTime.fromMillisecondsSinceEpoch(ms);
+  }
+
+  Future<void> setProPaywallLastShownAt(DateTime value) {
+    return _preferences.setInt(
+      _proPaywallLastShownKey,
+      value.millisecondsSinceEpoch,
+    );
+  }
+
   // ── Rating prompt ──────────────────────────────────────────────────────────
 
   /// Last time the review request was made, used for the 4-day cooldown.

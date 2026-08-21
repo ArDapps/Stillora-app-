@@ -63,9 +63,8 @@ Future<String> buildPdfDocument(PdfBuildRequest request) async {
     document.addPage(
       pw.Page(
         pageFormat: sheetFormatFor(page, request.sheet, margin),
-        build: (context) => pw.Center(
-          child: pw.Image(image, fit: pw.BoxFit.contain),
-        ),
+        build: (context) =>
+            pw.Center(child: pw.Image(image, fit: pw.BoxFit.contain)),
       ),
     );
   }

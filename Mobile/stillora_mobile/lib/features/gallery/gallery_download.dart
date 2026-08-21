@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../../core/i18n/app_strings.dart';
 import '../../core/platform/media_actions.dart';
 import '../../core/platform/platform_info.dart';
 import 'local_export_record.dart';
@@ -24,12 +25,16 @@ Future<void> downloadRecord(
   LocalExportRecord record,
 ) async {
   final messenger = ScaffoldMessenger.of(context);
+  final strings = context.strings;
   void snack(String message, {bool offerSettings = false}) {
     messenger.showSnackBar(
       SnackBar(
         content: Text(message),
         action: offerSettings
-            ? SnackBarAction(label: 'Settings', onPressed: openAppSettings)
+            ? SnackBarAction(
+                label: context.strings.openSettings,
+                onPressed: openAppSettings,
+              )
             : null,
       ),
     );
@@ -39,18 +44,23 @@ Future<void> downloadRecord(
       ? await MediaActions.saveVideoToFile(
           record.outputPath,
           suggestedName: suggestedFileNameFor(record),
+          dialogTitle: strings.shareSaveVideo,
         )
       : await MediaActions.saveToCameraRoll(record.outputPath);
 
   switch (outcome) {
     case SaveOutcome.saved:
-      snack(isDesktopPlatform ? 'Video saved.' : 'Saved to your Camera Roll.');
+      snack(
+        isDesktopPlatform
+            ? context.strings.htmlVideoSaved
+            : context.strings.galSavedToRoll,
+      );
     case SaveOutcome.missingFile:
-      snack('That video is no longer available.');
+      snack(context.strings.galVideoGone);
     case SaveOutcome.permissionDenied:
-      snack('Allow photo access to save your video.', offerSettings: true);
+      snack(context.strings.pvNeedPhotoAccess, offerSettings: true);
     case SaveOutcome.failed:
-      snack('Could not save the video. Please try again.');
+      snack(context.strings.pvSaveFailed);
     case SaveOutcome.cancelled:
       break; // User dismissed the save dialog.
   }
@@ -92,7 +102,9 @@ class _GalleryDownloadButtonState extends State<GalleryDownloadButton> {
 
   @override
   Widget build(BuildContext context) {
-    final label = isDesktopPlatform ? 'Download' : 'Save';
+    final label = isDesktopPlatform
+        ? context.strings.galDownload
+        : context.strings.galSave;
     final spinner = const SizedBox(
       width: 16,
       height: 16,
@@ -112,7 +124,7 @@ class _GalleryDownloadButtonState extends State<GalleryDownloadButton> {
       child: OutlinedButton.icon(
         onPressed: _saving ? null : _run,
         icon: _saving ? spinner : const Icon(Icons.download_rounded, size: 18),
-        label: Text(_saving ? 'Saving…' : label),
+        label: Text(_saving ? context.strings.pvSaving : label),
       ),
     );
   }

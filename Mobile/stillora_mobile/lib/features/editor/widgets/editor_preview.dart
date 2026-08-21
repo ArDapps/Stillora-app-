@@ -10,6 +10,7 @@ import '../../../core/design/stillora_spacing.dart';
 import '../../color/color_graded_preview.dart';
 import '../editor_state.dart';
 import '../video_styles.dart';
+import '../../../core/i18n/app_strings.dart';
 
 class PreviewCard extends StatelessWidget {
   const PreviewCard({
@@ -52,7 +53,7 @@ class PreviewCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'MP4 Preview',
+                      context.strings.edMp4Preview,
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     Text(
@@ -107,34 +108,52 @@ class _PreviewMedia extends StatelessWidget {
   Widget build(BuildContext context) {
     final item = media;
     if (item == null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(StilloraSpacing.md),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.auto_awesome_rounded,
-                color: StilloraColors.primary,
-                size: 36,
+      // A portrait frame in the stacked layout is only ~135pt wide, where the
+      // full two-line pitch wraps into more rows than the frame is tall. Below
+      // that size the empty state keeps the icon and the headline only.
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final compact =
+              constraints.maxWidth < 220 || constraints.maxHeight < 260;
+          final textTheme = Theme.of(context).textTheme;
+          return Center(
+            child: Padding(
+              padding: EdgeInsets.all(
+                compact ? StilloraSpacing.xs : StilloraSpacing.md,
               ),
-              const SizedBox(height: StilloraSpacing.xs),
-              Text(
-                'Upload media to begin',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleMedium,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.auto_awesome_rounded,
+                    color: StilloraColors.primary,
+                    size: compact ? 26 : 36,
+                  ),
+                  const SizedBox(height: StilloraSpacing.xs),
+                  Text(
+                    context.strings.edUploadToBegin,
+                    textAlign: TextAlign.center,
+                    style: compact
+                        ? textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          )
+                        : textTheme.titleMedium,
+                  ),
+                  if (!compact) ...[
+                    const SizedBox(height: StilloraSpacing.xs),
+                    Text(
+                      context.strings.edPreviewMatches,
+                      textAlign: TextAlign.center,
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: StilloraColors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ],
               ),
-              const SizedBox(height: StilloraSpacing.xs),
-              Text(
-                'The preview matches your final video frame.',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: StilloraColors.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       );
     }
 

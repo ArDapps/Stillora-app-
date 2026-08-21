@@ -7,6 +7,7 @@ import '../../../core/design/stillora_colors.dart';
 import '../../../core/platform/media_actions.dart';
 import '../../../core/widgets/render_panel.dart';
 import '../loop_images_controller.dart';
+import '../../../core/i18n/app_strings.dart';
 
 class LoopCard extends ConsumerWidget {
   const LoopCard({super.key, required this.item});
@@ -73,7 +74,7 @@ class LoopCard extends ConsumerWidget {
                     IconButton(
                       visualDensity: VisualDensity.compact,
                       iconSize: 18,
-                      tooltip: 'Share video',
+                      tooltip: context.strings.loopShareVideo,
                       onPressed: () =>
                           MediaActions.shareVideo(context, item.resultPath!),
                       icon: const Icon(Icons.ios_share_rounded),
@@ -101,7 +102,7 @@ class LoopStatusBadge extends StatelessWidget {
     switch (item.status) {
       case LoopItemStatus.rendering:
         bg = StilloraColors.accent;
-        text = 'Rendering';
+        text = context.strings.loopStatusRendering;
         leading = const SizedBox(
           width: 10,
           height: 10,
@@ -109,13 +110,13 @@ class LoopStatusBadge extends StatelessWidget {
         );
       case LoopItemStatus.done:
         bg = const Color(0xff16a34a);
-        text = 'Done';
+        text = context.strings.loopStatusDone;
       case LoopItemStatus.error:
         bg = const Color(0xffdc2626);
-        text = 'Failed';
+        text = context.strings.loopStatusFailed;
       case LoopItemStatus.ready:
         bg = Colors.black.withValues(alpha: 0.6);
-        text = 'Ready';
+        text = context.strings.loopStatusReady;
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

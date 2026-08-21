@@ -1,3 +1,5 @@
+import '../../core/i18n/app_strings.dart';
+import '../../core/i18n/language_controller.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -15,6 +17,7 @@ import 'editor_state_model.dart';
 import 'local_editor_media_store.dart';
 import 'video_preset.dart';
 import 'video_styles.dart';
+import '../../core/pro/pro_gate.dart';
 
 // The Create-flow notifier: picking media, fitting durations to audio,
 // persistence, and the setters the editor screens call.
@@ -367,8 +370,8 @@ class EditorController extends Notifier<EditorState> {
     );
     final audioPath = await _mediaStore.materializeAudioPath(state.audioPath);
     if (mediaPaths.length != state.media.length) {
-      throw const FileSystemException(
-        'Stillora could not read the selected media. Please choose the file again.',
+      throw FileSystemException(
+        AppStrings.of(ref.read(languageControllerProvider)).edMediaUnreadable,
       );
     }
 
@@ -380,7 +383,13 @@ class EditorController extends Notifier<EditorState> {
           volume: state.media[i].volume,
         ),
     ];
-    state = state.copyWith(media: nextMedia, audioPath: audioPath);
+    state = state.copyWith(
+      media: nextMedia,
+      audioPath: audioPath,
+      // Free exports top out at 720p. Clamp here, not just in the picker, so the
+      // tier is enforced on the output even when the picker never got built.
+      exportQuality: entitledQuality(ref, state.exportQuality),
+    );
     _persist();
     return state;
   }

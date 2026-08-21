@@ -6,6 +6,8 @@ import '../../../core/format/duration_label.dart';
 import '../editor_state.dart' show formatFileSize;
 import '../reel_state.dart';
 import '../video_preset.dart';
+import '../../../core/pro/pro_quality_picker.dart';
+import '../../../core/i18n/app_strings.dart';
 
 class ReelModeSection extends StatelessWidget {
   const ReelModeSection({
@@ -24,7 +26,10 @@ class ReelModeSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('3D video reel', style: Theme.of(context).textTheme.labelMedium),
+          Text(
+            context.strings.edReel3d,
+            style: Theme.of(context).textTheme.labelMedium,
+          ),
           const SizedBox(height: 10),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -32,7 +37,7 @@ class ReelModeSection extends StatelessWidget {
               children: [
                 for (final mockup in ReelMockup.values) ...[
                   ReelChip(
-                    label: mockup.label,
+                    label: mockup.label(context.strings),
                     selected: reel.mockup == mockup,
                     onTap: () => controller.setMockup(mockup),
                   ),
@@ -59,17 +64,14 @@ class ReelDurationBanner extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Row(
         children: [
-          Icon(
-            Icons.timer_outlined,
-            color: StilloraColors.primary,
-            size: 20,
-          ),
+          Icon(Icons.timer_outlined, color: StilloraColors.primary, size: 20),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               seconds > 0
-                  ? 'Output ${formatDurationLabel(seconds)} - ${reel.hasAudio ? 'matches audio' : 'matches app video'}'
-                  : 'Measuring length...',
+                  ? '${context.strings.rlOutput} ${formatDurationLabel(seconds)} — '
+                        '${reel.hasAudio ? context.strings.rlMatchesAudio : context.strings.rlMatchesVideo}'
+                  : context.strings.rlMeasuring,
               style: Theme.of(context).textTheme.bodyMedium,
             ),
           ),
@@ -107,8 +109,8 @@ class ReelAudioRow extends StatelessWidget {
           Expanded(
             child: Text(
               reel.hasAudio
-                  ? 'Audio added - sets reel length'
-                  : 'Add audio (optional)',
+                  ? context.strings.rlAudioAdded
+                  : context.strings.rlAddAudioOptional,
               style: Theme.of(context).textTheme.titleSmall,
             ),
           ),
@@ -116,7 +118,7 @@ class ReelAudioRow extends StatelessWidget {
             IconButton(
               onPressed: onRemove,
               icon: const Icon(Icons.delete_outline_rounded, size: 20),
-              tooltip: 'Remove audio',
+              tooltip: context.strings.edRemoveAudio,
             )
           else
             const Icon(Icons.chevron_right_rounded),
@@ -144,7 +146,10 @@ class ReelFormatExportSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Format & export', style: Theme.of(context).textTheme.labelMedium),
+        Text(
+          context.strings.edFormatExport,
+          style: Theme.of(context).textTheme.labelMedium,
+        ),
         const SizedBox(height: 8),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -162,18 +167,10 @@ class ReelFormatExportSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        SizedBox(
-          width: double.infinity,
-          child: SegmentedButton<ExportQuality>(
-            showSelectedIcon: false,
-            segments: [
-              for (final quality in ExportQuality.values)
-                ButtonSegment(value: quality, label: Text(quality.label)),
-            ],
-            selected: {reel.exportQuality},
-            onSelectionChanged: (value) =>
-                controller.setExportQuality(value.first),
-          ),
+        ProQualityPicker(
+          selected: reel.exportQuality,
+          onSelected: controller.setExportQuality,
+          style: ProQualityPickerStyle.segmented,
         ),
         const SizedBox(height: 8),
         Text(
@@ -186,7 +183,7 @@ class ReelFormatExportSection extends StatelessWidget {
         StilloraPrimaryButton(
           onPressed: onExport,
           icon: Icons.movie_filter_rounded,
-          label: 'Export MP4',
+          label: context.strings.edExportMp4,
         ),
       ],
     );
@@ -214,8 +211,8 @@ class ReelPickCard extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             mockup == ReelMockup.none
-                ? 'Add video or image'
-                : 'Upload app video',
+                ? context.strings.rlAddMedia
+                : context.strings.rlUploadAppVideo,
             style: Theme.of(
               context,
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
@@ -223,8 +220,8 @@ class ReelPickCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             mockup == ReelMockup.none
-                ? 'Create a simple reel from your media.'
-                : 'Your screen recording is placed inside the selected 3D device.',
+                ? context.strings.rlSimpleReel
+                : context.strings.rlMockupHint,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: StilloraColors.onSurfaceVariant,

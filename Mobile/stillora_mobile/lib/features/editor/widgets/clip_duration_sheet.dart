@@ -8,6 +8,7 @@ import '../../../core/widgets/duration_slider.dart';
 import '../editor_state.dart';
 import 'duration_chip.dart';
 import 'editor_shared.dart';
+import '../../../core/i18n/app_strings.dart';
 
 /// Bottom sheet that edits a single clip's duration. Every change is applied
 /// live so the timeline and preview update behind the sheet.
@@ -66,12 +67,13 @@ class _ClipDurationSheetState extends State<ClipDurationSheet> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            '${widget.isVideo ? 'Video' : 'Photo'} ${widget.clipNumber} duration',
+            '${widget.isVideo ? context.strings.edVideoClip : context.strings.edPhotoClip} '
+            '${widget.clipNumber} ${context.strings.edClipDuration}',
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: StilloraSpacing.xs),
           Text(
-            'Set how long this clip plays in the final video.',
+            context.strings.edClipLengthHint,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: StilloraColors.onSurfaceVariant,
             ),
@@ -93,7 +95,7 @@ class _ClipDurationSheetState extends State<ClipDurationSheet> {
           DurationSlider(
             seconds: _seconds,
             min: minDurationSeconds,
-            label: 'Length',
+            label: context.strings.edLength,
             onChanged: _set,
           ),
           if (widget.isVideo) ...[
@@ -101,7 +103,9 @@ class _ClipDurationSheetState extends State<ClipDurationSheet> {
             Row(
               children: [
                 IconButton.filledTonal(
-                  tooltip: _volume <= 0 ? 'Unmute' : 'Mute',
+                  tooltip: _volume <= 0
+                      ? context.strings.edUnmute
+                      : context.strings.edMute,
                   onPressed: () => _setVolume(_volume <= 0 ? 1.0 : 0.0),
                   icon: Icon(
                     _volume <= 0
@@ -113,8 +117,8 @@ class _ClipDurationSheetState extends State<ClipDurationSheet> {
                 Expanded(
                   child: Text(
                     _volume <= 0
-                        ? 'Muted'
-                        : 'Volume ${(_volume * 100).round()}%',
+                        ? context.strings.audMuted
+                        : '${context.strings.edVolumeLabel} ${(_volume * 100).round()}%',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ),
@@ -125,11 +129,13 @@ class _ClipDurationSheetState extends State<ClipDurationSheet> {
               min: 0,
               max: 1,
               divisions: 20,
-              label: _volume <= 0 ? 'Muted' : '${(_volume * 100).round()}%',
+              label: _volume <= 0
+                  ? context.strings.audMuted
+                  : '${(_volume * 100).round()}%',
               onChanged: _setVolume,
             ),
             Text(
-              'Controls this video clip’s own sound in the export.',
+              context.strings.edClipVolumeHint,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: StilloraColors.onSurfaceVariant,
               ),
@@ -139,7 +145,7 @@ class _ClipDurationSheetState extends State<ClipDurationSheet> {
           StilloraPrimaryButton(
             onPressed: () => Navigator.of(context).pop(),
             icon: Icons.check_rounded,
-            label: 'Done',
+            label: context.strings.edDone,
           ),
         ],
       ),

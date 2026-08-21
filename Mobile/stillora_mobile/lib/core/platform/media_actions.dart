@@ -103,6 +103,7 @@ class MediaActions {
   static Future<SaveOutcome> savePdfToFile(
     String path, {
     String suggestedName = 'stillora.pdf',
+    String? dialogTitle,
   }) async {
     final source = File(path);
     if (!source.existsSync()) {
@@ -111,7 +112,7 @@ class MediaActions {
     try {
       final bytes = await source.readAsBytes();
       final destination = await FilePicker.platform.saveFile(
-        dialogTitle: 'Save PDF',
+        dialogTitle: dialogTitle ?? 'Save PDF',
         fileName: suggestedName,
         type: FileType.custom,
         allowedExtensions: const ['pdf'],
@@ -138,6 +139,7 @@ class MediaActions {
   /// the dialog so the caller can stay silent.
   static Future<SaveOutcome> saveAudioToFile(
     String path, {
+    String? dialogTitle,
     String suggestedName = 'stillora.mp3',
   }) async {
     final source = File(path);
@@ -147,7 +149,7 @@ class MediaActions {
     try {
       final bytes = await source.readAsBytes();
       final destination = await FilePicker.platform.saveFile(
-        dialogTitle: 'Save audio',
+        dialogTitle: dialogTitle ?? 'Save audio',
         fileName: suggestedName,
         type: FileType.custom,
         allowedExtensions: const ['mp3'],
@@ -199,6 +201,7 @@ class MediaActions {
   static Future<SaveOutcome> saveVideoToFile(
     String path, {
     String suggestedName = 'stillora.mp4',
+    String? dialogTitle,
   }) async {
     final source = File(path);
     if (!source.existsSync()) {
@@ -207,7 +210,7 @@ class MediaActions {
     try {
       final bytes = await source.readAsBytes();
       final destination = await FilePicker.platform.saveFile(
-        dialogTitle: 'Save video',
+        dialogTitle: dialogTitle ?? 'Save video',
         fileName: suggestedName,
         type: FileType.custom,
         allowedExtensions: const ['mp4'],

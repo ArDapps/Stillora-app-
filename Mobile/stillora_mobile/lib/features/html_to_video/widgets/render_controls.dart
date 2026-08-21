@@ -1,3 +1,4 @@
+import '../../../core/i18n/app_strings.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -27,17 +28,17 @@ class ConvertButton extends StatelessWidget {
         height: 56,
         child: Row(
           children: [
-            const Expanded(
+            Expanded(
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  SizedBox(
+                  const SizedBox(
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   ),
-                  SizedBox(width: 10),
-                  Text('Rendering…'),
+                  const SizedBox(width: 10),
+                  Text(context.strings.htmlRendering),
                 ],
               ),
             ),
@@ -45,7 +46,7 @@ class ConvertButton extends StatelessWidget {
             OutlinedButton.icon(
               onPressed: onCancel,
               icon: const Icon(Icons.close_rounded),
-              label: const Text('Cancel'),
+              label: Text(context.strings.cancel),
               style: OutlinedButton.styleFrom(minimumSize: const Size(0, 56)),
             ),
           ],
@@ -57,7 +58,7 @@ class ConvertButton extends StatelessWidget {
       child: FilledButton.icon(
         onPressed: onConvert,
         icon: const Icon(Icons.auto_awesome),
-        label: const Text('Convert to MP4'),
+        label: Text(context.strings.htmlConvertCta),
       ),
     );
   }
@@ -68,15 +69,21 @@ class ConvertButton extends StatelessWidget {
 Future<void> saveRenderedVideo(BuildContext context, File file) async {
   final name = 'stillora_${DateTime.now().millisecondsSinceEpoch}.mp4';
   final outcome = isDesktopPlatform
-      ? await MediaActions.saveVideoToFile(file.path, suggestedName: name)
+      ? await MediaActions.saveVideoToFile(
+          file.path,
+          suggestedName: name,
+          dialogTitle: context.strings.shareSaveVideo,
+        )
       : await MediaActions.saveToCameraRoll(file.path);
   if (!context.mounted || outcome == SaveOutcome.cancelled) return;
   final message = switch (outcome) {
     SaveOutcome.saved =>
-      isDesktopPlatform ? 'Video saved.' : 'Saved to your camera roll.',
-    SaveOutcome.permissionDenied => 'Photos permission was denied.',
-    SaveOutcome.missingFile => 'The video file is missing.',
-    SaveOutcome.failed => 'Could not save the video.',
+      isDesktopPlatform
+          ? context.strings.htmlVideoSaved
+          : context.strings.htmlSavedToRoll,
+    SaveOutcome.permissionDenied => context.strings.htmlPhotosDenied,
+    SaveOutcome.missingFile => context.strings.htmlFileMissing,
+    SaveOutcome.failed => context.strings.htmlSaveFailed,
     SaveOutcome.cancelled => '',
   };
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
@@ -88,7 +95,7 @@ Future<void> shareRenderedVideo(BuildContext context, File file) async {
   if (!context.mounted || ok) return;
   ScaffoldMessenger.of(
     context,
-  ).showSnackBar(const SnackBar(content: Text('The video file is missing.')));
+  ).showSnackBar(SnackBar(content: Text(context.strings.htmlFileMissing)));
 }
 
 /// Save / share row shown once a render has finished.

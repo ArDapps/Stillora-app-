@@ -13,6 +13,7 @@ import '../preview/section_video_preview.dart';
 import 'watermark_state.dart';
 import 'widgets/watermark_overlay_list.dart';
 import 'widgets/watermark_preview.dart';
+import '../../core/i18n/app_strings.dart';
 
 /// "Watermark" section: load a video, then stack one or more logos / images /
 /// videos over it as overlays. Each overlay can be dragged, resized, and given a
@@ -25,12 +26,7 @@ class WatermarkView extends ConsumerWidget {
     final messenger = ScaffoldMessenger.of(context);
     if (!watermarkExportSupported) {
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Watermark export runs on macOS and Windows/Linux today. '
-            'iPhone & Android export is coming next.',
-          ),
-        ),
+        SnackBar(content: Text(context.strings.wmPlatformNote)),
       );
       return;
     }
@@ -50,8 +46,8 @@ class WatermarkView extends ConsumerWidget {
         SnackBar(
           content: Text(
             result == null
-                ? 'Add a video and at least one overlay first.'
-                : 'Saved to Library · ${result.width}×${result.height}',
+                ? context.strings.wmNeedVideoAndOverlay
+                : '${context.strings.savedToLibrary} · ${result.width}×${result.height}',
           ),
         ),
       );
@@ -60,7 +56,9 @@ class WatermarkView extends ConsumerWidget {
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            isExportCancellation(e) ? 'Export cancelled' : 'Export failed: $e',
+            isExportCancellation(e)
+                ? context.strings.wmExportCancelled
+                : 'Export failed: $e',
           ),
         ),
       );
@@ -82,12 +80,10 @@ class WatermarkView extends ConsumerWidget {
         child: SectionSplitView(
           onStartOver: controller.reset,
           canStartOver: wm.hasBase,
-          previewCaption: wm.hasBase
-              ? 'Drag an overlay to place it — this is what gets exported'
-              : null,
+          previewCaption: wm.hasBase ? context.strings.wmDragHint : null,
           preview: PreviewStage(
             aspectRatio: wm.aspectRatio,
-            emptyLabel: 'Load a video to stack overlays on it',
+            emptyLabel: context.strings.wmLoadVideoFirst,
             emptyIcon: Icons.branding_watermark_outlined,
             // Grade the whole composite so the preview matches the exported
             // (graded) file.
@@ -104,8 +100,7 @@ class WatermarkView extends ConsumerWidget {
           ),
           controls: [
             Text(
-              'Add a logo, image, or video on top of your clip. Drag to place it, '
-              'resize it, and set when it appears. Your video keeps its own sound.',
+              context.strings.wmIntro,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: StilloraColors.onSurfaceVariant,
               ),
@@ -113,9 +108,8 @@ class WatermarkView extends ConsumerWidget {
             const SizedBox(height: 16),
             if (!wm.hasBase)
               SectionPickBaseCard(
-                title: 'Choose a video to watermark',
-                subtitle:
-                    'Then drop your logo, image, or another video on top.',
+                title: context.strings.wmChooseVideo,
+                subtitle: context.strings.wmThenDrop,
                 onPick: controller.pickBaseVideo,
               )
             else ...[
@@ -129,16 +123,13 @@ class WatermarkView extends ConsumerWidget {
               OutlinedButton.icon(
                 onPressed: controller.addOverlays,
                 icon: const Icon(Icons.add_photo_alternate_rounded),
-                label: const Text('Add logo, image, or video'),
+                label: Text(context.strings.wmAddOverlay),
               ),
               const SizedBox(height: 12),
               if (wm.hasOverlays)
                 WatermarkOverlayList(wm: wm, controller: controller)
               else
-                const SectionEmptyHint(
-                  'No overlays yet. Add a logo, image, or video to place on '
-                  'the clip.',
-                ),
+                SectionEmptyHint(context.strings.wmNoOverlays),
               if (colorGradingSupported) ...[
                 const SizedBox(height: 16),
                 ColorCorrectionPanel(
@@ -157,9 +148,7 @@ class WatermarkView extends ConsumerWidget {
                 durationSeconds: wm.baseDurationSeconds,
                 canExport: wm.canExport,
                 onExport: () => _runExport(context, ref),
-                platformNote:
-                    'Each overlay is burned in with its time window on macOS '
-                    'and Windows/Linux. iPhone & Android export is coming next.',
+                platformNote: context.strings.wmPlatformNote,
               ),
               // Clearing is the shared "Start over" control pinned above the
               // controls column.

@@ -8,6 +8,7 @@ import '../images_to_pdf_controller.dart';
 import '../pdf_builder.dart';
 import '../pdf_import.dart';
 import '../pdf_layout.dart';
+import '../../../core/i18n/app_strings.dart';
 
 /// Step 1 — get files in, and act on the whole queue at once.
 class PdfSourceCard extends ConsumerWidget {
@@ -23,11 +24,11 @@ class PdfSourceCard extends ConsumerWidget {
 
     return RenderStepCard(
       number: '1',
-      title: 'Pages',
+      title: context.strings.pdfPages,
       trailing: RenderTagPill('${state.pages.length}/$kPdfMaxPages'),
       footer: state.isImporting && state.importingLabel != null
           ? 'Reading ${state.importingLabel}…'
-          : 'Images and PDFs mix freely — a PDF adds one page per page it has.',
+          : context.strings.pdfMixHint,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -36,7 +37,11 @@ class PdfSourceCard extends ConsumerWidget {
             child: FilledButton.icon(
               onPressed: state.isBusy ? null : onAdd,
               icon: const Icon(Icons.add_rounded),
-              label: Text(hasPages ? 'Add more files' : 'Add images or PDFs'),
+              label: Text(
+                hasPages
+                    ? context.strings.loopAddMore
+                    : context.strings.pdfAddFiles,
+              ),
             ),
           ),
           if (hasPages) ...[
@@ -49,7 +54,7 @@ class PdfSourceCard extends ConsumerWidget {
                         ? null
                         : () => controller.rotateAll(1),
                     icon: const Icon(Icons.rotate_right_rounded, size: 18),
-                    label: const Text('Rotate all'),
+                    label: Text(context.strings.pdfRotateAll),
                   ),
                 ),
                 const SizedBox(width: StilloraSpacing.xs),
@@ -57,7 +62,7 @@ class PdfSourceCard extends ConsumerWidget {
                   child: OutlinedButton.icon(
                     onPressed: state.isBusy ? null : controller.clearPages,
                     icon: const Icon(Icons.delete_outline_rounded, size: 18),
-                    label: const Text('Clear'),
+                    label: Text(context.strings.loopClear),
                   ),
                 ),
               ],
@@ -80,25 +85,31 @@ class PdfSheetCard extends ConsumerWidget {
 
     return RenderStepCard(
       number: '2',
-      title: 'Page size',
-      trailing: RenderTagPill(state.sheet.label),
-      footer: state.sheet.hint,
+      title: context.strings.pdfPageSize,
+      trailing: RenderTagPill(state.sheet.label(context.strings)),
+      footer: state.sheet.hint(context.strings),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           RenderPillSegmented(
-            options: [for (final sheet in PdfSheet.values) sheet.label],
+            options: [
+              for (final sheet in PdfSheet.values) sheet.label(context.strings),
+            ],
             selectedIndex: PdfSheet.values.indexOf(state.sheet),
             onSelected: (i) => controller.setSheet(PdfSheet.values[i]),
           ),
           const SizedBox(height: StilloraSpacing.sm),
-          Text('Margin', style: Theme.of(context).textTheme.labelMedium),
+          Text(
+            context.strings.pdfMargin,
+            style: Theme.of(context).textTheme.labelMedium,
+          ),
           const SizedBox(height: StilloraSpacing.xs),
           RenderPillSegmented(
-            options: [for (final m in PdfMarginSize.values) m.label],
+            options: [
+              for (final m in PdfMarginSize.values) m.label(context.strings),
+            ],
             selectedIndex: PdfMarginSize.values.indexOf(state.margin),
-            onSelected: (i) =>
-                controller.setMargin(PdfMarginSize.values[i]),
+            onSelected: (i) => controller.setMargin(PdfMarginSize.values[i]),
           ),
         ],
       ),
@@ -120,12 +131,11 @@ class PdfImportQualityCard extends ConsumerWidget {
 
     return RenderStepCard(
       number: '3',
-      title: 'PDF import quality',
+      title: context.strings.pdfImportQuality,
       trailing: RenderTagPill('${state.importDpi} dpi'),
       footer:
-          'Imported PDF pages are re-drawn as pictures so they can be rotated '
-          'and reordered next to your images. Text stops being selectable. '
-          'Applies to PDFs added from now on.',
+          '${context.strings.pdfImportQualityHint} '
+          '${context.strings.pdfImportQualityNote}',
       child: RenderPillSegmented(
         options: [for (final dpi in kPdfImportDpiOptions) '$dpi dpi'],
         selectedIndex: kPdfImportDpiOptions.indexOf(state.importDpi),
@@ -167,14 +177,13 @@ class _PdfOutputCardState extends ConsumerState<PdfOutputCard> {
 
     // "Start over" resets the name in state; mirror that back into the field
     // without stomping on what the user is mid-way through typing.
-    if (_name.text != state.fileName &&
-        !FocusScope.of(context).hasFocus) {
+    if (_name.text != state.fileName && !FocusScope.of(context).hasFocus) {
       _name.text = state.fileName;
     }
 
     return RenderStepCard(
       number: '4',
-      title: 'File name',
+      title: context.strings.pdfFileName,
       trailing: state.estimatedBytes > 0
           ? RenderTagPill('≈ ${formatPdfSize(state.estimatedBytes)}')
           : null,
@@ -226,18 +235,13 @@ class PdfMessageBanner extends ConsumerWidget {
                   ? Icons.error_outline_rounded
                   : Icons.info_outline_rounded,
               size: 18,
-              color: isError
-                  ? StilloraColors.error
-                  : StilloraColors.secondary,
+              color: isError ? StilloraColors.error : StilloraColors.secondary,
             ),
             const SizedBox(width: StilloraSpacing.xs),
             Expanded(
               child: Text(
                 message,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: StilloraColors.onSurface,
-                ),
+                style: TextStyle(fontSize: 12, color: StilloraColors.onSurface),
               ),
             ),
             IconButton(

@@ -14,6 +14,7 @@ import 'gallery_video_screen.dart';
 import 'local_export_record.dart';
 import 'widgets/gallery_browser_widgets.dart';
 import 'widgets/gallery_cards.dart';
+import '../../core/i18n/app_strings.dart';
 
 class GalleryScreen extends StatelessWidget {
   const GalleryScreen({super.key});
@@ -23,7 +24,7 @@ class GalleryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Library')),
+      appBar: AppBar(title: Text(context.strings.library)),
       body: const GalleryView(),
     );
   }
@@ -128,16 +129,20 @@ class _GalleryViewState extends ConsumerState<GalleryView> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text('Delete $count ${count == 1 ? 'video' : 'videos'}?'),
-        content: const Text('This permanently removes them from this device.'),
+        title: Text(
+          count == 1
+              ? context.strings.galDeleteOneTitle
+              : context.strings.galDeleteCountTitle('$count'),
+        ),
+        content: Text(context.strings.galDeleteManyBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
+            child: Text(context.strings.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Delete'),
+            child: Text(context.strings.delete),
           ),
         ],
       ),
@@ -236,7 +241,7 @@ class _GalleryViewState extends ConsumerState<GalleryView> {
                   width: 400,
                   child: LivePreviewPanel(
                     caption: _preview == null
-                        ? 'Pick a render to play it here'
+                        ? context.strings.galPickToPlay
                         : _preview!.outputPath.split(RegExp(r'[/\\]')).last,
                     actions: _preview == null
                         ? null
@@ -251,7 +256,7 @@ class _GalleryViewState extends ConsumerState<GalleryView> {
                                   Icons.open_in_full_rounded,
                                   size: 18,
                                 ),
-                                label: const Text('Open full screen'),
+                                label: Text(context.strings.galOpenFull),
                               ),
                             ],
                           ),

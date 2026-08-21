@@ -79,12 +79,10 @@ class DesktopSidebar extends ConsumerWidget {
               ),
             ),
           const SizedBox(height: StilloraSpacing.md),
-          if (!collapsed) ...[
-            SidebarLabel(strings.workspace),
-            const SizedBox(height: StilloraSpacing.xs),
-          ],
-          // Scrolls when the window is short or the item list grows, so the
-          // nav never overflows and the ad + footer stay pinned below. A
+          // Tools, grouped under quiet headings (CREATE / VIDEO TOOLS /
+          // DOCUMENT TOOLS / YOUR CONTENT). Scrolls when the window is short or
+          // the list grows, so the nav never overflows and the ACCOUNT / APP
+          // footer, ad and privacy line stay pinned below. A
           // SingleChildScrollView (not ListView) builds every item even when
           // off-screen, so all nav destinations stay reachable/testable.
           Expanded(
@@ -94,21 +92,48 @@ class DesktopSidebar extends ConsumerWidget {
                     ? CrossAxisAlignment.center
                     : CrossAxisAlignment.start,
                 children: [
-                  for (final section in desktopNavOrder)
-                    if (section.isAvailable)
-                      DesktopNavItem(
-                        selected: section.viewIndex == activeIndex,
-                        icon: section.icon,
-                        selectedIcon: section.selectedIcon,
-                        label: section.title(strings),
-                        collapsed: collapsed,
-                        onTap: () => onSelect(section.viewIndex),
+                  for (final group in navToolGroups)
+                    if (group.availableSections.isNotEmpty) ...[
+                      if (!collapsed) ...[
+                        SidebarLabel(group.group.label(strings)),
+                        const SizedBox(height: StilloraSpacing.xs),
+                      ],
+                      for (final section in group.availableSections)
+                        DesktopNavItem(
+                          selected: section.viewIndex == activeIndex,
+                          icon: section.icon,
+                          selectedIcon: section.selectedIcon,
+                          label: section.title(strings),
+                          collapsed: collapsed,
+                          onTap: () => onSelect(section.viewIndex),
+                        ),
+                      SizedBox(
+                        height: collapsed
+                            ? StilloraSpacing.xs
+                            : StilloraSpacing.base,
                       ),
+                    ],
                 ],
               ),
             ),
           ),
+          // ACCOUNT / APP: Stillora Pro + Info, pinned above the privacy line.
           if (!collapsed) ...[
+            SidebarLabel(navFooterGroup.group.label(strings)),
+            const SizedBox(height: StilloraSpacing.xs),
+          ],
+          for (final section in navFooterGroup.availableSections)
+            DesktopNavItem(
+              selected: section.viewIndex == activeIndex,
+              icon: section.icon,
+              selectedIcon: section.selectedIcon,
+              label: section.title(strings),
+              collapsed: collapsed,
+              premium: section == AppSection.stilloraPro,
+              onTap: () => onSelect(section.viewIndex),
+            ),
+          if (!collapsed) ...[
+            const SizedBox(height: StilloraSpacing.base),
             const AdSlotWidget(
               placement: 'USER_DASHBOARD_LEFT',
               campaignKey: 'stilloraside',
@@ -174,6 +199,7 @@ class DesktopNavItem extends StatefulWidget {
     required this.label,
     required this.onTap,
     this.collapsed = false,
+    this.premium = false,
   });
 
   final bool selected;
@@ -182,6 +208,10 @@ class DesktopNavItem extends StatefulWidget {
   final String label;
   final VoidCallback onTap;
   final bool collapsed;
+
+  /// Marks the Stillora Pro entry. It gets a warm premium tint instead of the
+  /// muted nav grey — enough to read as special, not enough to look like an ad.
+  final bool premium;
 
   @override
   State<DesktopNavItem> createState() => _DesktopNavItemState();
@@ -197,6 +227,8 @@ class _DesktopNavItemState extends State<DesktopNavItem> {
     // stay muted, brightening only on hover.
     final fg = selected
         ? Colors.white
+        : widget.premium
+        ? StilloraColors.brandCyan
         : (_hovered
               ? StilloraColors.onSurface
               : StilloraColors.onSurfaceVariant);
@@ -228,6 +260,8 @@ class _DesktopNavItemState extends State<DesktopNavItem> {
                     ? null
                     : (_hovered
                           ? StilloraColors.onSurface.withValues(alpha: 0.06)
+                          : widget.premium
+                          ? StilloraColors.brandCyan.withValues(alpha: 0.07)
                           : Colors.transparent),
                 borderRadius: BorderRadius.circular(StilloraRadius.md),
                 boxShadow: selected
@@ -270,7 +304,7 @@ class _DesktopNavItemState extends State<DesktopNavItem> {
                               overflow: TextOverflow.ellipsis,
                               style: Theme.of(context).textTheme.labelLarge
                                   ?.copyWith(
-                                    fontWeight: selected
+                                    fontWeight: selected || widget.premium
                                         ? FontWeight.w800
                                         : FontWeight.w600,
                                     color: fg,

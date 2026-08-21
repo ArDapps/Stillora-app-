@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/editor/video_preset.dart';
 import '../design/stillora_colors.dart';
 import '../design/stillora_spacing.dart';
 import '../design/stillora_surface.dart';
 import '../format/duration_label.dart';
+import '../pro/pro_controller.dart';
+import '../pro/pro_gate.dart';
+import '../i18n/app_strings.dart';
 
 /// Shared chrome for the "load a base video, stack things on it, export" model
 /// sections (Text, Watermark, …). Each section supplies its own copy; the
@@ -43,11 +47,14 @@ class SectionBaseInfoRow extends StatelessWidget {
               measured
                   ? 'Base video · ${resolution.width}×${resolution.height} · '
                         '${formatDurationLabel(durationSeconds)}'
-                  : 'Reading video…',
+                  : context.strings.exportReadingVideo,
               style: Theme.of(context).textTheme.bodyMedium,
             ),
           ),
-          TextButton(onPressed: onReplace, child: const Text('Replace')),
+          TextButton(
+            onPressed: onReplace,
+            child: Text(context.strings.exportReplace),
+          ),
         ],
       ),
     );
@@ -77,7 +84,10 @@ class SectionExportPanel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Export', style: Theme.of(context).textTheme.labelMedium),
+        Text(
+          context.strings.exExport,
+          style: Theme.of(context).textTheme.labelMedium,
+        ),
         const SizedBox(height: 8),
         Text(
           'Output ${resolution.width} × ${resolution.height} · '
@@ -90,7 +100,7 @@ class SectionExportPanel extends StatelessWidget {
         StilloraPrimaryButton(
           onPressed: canExport ? onExport : null,
           icon: Icons.movie_filter_rounded,
-          label: 'Export MP4',
+          label: context.strings.exportMp4,
         ),
         const SizedBox(height: 8),
         Row(
@@ -164,7 +174,12 @@ class SectionPickBaseCard extends StatelessWidget {
 
 /// Output-resolution picker: Original (keep the source size) or a tier that
 /// scales the short edge to 720p/1080p/2K/4K, aspect preserved. `null` = Original.
-class SectionResolutionSelector extends StatelessWidget {
+///
+/// Tiers above the Free ceiling stay visible, carry a PRO badge, and open the
+/// upgrade page instead of applying. "Original" is never gated — re-exporting a
+/// video at the size it already was is basic access to the user's own file, not
+/// a premium feature.
+class SectionResolutionSelector extends ConsumerWidget {
   const SectionResolutionSelector({
     super.key,
     required this.selected,
@@ -175,26 +190,43 @@ class SectionResolutionSelector extends StatelessWidget {
   final ValueChanged<ExportQuality?> onSelected;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isPro = ref.watch(isProProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Resolution', style: Theme.of(context).textTheme.labelMedium),
+        Text(
+          context.strings.exportResolution,
+          style: Theme.of(context).textTheme.labelMedium,
+        ),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
           runSpacing: 8,
           children: [
             ChoiceChip(
-              label: const Text('Original'),
+              label: Text(context.strings.exportOriginal),
               selected: selected == null,
               onSelected: (_) => onSelected(null),
             ),
             for (final q in ExportQuality.values)
               ChoiceChip(
-                label: Text(q.label),
+                label: ProLabel(
+                  q.label,
+                  locked: q.requiresPro && !isPro,
+                  compact: true,
+                ),
                 selected: selected == q,
-                onSelected: (_) => onSelected(q),
+                onSelected: (_) {
+                  if (q.requiresPro && !isPro) {
+                    openProUpgrade(
+                      context,
+                      reason: ProFeature.higherResolution,
+                    );
+                    return;
+                  }
+                  onSelected(q);
+                },
               ),
           ],
         ),
@@ -229,7 +261,9 @@ class _SectionExportingDialogState extends State<SectionExportingDialog> {
             const CircularProgressIndicator(),
             const SizedBox(height: StilloraSpacing.sm),
             Text(
-              _cancelling ? 'Cancelling…' : 'Exporting…',
+              _cancelling
+                  ? context.strings.exportCancelling
+                  : context.strings.exportExporting,
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(height: StilloraSpacing.sm),
@@ -241,7 +275,7 @@ class _SectionExportingDialogState extends State<SectionExportingDialog> {
                       await widget.onCancel();
                     },
               icon: const Icon(Icons.close_rounded),
-              label: const Text('Cancel export'),
+              label: Text(context.strings.exportCancel),
             ),
           ],
         ),

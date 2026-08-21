@@ -15,6 +15,7 @@ import '../../core/widgets/desktop_shell.dart';
 import '../export/export_controller.dart';
 import '../rating/rating_prompt.dart';
 import '../tabs/app_tabs_screen.dart';
+import '../../core/i18n/app_strings.dart';
 
 class PreviewScreen extends ConsumerStatefulWidget {
   const PreviewScreen({super.key});
@@ -56,7 +57,10 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
       SnackBar(
         content: Text(message),
         action: offerSettings
-            ? SnackBarAction(label: 'Settings', onPressed: openAppSettings)
+            ? SnackBarAction(
+                label: context.strings.openSettings,
+                onPressed: openAppSettings,
+              )
             : null,
       ),
     );
@@ -69,7 +73,7 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
     try {
       final ok = await MediaActions.shareVideo(context, path);
       if (!ok) {
-        _snack('That video is no longer available. Please export again.');
+        _snack(context.strings.pvGone);
       }
     } finally {
       if (mounted) setState(() => _sharing = false);
@@ -84,13 +88,13 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
       final outcome = await MediaActions.saveToCameraRoll(path);
       switch (outcome) {
         case SaveOutcome.saved:
-          _snack('Saved to your Camera Roll.');
+          _snack(context.strings.pvSaved);
         case SaveOutcome.missingFile:
-          _snack('That video is no longer available. Please export again.');
+          _snack(context.strings.pvGone);
         case SaveOutcome.permissionDenied:
-          _snack('Allow photo access to save your video.', offerSettings: true);
+          _snack(context.strings.pvNeedPhotoAccess, offerSettings: true);
         case SaveOutcome.failed:
-          _snack('Could not save the video. Please try again.');
+          _snack(context.strings.pvSaveFailed);
         case SaveOutcome.cancelled:
           break; // Camera-roll save has no cancellable dialog.
       }
@@ -112,7 +116,7 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
 
     if (!fileExists) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Export Complete')),
+        appBar: AppBar(title: Text(context.strings.previewComplete)),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(StilloraSpacing.lg),
@@ -126,14 +130,14 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
                 ),
                 const SizedBox(height: StilloraSpacing.sm),
                 Text(
-                  'No video yet',
+                  context.strings.previewNoVideo,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: StilloraSpacing.xs),
                 FilledButton.icon(
                   onPressed: openEditor,
                   icon: const Icon(Icons.add_rounded),
-                  label: const Text('Create a video'),
+                  label: Text(context.strings.previewCreateVideo),
                 ),
               ],
             ),
@@ -143,7 +147,7 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Export Complete')),
+      appBar: AppBar(title: Text(context.strings.previewComplete)),
       body: DecoratedBox(
         decoration: BoxDecoration(gradient: stilloraBackgroundGradient),
         child: SafeArea(
@@ -155,7 +159,7 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
               _VideoCard(outputPath: outputPath),
               const SizedBox(height: 24),
               Text(
-                'Share to',
+                context.strings.previewShareTo,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: StilloraColors.onSurfaceVariant,
                 ),
@@ -166,7 +170,9 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
               StilloraPrimaryButton(
                 onPressed: _busy ? null : _share,
                 icon: Icons.ios_share_rounded,
-                label: _sharing ? 'Preparing…' : 'Save & Share',
+                label: _sharing
+                    ? context.strings.pvPreparing
+                    : context.strings.pvSaveShare,
               ),
               const SizedBox(height: 12),
               OutlinedButton.icon(
@@ -177,14 +183,18 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.download_rounded),
-                label: Text(_saving ? 'Saving…' : 'Save to Camera Roll'),
+                label: Text(
+                  _saving
+                      ? context.strings.pvSaving
+                      : context.strings.pvSaveRoll,
+                ),
               ),
               const SizedBox(height: 20),
               Center(
                 child: TextButton.icon(
                   onPressed: openEditor,
                   icon: const Icon(Icons.add_rounded),
-                  label: const Text('Create Another Video'),
+                  label: Text(context.strings.previewAnother),
                 ),
               ),
             ],
@@ -246,14 +256,14 @@ class _SuccessHeader extends StatelessWidget {
         ),
         const SizedBox(height: 20),
         Text(
-          'Export Complete!',
+          context.strings.previewComplete,
           style: Theme.of(
             context,
           ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 6),
         Text(
-          'Your video is ready to share.',
+          context.strings.previewReady,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: StilloraColors.onSurfaceVariant,
           ),
@@ -376,7 +386,7 @@ class _PlatformRow extends StatelessWidget {
         ),
         _PlatformButton(
           icon: Icons.more_horiz_rounded,
-          label: 'More',
+          label: context.strings.previewMore,
           color: StilloraColors.onSurfaceVariant,
           onTap: onShare,
           isMaterial: true,

@@ -5,6 +5,7 @@ import '../../../core/design/stillora_spacing.dart';
 import '../../../core/widgets/video_thumbnail.dart';
 import '../gallery_download.dart';
 import '../local_export_record.dart';
+import '../../../core/i18n/app_strings.dart';
 
 /// "Load more" footer shown when the Library has more videos than are currently
 /// revealed. Tapping reveals the next page.
@@ -26,7 +27,7 @@ class GalleryLoadMoreButton extends StatelessWidget {
         child: OutlinedButton.icon(
           onPressed: onPressed,
           icon: const Icon(Icons.expand_more_rounded, size: 18),
-          label: Text('Load more ($remaining)'),
+          label: Text('${context.strings.galLoadMoreCount} ($remaining)'),
         ),
       ),
     );
@@ -206,14 +207,14 @@ class GalleryEmpty extends StatelessWidget {
       padding: const EdgeInsets.all(StilloraSpacing.md),
       children: [
         Text(
-          'Local library',
+          context.strings.galLocalLibrary,
           style: Theme.of(
             context,
           ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 6),
         Text(
-          'Exports are stored on this phone. Nothing here depends on cloud storage.',
+          context.strings.galStoredHere,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: StilloraColors.onSurfaceVariant,
           ),
@@ -230,10 +231,7 @@ class GalleryEmpty extends StatelessWidget {
                   color: Theme.of(context).colorScheme.primary,
                 ),
                 const SizedBox(height: 12),
-                const Text(
-                  'Videos you convert on this phone will appear here. Convert a photo to get started.',
-                  textAlign: TextAlign.center,
-                ),
+                Text(context.strings.galEmpty, textAlign: TextAlign.center),
               ],
             ),
           ),

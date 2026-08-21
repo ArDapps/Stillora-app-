@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/i18n/app_strings.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/design/stillora_colors.dart';
 import '../../../core/design/stillora_glow.dart';
@@ -212,12 +213,12 @@ class LoginLegalLinks extends StatelessWidget {
       children: [
         TextButton(
           onPressed: () => _open(AppConstants.termsUrl),
-          child: Text('Terms', style: style),
+          child: Text(context.strings.authTerms, style: style),
         ),
         Text('·', style: style),
         TextButton(
           onPressed: () => _open(AppConstants.privacyUrl),
-          child: Text('Privacy', style: style),
+          child: Text(context.strings.authPrivacy, style: style),
         ),
       ],
     );

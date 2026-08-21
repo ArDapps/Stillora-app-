@@ -5,6 +5,7 @@ import '../../../core/design/stillora_spacing.dart';
 import '../../../core/design/stillora_surface.dart';
 import '../../../core/format/duration_label.dart';
 import '../watermark_state.dart';
+import '../../../core/i18n/app_strings.dart';
 
 class WatermarkOverlayList extends StatelessWidget {
   const WatermarkOverlayList({required this.wm, required this.controller});
@@ -17,7 +18,10 @@ class WatermarkOverlayList extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Overlays', style: Theme.of(context).textTheme.labelMedium),
+        Text(
+          context.strings.wmOverlays,
+          style: Theme.of(context).textTheme.labelMedium,
+        ),
         const SizedBox(height: 8),
         for (var i = 0; i < wm.overlays.length; i++)
           WatermarkOverlayRow(
@@ -94,7 +98,7 @@ class WatermarkOverlayRow extends StatelessWidget {
                 IconButton(
                   onPressed: onRemove,
                   icon: const Icon(Icons.delete_outline_rounded, size: 20),
-                  tooltip: 'Remove',
+                  tooltip: context.strings.wmRemove,
                   visualDensity: VisualDensity.compact,
                   color: StilloraColors.onSurfaceVariant,
                 ),

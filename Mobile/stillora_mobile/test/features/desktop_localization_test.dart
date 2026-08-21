@@ -63,7 +63,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
   }
 
-  testWidgets('the sidebar shows Settings, not the old Info tab', (
+  testWidgets('the sidebar is grouped into toolkit categories', (
     tester,
   ) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
@@ -73,9 +73,25 @@ void main() {
         harness(language: AppLanguage.english, mode: ThemeMode.dark),
       );
 
-      expect(find.text('Settings'), findsOneWidget);
-      expect(find.text('Info'), findsNothing);
+      // Group headings (SidebarLabel uppercases them).
+      expect(find.text('CREATE'), findsOneWidget);
+      expect(find.text('VIDEO TOOLS'), findsOneWidget);
+      expect(find.text('DOCUMENT TOOLS'), findsOneWidget);
+      expect(find.text('YOUR CONTENT'), findsOneWidget);
+      expect(find.text('ACCOUNT / APP'), findsOneWidget);
+
+      // A representative destination from each group is reachable.
+      expect(find.text('Create'), findsOneWidget); // CREATE heading is uppercased
+      expect(find.text('Watermark'), findsOneWidget);
+      expect(find.text('PDF Converter'), findsOneWidget);
       expect(find.text('Library'), findsOneWidget);
+
+      // ACCOUNT / APP holds the upgrade page and the app info section.
+      expect(find.text('Stillora Pro'), findsOneWidget);
+      expect(find.text('Info'), findsOneWidget);
+
+      // The privacy promise stays visible and is never a Pro feature.
+      expect(find.text('Files stay on this computer.'), findsOneWidget);
       expect(tester.takeException(), isNull);
     } finally {
       debugDefaultTargetPlatformOverride = null;
@@ -89,18 +105,20 @@ void main() {
         tester,
         harness(language: AppLanguage.french, mode: ThemeMode.dark),
       );
-      expect(find.text('Paramètres'), findsOneWidget);
+      expect(find.text('Infos'), findsOneWidget);
       expect(find.text('Bibliothèque'), findsOneWidget);
-      expect(find.text('ESPACE DE TRAVAIL'), findsOneWidget); // SidebarLabel uppercases
+      // Group headings translate too (SidebarLabel uppercases them).
+      expect(find.text('OUTILS VIDÉO'), findsOneWidget);
+      expect(find.text('VOS CONTENUS'), findsOneWidget);
 
       await pumpDesktop(
         tester,
         harness(language: AppLanguage.arabic, mode: ThemeMode.dark),
       );
-      expect(find.text('الإعدادات'), findsOneWidget);
+      expect(find.text('معلومات'), findsOneWidget);
       expect(find.text('المكتبة'), findsOneWidget);
       expect(
-        Directionality.of(tester.element(find.text('الإعدادات'))),
+        Directionality.of(tester.element(find.text('معلومات'))),
         TextDirection.rtl,
       );
       expect(tester.takeException(), isNull);

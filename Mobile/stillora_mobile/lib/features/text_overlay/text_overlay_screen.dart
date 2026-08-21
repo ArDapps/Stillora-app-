@@ -11,6 +11,7 @@ import 'text_overlay_controller.dart';
 import 'widgets/text_layer_list.dart';
 import 'widgets/text_overlay_preview.dart';
 import 'widgets/text_property_editor.dart';
+import '../../core/i18n/app_strings.dart';
 
 /// "Text" section: load a video, then stack one or more animated text overlays
 /// on top. Each layer is dragged into place on a live preview, timed with a
@@ -24,12 +25,7 @@ class TextOverlayView extends ConsumerWidget {
     final messenger = ScaffoldMessenger.of(context);
     if (!textOverlayExportSupported) {
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Text export runs on iPhone, macOS and Windows/Linux today. '
-            'Android export is coming next.',
-          ),
-        ),
+        SnackBar(content: Text(context.strings.txtPlatformNote)),
       );
       return;
     }
@@ -50,8 +46,9 @@ class TextOverlayView extends ConsumerWidget {
         SnackBar(
           content: Text(
             result == null
-                ? 'Add a video and at least one text layer first.'
-                : 'Saved to Library · ${result.width}×${result.height}',
+                ? context.strings.txtNeedVideoAndLayer
+                : '${context.strings.savedToLibrary} · '
+                      '${result.width}×${result.height}',
           ),
         ),
       );
@@ -60,7 +57,9 @@ class TextOverlayView extends ConsumerWidget {
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            isExportCancellation(e) ? 'Export cancelled' : 'Export failed: $e',
+            isExportCancellation(e)
+                ? context.strings.exportCancelled
+                : '${context.strings.txtExportFailed}: $e',
           ),
         ),
       );
@@ -82,12 +81,10 @@ class TextOverlayView extends ConsumerWidget {
         child: SectionSplitView(
           onStartOver: controller.reset,
           canStartOver: st.hasBase,
-          previewCaption: st.hasBase
-              ? 'Drag a layer to place it — this is what gets exported'
-              : null,
+          previewCaption: st.hasBase ? context.strings.txtDragHint : null,
           preview: PreviewStage(
             aspectRatio: st.aspectRatio,
-            emptyLabel: 'Load a video to place text on it',
+            emptyLabel: context.strings.txtLoadVideoFirst,
             emptyIcon: Icons.text_fields_rounded,
             child: st.hasBase
                 ? TextOverlayPreview(
@@ -99,8 +96,7 @@ class TextOverlayView extends ConsumerWidget {
           ),
           controls: [
             Text(
-              'Add animated text on top of your clip. Type it, drag it anywhere, '
-              'set when it appears and how it fades. Your video keeps its sound.',
+              context.strings.txtIntro,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: StilloraColors.onSurfaceVariant,
               ),
@@ -108,8 +104,8 @@ class TextOverlayView extends ConsumerWidget {
             const SizedBox(height: 16),
             if (!st.hasBase)
               SectionPickBaseCard(
-                title: 'Choose a video to caption',
-                subtitle: 'Then add animated text and drag it into place.',
+                title: context.strings.txtChooseVideo,
+                subtitle: context.strings.txtThenAdd,
                 onPick: controller.pickBaseVideo,
               )
             else ...[
@@ -135,10 +131,7 @@ class TextOverlayView extends ConsumerWidget {
                     controller: controller,
                   ),
               ] else
-                const SectionEmptyHint(
-                  'No text yet. Tap “Add text” (or a preset) to drop a layer '
-                  'on the clip.',
-                ),
+                SectionEmptyHint(context.strings.txtNoLayersYet),
               const SizedBox(height: 16),
               SectionResolutionSelector(
                 selected: st.quality,
@@ -150,9 +143,7 @@ class TextOverlayView extends ConsumerWidget {
                 durationSeconds: st.baseDurationSeconds,
                 canExport: st.canExport,
                 onExport: () => _runExport(context, ref),
-                platformNote:
-                    'Text is burned in with its timing & fade on iPhone, macOS '
-                    'and Windows/Linux. Android export is coming next.',
+                platformNote: context.strings.txtPlatformNote,
               ),
               // Clearing is the shared "Start over" control pinned above the
               // controls column.

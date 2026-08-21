@@ -8,6 +8,7 @@ import '../editor/editor_state.dart';
 import '../editor/video_preset.dart';
 import '../gallery/gallery_controller.dart';
 import '../gallery/local_export_record.dart';
+import '../../core/pro/pro_gate.dart';
 
 /// Maximum images in one batch — keeps a single run within reasonable time.
 const kLoopMaxImages = 30;
@@ -200,6 +201,11 @@ class LoopImagesController extends Notifier<LoopImagesState> {
 
     final videoEngine = ref.read(videoEngineProvider);
     final size = state.size;
+    // Free exports top out at 720p. Clamp here, not just in the picker, so the
+    // tier is enforced on the output even when the picker never got built.
+    state = state.copyWith(
+      exportQuality: entitledQuality(ref, state.exportQuality),
+    );
     // Aspect ratio from the size option, pixel size from the chosen quality.
     final scaled = state.outputSize;
     final width = scaled.width;

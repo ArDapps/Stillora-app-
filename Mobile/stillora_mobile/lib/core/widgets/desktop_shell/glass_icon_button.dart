@@ -18,9 +18,7 @@ class GlassIconButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final button = Material(
       color: StilloraColors.surfaceContainer.withValues(alpha: 0.6),
-      shape: CircleBorder(
-        side: BorderSide(color: StilloraColors.glassStroke),
-      ),
+      shape: CircleBorder(side: BorderSide(color: StilloraColors.glassStroke)),
       child: InkWell(
         onTap: onTap,
         customBorder: const CircleBorder(),

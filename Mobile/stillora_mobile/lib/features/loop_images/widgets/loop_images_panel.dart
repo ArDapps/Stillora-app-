@@ -6,6 +6,7 @@ import '../../../core/design/stillora_spacing.dart';
 import '../../../core/widgets/render_panel.dart';
 import '../loop_images_controller.dart';
 import 'loop_image_card.dart';
+import '../../../core/i18n/app_strings.dart';
 
 /// The right-hand panel: a header chip and the image grid (or empty hint).
 class LoopImagesPanel extends ConsumerWidget {
@@ -50,11 +51,13 @@ class LoopImagesPanel extends ConsumerWidget {
         children: [
           Row(
             children: [
-              RenderTagPill('${items.length}/$kLoopMaxImages images'),
+              RenderTagPill(
+                context.strings.loopImageCount(items.length, kLoopMaxImages),
+              ),
               const Spacer(),
               if (state.isRunning)
                 Text(
-                  'Rendering…',
+                  context.strings.loopRendering,
                   style: TextStyle(
                     color: StilloraColors.accent,
                     fontWeight: FontWeight.w700,
@@ -101,7 +104,7 @@ class LoopEmptyDrop extends StatelessWidget {
               ),
               SizedBox(height: StilloraSpacing.xs),
               Text(
-                'Drop images or click to add',
+                context.strings.loopDropHint,
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
                   color: StilloraColors.onSurface,
@@ -109,7 +112,7 @@ class LoopEmptyDrop extends StatelessWidget {
               ),
               SizedBox(height: 4),
               Text(
-                'JPG · PNG · WebP — each becomes its own MP4',
+                context.strings.loopDropSubtitle,
                 style: TextStyle(
                   color: StilloraColors.onSurfaceVariant,
                   fontSize: 12,
@@ -148,7 +151,7 @@ class LoopFormatGrid extends StatelessWidget {
               children: [
                 Expanded(
                   child: RenderFormatTile(
-                    label: loopSizes[i].label,
+                    label: context.strings.loopSizeLabel(loopSizes[i].id),
                     ratio: loopSizes[i].ratio,
                     selected: loopSizes[i].id == selectedId,
                     onTap: () => onSelected(loopSizes[i].id),
@@ -158,7 +161,9 @@ class LoopFormatGrid extends StatelessWidget {
                 Expanded(
                   child: i + 1 < loopSizes.length
                       ? RenderFormatTile(
-                          label: loopSizes[i + 1].label,
+                          label: context.strings.loopSizeLabel(
+                            loopSizes[i + 1].id,
+                          ),
                           ratio: loopSizes[i + 1].ratio,
                           selected: loopSizes[i + 1].id == selectedId,
                           onTap: () => onSelected(loopSizes[i + 1].id),

@@ -9,6 +9,7 @@ import '../editor/editor_state.dart' show formatFileSize;
 import '../export/export_cancellation.dart';
 import '../preview/section_video_preview.dart';
 import 'compress_state.dart';
+import '../../core/i18n/app_strings.dart';
 
 /// Standalone "Compress" section: upload a video and re-encode it to a smaller
 /// MP4 (HandBrake-style). Resolution tier + optional mute drive the file size;
@@ -37,8 +38,9 @@ class _CompressViewState extends ConsumerState<CompressView> {
         SnackBar(
           content: Text(
             result == null
-                ? 'Nothing to export.'
-                : 'Saved to Library · ${result.width}×${result.height}',
+                ? context.strings.exNothingToExport
+                : '${context.strings.savedToLibrary} · '
+                      '${result.width}×${result.height}',
           ),
         ),
       );
@@ -47,7 +49,9 @@ class _CompressViewState extends ConsumerState<CompressView> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            isExportCancellation(e) ? 'Export cancelled' : 'Failed: $e',
+            isExportCancellation(e)
+                ? context.strings.exportCancelled
+                : '${context.strings.exFailed}: $e',
           ),
         ),
       );
@@ -84,43 +88,48 @@ class _CompressViewState extends ConsumerState<CompressView> {
           onStartOver: controller.reset,
           canStartOver: compress.hasVideo && !_running,
           previewCaption: compress.hasVideo
-              ? 'Same frame, smaller file — quality drops as the level rises'
+              ? context.strings.cmpPreviewCaption
               : null,
           preview: SectionVideoPreview(
             videoPath: compress.videoPath,
             sourceWidth: compress.sourceWidth,
             sourceHeight: compress.sourceHeight,
-            badge: compress.hasVideo ? compress.level.label : null,
-            emptyLabel: 'Upload a video to preview it here',
+            badge: compress.hasVideo
+                ? compress.level.labelOf(context.strings)
+                : null,
+            emptyLabel: context.strings.pvUploadToPreview,
             stats: [
               if (compress.hasVideo) ...[
                 (
-                  label: 'Before',
+                  label: context.strings.compressBefore,
                   value: compress.sourceBytes > 0
                       ? '${formatFileSize(compress.sourceBytes)} · '
                             '${compress.sourceWidth}×${compress.sourceHeight}'
                       : '${compress.sourceWidth}×${compress.sourceHeight}',
                 ),
                 (
-                  label: 'After ≈',
+                  label: context.strings.compressAfter,
                   value:
                       '${formatFileSize(compress.estimatedBytes)} · '
                       '${res.width}×${res.height}',
                 ),
                 if (compress.savingsPercent > 0)
-                  (label: 'Saving', value: '−${compress.savingsPercent}%'),
+                  (
+                    label: context.strings.compressSaving,
+                    value: '−${compress.savingsPercent}%',
+                  ),
                 (
-                  label: 'Audio',
-                  value: compress.muteAudio ? 'Dropped' : 'Kept',
+                  label: context.strings.toolAudio,
+                  value: compress.muteAudio
+                      ? context.strings.audDropped
+                      : context.strings.audKept,
                 ),
               ],
             ],
           ),
           controls: [
             Text(
-              'Upload a video and shrink it to a smaller MP4 at the same '
-              'resolution. Stronger compression means a smaller file — pick a '
-              'level and see the estimate.',
+              context.strings.compressIntro,
               style: textTheme.bodyMedium?.copyWith(
                 color: StilloraColors.onSurfaceVariant,
               ),
@@ -148,7 +157,7 @@ class _CompressViewState extends ConsumerState<CompressView> {
                         Text(
                           compress.hasVideo
                               ? compress.videoName!
-                              : 'Upload video',
+                              : context.strings.toolUploadVideo,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: textTheme.titleSmall?.copyWith(
@@ -179,7 +188,7 @@ class _CompressViewState extends ConsumerState<CompressView> {
             const SizedBox(height: 20),
 
             // Compression strength (the file-size lever)
-            Text('Compression', style: textTheme.labelMedium),
+            Text(context.strings.compressLevel, style: textTheme.labelMedium),
             const SizedBox(height: 8),
             SizedBox(
               width: double.infinity,
@@ -187,7 +196,10 @@ class _CompressViewState extends ConsumerState<CompressView> {
                 showSelectedIcon: false,
                 segments: [
                   for (final l in CompressLevel.values)
-                    ButtonSegment(value: l, label: Text(l.label)),
+                    ButtonSegment(
+                      value: l,
+                      label: Text(l.labelOf(context.strings)),
+                    ),
                 ],
                 selected: {compress.level},
                 onSelectionChanged: _running
@@ -197,7 +209,7 @@ class _CompressViewState extends ConsumerState<CompressView> {
             ),
             const SizedBox(height: 6),
             Text(
-              compress.level.note,
+              compress.level.note(context.strings),
               style: textTheme.bodySmall?.copyWith(
                 color: StilloraColors.onSurfaceVariant,
               ),
@@ -208,7 +220,7 @@ class _CompressViewState extends ConsumerState<CompressView> {
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               dense: true,
-              title: const Text('Mute (drop audio for a smaller file)'),
+              title: Text(context.strings.compressMute),
               value: compress.muteAudio,
               onChanged: _running ? null : controller.setMuteAudio,
             ),
@@ -219,7 +231,9 @@ class _CompressViewState extends ConsumerState<CompressView> {
             StilloraPrimaryButton(
               onPressed: compress.hasVideo && !_running ? _run : null,
               icon: Icons.compress_rounded,
-              label: _running ? 'Compressing…' : 'Compress & export',
+              label: _running
+                  ? context.strings.cmpExporting
+                  : context.strings.cmpExportCta,
             ),
             if (_running) ...[
               const SizedBox(height: 16),
@@ -228,7 +242,11 @@ class _CompressViewState extends ConsumerState<CompressView> {
               OutlinedButton.icon(
                 onPressed: _cancelling ? null : _cancel,
                 icon: const Icon(Icons.close_rounded),
-                label: Text(_cancelling ? 'Cancelling…' : 'Cancel export'),
+                label: Text(
+                  _cancelling
+                      ? context.strings.exportCancelling
+                      : context.strings.exportCancel,
+                ),
               ),
             ],
             const SizedBox(height: 16),

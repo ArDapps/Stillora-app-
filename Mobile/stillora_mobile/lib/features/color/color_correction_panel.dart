@@ -4,6 +4,7 @@ import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_spacing.dart';
 import '../../core/design/stillora_surface.dart';
 import 'color_adjust.dart';
+import '../../core/i18n/app_strings.dart';
 
 /// Shared colour-correction editor: one-tap preset looks plus fine sliders for
 /// brightness, contrast, saturation, warmth, tint, vibrance, exposure and
@@ -40,13 +41,15 @@ class ColorCorrectionPanel extends StatelessWidget {
             color: active ? StilloraColors.brandViolet : StilloraColors.primary,
           ),
           title: Text(
-            'Color Correction',
+            context.strings.colTitle,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w800,
             ),
           ),
           subtitle: Text(
-            active ? 'Custom grade applied' : 'Grade the final video',
+            active
+                ? context.strings.colCustomApplied
+                : context.strings.colGradeFinal,
             style: theme.textTheme.bodySmall?.copyWith(
               color: StilloraColors.onSurfaceVariant,
             ),
@@ -55,49 +58,49 @@ class ColorCorrectionPanel extends StatelessWidget {
             _PresetRow(value: value, onChanged: onChanged),
             const SizedBox(height: StilloraSpacing.sm),
             _ColorSlider(
-              label: 'Brightness',
+              label: context.strings.colBrightness,
               icon: Icons.brightness_6_rounded,
               value: value.brightness,
               onChanged: (v) => onChanged(value.copyWith(brightness: v)),
             ),
             _ColorSlider(
-              label: 'Contrast',
+              label: context.strings.colContrast,
               icon: Icons.contrast_rounded,
               value: value.contrast,
               onChanged: (v) => onChanged(value.copyWith(contrast: v)),
             ),
             _ColorSlider(
-              label: 'Saturation',
+              label: context.strings.colSaturation,
               icon: Icons.opacity_rounded,
               value: value.saturation,
               onChanged: (v) => onChanged(value.copyWith(saturation: v)),
             ),
             _ColorSlider(
-              label: 'Warmth',
+              label: context.strings.colWarmth,
               icon: Icons.thermostat_rounded,
               value: value.warmth,
               onChanged: (v) => onChanged(value.copyWith(warmth: v)),
             ),
             _ColorSlider(
-              label: 'Tint',
+              label: context.strings.colTint,
               icon: Icons.colorize_rounded,
               value: value.tint,
               onChanged: (v) => onChanged(value.copyWith(tint: v)),
             ),
             _ColorSlider(
-              label: 'Vibrance',
+              label: context.strings.colVibrance,
               icon: Icons.auto_awesome_rounded,
               value: value.vibrance,
               onChanged: (v) => onChanged(value.copyWith(vibrance: v)),
             ),
             _ColorSlider(
-              label: 'Exposure',
+              label: context.strings.colExposure,
               icon: Icons.exposure_rounded,
               value: value.exposure,
               onChanged: (v) => onChanged(value.copyWith(exposure: v)),
             ),
             _ColorSlider(
-              label: 'Sharpness',
+              label: context.strings.colSharpness,
               icon: Icons.details_rounded,
               value: value.sharpness,
               min: 0,
@@ -110,7 +113,7 @@ class ColorCorrectionPanel extends StatelessWidget {
                     ? () => onChanged(ColorAdjust.identity)
                     : null,
                 icon: const Icon(Icons.restart_alt_rounded, size: 18),
-                label: const Text('Reset'),
+                label: Text(context.strings.reset),
               ),
             ),
           ],
@@ -134,7 +137,7 @@ class _PresetRow extends StatelessWidget {
         children: [
           for (final preset in colorPresets) ...[
             _PresetChip(
-              label: preset.label,
+              label: preset.labelOf(context.strings),
               icon: preset.icon,
               selected: value == preset.adjust,
               onTap: () => onChanged(preset.adjust),

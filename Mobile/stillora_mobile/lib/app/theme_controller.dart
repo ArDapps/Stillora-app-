@@ -19,9 +19,8 @@ class ThemeModeController extends Notifier<ThemeMode> {
 
   /// Convenience for a single-tap toggle: flips between light and dark,
   /// resolving `system` against whatever the OS is currently showing.
-  Future<void> toggle(Brightness current) => setMode(
-    current == Brightness.dark ? ThemeMode.light : ThemeMode.dark,
-  );
+  Future<void> toggle(Brightness current) =>
+      setMode(current == Brightness.dark ? ThemeMode.light : ThemeMode.dark);
 }
 
 final themeModeControllerProvider =

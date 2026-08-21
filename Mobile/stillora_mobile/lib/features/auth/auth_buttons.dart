@@ -1,3 +1,4 @@
+import '../../core/i18n/app_strings.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -12,11 +13,13 @@ import '../../core/design/stillora_colors.dart';
 bool get appleSignInSupported =>
     Platform.isIOS || Platform.isMacOS || Platform.isAndroid;
 
-String authErrorMessage(Object? error) {
+/// Message for a failed sign-in: the repository's own wording when it has one,
+/// otherwise the translated generic fallback.
+String authErrorMessage(AppStrings strings, Object? error) {
   if (error is AuthFailure) {
     return error.message;
   }
-  return 'Sign-in failed. Please try again.';
+  return strings.authFailed;
 }
 
 /// Prominent black "Continue with Apple" button. Per Apple's Human Interface
@@ -36,7 +39,7 @@ class StilloraAppleButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: 'Continue with Apple',
+      label: context.strings.authContinueApple,
       enabled: !loading,
       child: Material(
         color: Colors.black,
@@ -65,7 +68,9 @@ class StilloraAppleButton extends StatelessWidget {
                   ),
                 const SizedBox(width: 12),
                 Text(
-                  loading ? 'Signing in…' : 'Continue with Apple',
+                  loading
+                      ? context.strings.authSigningIn
+                      : context.strings.authContinueApple,
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
@@ -96,7 +101,7 @@ class StilloraGoogleButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: 'Continue with Google',
+      label: context.strings.authContinueGoogle,
       enabled: !loading,
       child: Material(
         color: Colors.white,
@@ -125,7 +130,9 @@ class StilloraGoogleButton extends StatelessWidget {
                   ),
                 const SizedBox(width: 12),
                 Text(
-                  loading ? 'Signing in…' : 'Continue with Google',
+                  loading
+                      ? context.strings.authSigningIn
+                      : context.strings.authContinueGoogle,
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,

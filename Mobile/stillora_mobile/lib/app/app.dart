@@ -9,6 +9,7 @@ import '../core/i18n/language_controller.dart';
 import '../features/export/export_controller.dart';
 import '../features/html_to_video/html_to_video_controller.dart';
 import '../features/html_to_video/html_to_video_service.dart';
+import 'paywall_schedule_host.dart';
 import 'router.dart';
 import 'theme.dart';
 import 'theme_controller.dart';
@@ -58,8 +59,10 @@ class StilloraApp extends ConsumerWidget {
         strings: AppStrings.of(language),
         child: StilloraPaletteScope(
           child: UsageTrackerHost(
-            child: _BackgroundJobToasts(
-              child: child ?? const SizedBox.shrink(),
+            child: ProPaywallScheduleHost(
+              child: _BackgroundJobToasts(
+                child: child ?? const SizedBox.shrink(),
+              ),
             ),
           ),
         ),
@@ -81,12 +84,12 @@ class _BackgroundJobToasts extends ConsumerWidget {
       if (previous?.isLoading != true) return; // only react to a finished job
       next.when(
         data: (file) {
-          if (file != null) showStilloraToast('Your video is ready ✓');
+          if (file != null) showStilloraToast(context.strings.toastVideoReady);
         },
         error: (error, _) => showStilloraToast(
           error is HtmlToVideoException
               ? error.message
-              : 'Conversion failed. Please try again.',
+              : context.strings.toastConversionFailed,
         ),
         loading: () {},
       );
@@ -96,9 +99,10 @@ class _BackgroundJobToasts extends ConsumerWidget {
       if (previous?.isLoading != true) return;
       next.when(
         data: (result) {
-          if (result != null) showStilloraToast('Export complete ✓');
+          if (result != null)
+            showStilloraToast(context.strings.toastExportComplete);
         },
-        error: (_, _) => showStilloraToast('Export failed. Please try again.'),
+        error: (_, _) => showStilloraToast(context.strings.toastExportFailed),
         loading: () {},
       );
     });
