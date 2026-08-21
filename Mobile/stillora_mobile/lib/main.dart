@@ -4,6 +4,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app/app.dart';
+import 'core/design/stillora_colors.dart';
 import 'core/storage/app_preferences.dart';
 
 Future<void> main() async {
@@ -11,10 +12,23 @@ Future<void> main() async {
   await Hive.initFlutter();
   // Loopara banners load on demand inside AdSlotWidget — no SDK init needed.
   final preferences = await SharedPreferences.getInstance();
+  final appPreferences = AppPreferences(preferences);
+  // Seed the design tokens before the first frame so the app never flashes the
+  // wrong palette on launch. StilloraPaletteScope keeps them in sync afterwards.
+  StilloraColors.activate(
+    StilloraPalette.forBrightness(
+      switch (appPreferences.themeMode) {
+        ThemeMode.light => Brightness.light,
+        ThemeMode.dark => Brightness.dark,
+        ThemeMode.system =>
+          WidgetsBinding.instance.platformDispatcher.platformBrightness,
+      },
+    ),
+  );
   runApp(
     ProviderScope(
       overrides: [
-        appPreferencesProvider.overrideWithValue(AppPreferences(preferences)),
+        appPreferencesProvider.overrideWithValue(appPreferences),
       ],
       child: const StilloraApp(),
     ),

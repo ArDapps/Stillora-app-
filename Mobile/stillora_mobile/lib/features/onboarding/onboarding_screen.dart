@@ -24,7 +24,9 @@ class _OnboardingSlide {
   final Color color;
 }
 
-const _slides = [
+// A getter rather than a `const`/`final` list: the slide accents come from the
+// active palette, so they have to be rebuilt when the theme flips.
+List<_OnboardingSlide> get _slides => [
   _OnboardingSlide(
     icon: Icons.perm_media_rounded,
     title: 'Upload your media',
@@ -94,7 +96,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: DecoratedBox(
-        decoration: const BoxDecoration(gradient: stilloraBackgroundGradient),
+        decoration: BoxDecoration(gradient: stilloraBackgroundGradient),
         child: SafeArea(
           child: Column(
             children: [

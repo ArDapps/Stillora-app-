@@ -61,7 +61,7 @@ class PdfPagesPanel extends ConsumerWidget {
           dragHandle: ReorderableDragStartListener(
             index: i,
             enabled: !state.isBusy,
-            child: const Padding(
+            child: Padding(
               padding: EdgeInsets.symmetric(horizontal: 2),
               child: Icon(
                 Icons.drag_indicator_rounded,
@@ -109,7 +109,7 @@ class PdfPagesPanel extends ConsumerWidget {
                   '${state.pdfPageCount} from PDFs',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: StilloraColors.onSurfaceVariant,
                     fontSize: 11,
                   ),

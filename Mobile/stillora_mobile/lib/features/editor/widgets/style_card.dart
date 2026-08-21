@@ -25,7 +25,7 @@ class StyleCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.auto_awesome_rounded,
                 size: 20,
                 color: StilloraColors.primary,

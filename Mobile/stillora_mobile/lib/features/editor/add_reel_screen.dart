@@ -57,7 +57,7 @@ class ReelView extends ConsumerWidget {
     final reel = ref.watch(reelControllerProvider);
     final controller = ref.read(reelControllerProvider.notifier);
     return DecoratedBox(
-      decoration: const BoxDecoration(gradient: stilloraBackgroundGradient),
+      decoration: BoxDecoration(gradient: stilloraBackgroundGradient),
       child: SafeArea(
         top: false,
         child: ListView(

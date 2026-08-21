@@ -53,7 +53,7 @@ class LoopImagesPanel extends ConsumerWidget {
               RenderTagPill('${items.length}/$kLoopMaxImages images'),
               const Spacer(),
               if (state.isRunning)
-                const Text(
+                Text(
                   'Rendering…',
                   style: TextStyle(
                     color: StilloraColors.accent,
@@ -91,7 +91,7 @@ class LoopEmptyDrop extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: StilloraColors.panelBorder),
           ),
-          child: const Column(
+          child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(

@@ -1,7 +1,10 @@
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../i18n/app_locale.dart';
 
 final appPreferencesProvider = Provider<AppPreferences>((ref) {
   throw UnimplementedError('AppPreferences must be overridden at startup.');
@@ -21,6 +24,8 @@ class AppPreferences {
   static const _defaultPresetKey = 'stillora.editor.defaultPreset';
   static const _defaultResizeModeKey = 'stillora.editor.defaultResizeMode';
   static const _hasSeenOnboardingKey = 'stillora.onboarding.seen';
+  static const _themeModeKey = 'stillora.appearance.themeMode';
+  static const _languageKey = 'stillora.appearance.language';
   static const _ratingLastPromptKey = 'stillora.rating.lastPromptMs';
   static const _ratedAfterFirstExportKey =
       'stillora.rating.requestedAfterFirstExport';
@@ -33,6 +38,33 @@ class AppPreferences {
   Future<void> setHasSeenOnboarding(bool value) {
     return _preferences.setBool(_hasSeenOnboardingKey, value);
   }
+
+  // ── Appearance ─────────────────────────────────────────────────────────────
+
+  /// Persisted light/dark preference, stored as the [ThemeMode] name so the
+  /// value stays readable in the prefs plist. Defaults to following the OS.
+  ThemeMode get themeMode {
+    final raw = _preferences.getString(_themeModeKey);
+    return switch (raw) {
+      'light' => ThemeMode.light,
+      'dark' => ThemeMode.dark,
+      _ => ThemeMode.system,
+    };
+  }
+
+  Future<void> setThemeMode(ThemeMode value) =>
+      _preferences.setString(_themeModeKey, value.name);
+
+  /// The language the user explicitly picked, or null while Stillora is still
+  /// following the OS locale (the state on a fresh install).
+  AppLanguage? get language {
+    final raw = _preferences.getString(_languageKey);
+    if (raw == null) return null;
+    return AppLanguage.fromCode(raw);
+  }
+
+  Future<void> setLanguage(AppLanguage value) =>
+      _preferences.setString(_languageKey, value.code);
 
   // ── Rating prompt ──────────────────────────────────────────────────────────
 

@@ -109,7 +109,7 @@ class LoopImagesView extends ConsumerWidget {
         ),
       ),
       const SizedBox(height: StilloraSpacing.xs),
-      const Text(
+      Text(
         'Add up to $kLoopMaxImages images, pick one size and one duration. Each '
         'image becomes its own MP4 of that length — they are not merged.',
         style: TextStyle(color: StilloraColors.onSurfaceVariant, height: 1.4),
@@ -161,14 +161,14 @@ class LoopImagesView extends ConsumerWidget {
               children: [
                 Text(
                   '${state.durationSeconds} s',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: StilloraColors.accent,
                     fontWeight: FontWeight.w800,
                     fontSize: 18,
                   ),
                 ),
                 const Spacer(),
-                const Text(
+                Text(
                   'type any duration',
                   style: TextStyle(color: StilloraColors.onSurfaceVariant),
                 ),
@@ -280,7 +280,7 @@ class LoopImagesView extends ConsumerWidget {
           const SizedBox(height: StilloraSpacing.xs),
           Text(
             '${state.doneCount} of ${state.items.length} saved to Library',
-            style: const TextStyle(
+            style: TextStyle(
               color: StilloraColors.secondary,
               fontSize: 12,
             ),

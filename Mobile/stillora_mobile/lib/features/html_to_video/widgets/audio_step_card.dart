@@ -56,7 +56,7 @@ class AudioStepCard extends StatelessWidget {
                         audioName ?? 'Audio',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.w600,
                           color: StilloraColors.onSurface,
                         ),

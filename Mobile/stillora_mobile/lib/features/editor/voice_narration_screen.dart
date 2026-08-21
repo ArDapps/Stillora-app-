@@ -283,7 +283,7 @@ class _VoiceNarrationScreenState extends ConsumerState<VoiceNarrationScreen> {
       desktopTitle: 'Voice Narration',
       appBar: AppBar(title: const Text('Voice Narration')),
       body: DecoratedBox(
-        decoration: const BoxDecoration(gradient: stilloraBackgroundGradient),
+        decoration: BoxDecoration(gradient: stilloraBackgroundGradient),
         child: SafeArea(
           child: ListView(
             padding: const EdgeInsets.all(StilloraSpacing.md),

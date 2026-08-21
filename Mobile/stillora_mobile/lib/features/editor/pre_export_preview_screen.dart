@@ -38,7 +38,7 @@ class PreExportPreviewScreen extends ConsumerWidget {
         ],
       ),
       body: DecoratedBox(
-        decoration: const BoxDecoration(gradient: stilloraBackgroundGradient),
+        decoration: BoxDecoration(gradient: stilloraBackgroundGradient),
         child: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -147,7 +147,7 @@ class _PreviewContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final media = editor.selectedMedia;
     if (media == null) {
-      return const ColoredBox(
+      return ColoredBox(
         color: StilloraColors.surfaceContainerLowest,
         child: Center(
           child: Icon(
@@ -168,7 +168,7 @@ class _PreviewContent extends StatelessWidget {
         height: double.infinity,
       );
     }
-    return const ColoredBox(
+    return ColoredBox(
       color: StilloraColors.surfaceContainerLowest,
       child: Center(
         child: Icon(
@@ -202,7 +202,7 @@ class _PlaybackBar extends StatelessWidget {
         const SizedBox(width: 6),
         Text(
           '0:00',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             color: StilloraColors.onSurfaceVariant,
           ),
@@ -211,7 +211,7 @@ class _PlaybackBar extends StatelessWidget {
         Expanded(
           child: ClipRRect(
             borderRadius: BorderRadius.circular(4),
-            child: const LinearProgressIndicator(
+            child: LinearProgressIndicator(
               value: 0.0,
               backgroundColor: StilloraColors.surfaceContainerHigh,
               color: StilloraColors.primary,
@@ -222,13 +222,13 @@ class _PlaybackBar extends StatelessWidget {
         const SizedBox(width: 8),
         Text(
           _fmt(durationSeconds),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             color: StilloraColors.onSurfaceVariant,
           ),
         ),
         const SizedBox(width: 8),
-        const Icon(
+        Icon(
           Icons.fullscreen_rounded,
           size: 20,
           color: StilloraColors.onSurfaceVariant,
@@ -279,7 +279,7 @@ class _SummaryRow extends StatelessWidget {
           ),
         ),
         if (!isLast)
-          const Divider(height: 0, color: StilloraColors.glassStroke),
+          Divider(height: 0, color: StilloraColors.glassStroke),
       ],
     );
   }

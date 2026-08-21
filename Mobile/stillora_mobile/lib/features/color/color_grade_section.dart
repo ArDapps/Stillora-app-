@@ -63,7 +63,7 @@ class ColorGradeSection extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
+              Icon(
                 Icons.visibility_rounded,
                 size: 14,
                 color: StilloraColors.onSurfaceVariant,

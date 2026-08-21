@@ -25,7 +25,7 @@ class ChoosePresetScreen extends ConsumerWidget {
       desktopTitle: 'Choose Format',
       appBar: AppBar(title: const Text('Choose Format')),
       body: DecoratedBox(
-        decoration: const BoxDecoration(gradient: stilloraBackgroundGradient),
+        decoration: BoxDecoration(gradient: stilloraBackgroundGradient),
         child: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,

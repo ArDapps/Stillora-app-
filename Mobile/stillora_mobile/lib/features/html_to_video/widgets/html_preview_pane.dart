@@ -52,7 +52,7 @@ class PreviewPane extends StatelessWidget {
                 ),
                 child: Text(
                   size.chip,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: StilloraColors.accentText,
                     fontWeight: FontWeight.w700,
                     fontSize: 12,
@@ -62,7 +62,7 @@ class PreviewPane extends StatelessWidget {
               const Spacer(),
               Text(
                 '${size.width} × ${size.height}',
-                style: const TextStyle(
+                style: TextStyle(
                   color: StilloraColors.onSurfaceVariant,
                   fontFamily: 'monospace',
                 ),
@@ -93,7 +93,7 @@ class PreviewPane extends StatelessWidget {
             ),
             child: Row(
               children: [
-                const Text(
+                Text(
                   'stillora.mp4',
                   style: TextStyle(
                     fontFamily: 'monospace',
@@ -103,7 +103,7 @@ class PreviewPane extends StatelessWidget {
                 const Spacer(),
                 Text(
                   '${size.height >= 1080 ? '1080p' : '720p'} · H.264 · $fps fps',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: StilloraColors.onSurfaceVariant,
                     fontFamily: 'monospace',
                     fontSize: 12,
@@ -130,7 +130,7 @@ class PreviewPlaceholder extends StatelessWidget {
         color: const Color(0xff15151f),
         child: Center(
           child: converting
-              ? const Column(
+              ? Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     CircularProgressIndicator(),
@@ -141,7 +141,7 @@ class PreviewPlaceholder extends StatelessWidget {
                     ),
                   ],
                 )
-              : const Text(
+              : Text(
                   'your video renders here',
                   style: TextStyle(
                     fontFamily: 'monospace',

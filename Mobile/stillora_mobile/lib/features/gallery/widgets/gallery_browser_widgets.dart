@@ -20,7 +20,7 @@ class GalleryPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     final item = record;
     if (item == null) {
-      return const Center(
+      return Center(
         child: Icon(
           Icons.video_library_outlined,
           size: 40,

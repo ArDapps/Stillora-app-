@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/tabs/app_sections.dart';
 import '../design/stillora_colors.dart';
 import '../design/stillora_spacing.dart';
+import '../i18n/app_strings.dart';
 import '../platform/platform_info.dart';
 import 'desktop_shell/desktop_sidebar.dart';
 import 'desktop_shell/desktop_top_bar.dart';
@@ -60,13 +62,7 @@ class DesktopShell extends ConsumerWidget {
         ref.read(sidebarCollapsedProvider.notifier).state = !collapsed;
     return Scaffold(
       body: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xff0d0820), Color(0xff070611), Color(0xff030309)],
-          ),
-        ),
+        decoration: BoxDecoration(gradient: StilloraColors.shellGradient),
         child: SafeArea(
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -84,7 +80,7 @@ class DesktopShell extends ConsumerWidget {
                   color: StilloraColors.surfaceContainerLow.withValues(
                     alpha: 0.55,
                   ),
-                  border: const Border(
+                  border: Border(
                     right: BorderSide(color: StilloraColors.glassStroke),
                   ),
                 ),
@@ -102,6 +98,11 @@ class DesktopShell extends ConsumerWidget {
                   children: [
                     DesktopTopBar(
                       title: title,
+                      subtitle: activeIndex >= 0
+                          ? AppSection.fromIndex(
+                              activeIndex,
+                            ).subtitle(context.strings)
+                          : null,
                       trailing: trailing,
                       onToggleSidebar: toggleSidebar,
                     ),

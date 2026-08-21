@@ -32,7 +32,7 @@ class SectionBaseInfoRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Row(
         children: [
-          const Icon(
+          Icon(
             Icons.movie_creation_rounded,
             size: 20,
             color: StilloraColors.primary,
@@ -95,7 +95,7 @@ class SectionExportPanel extends StatelessWidget {
         const SizedBox(height: 8),
         Row(
           children: [
-            const Icon(
+            Icon(
               Icons.info_outline_rounded,
               size: 15,
               color: StilloraColors.onSurfaceVariant,
@@ -136,7 +136,7 @@ class SectionPickBaseCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 22),
       child: Column(
         children: [
-          const Icon(
+          Icon(
             Icons.video_call_rounded,
             color: StilloraColors.primary,
             size: 34,

@@ -65,7 +65,9 @@ class _Chip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fg = selected ? Colors.white : StilloraColors.onSurfaceVariant;
+    final fg = selected
+        ? StilloraColors.onPrimary
+        : StilloraColors.onSurfaceVariant;
     return Material(
       color: selected
           ? StilloraColors.primary.withValues(alpha: 0.9)

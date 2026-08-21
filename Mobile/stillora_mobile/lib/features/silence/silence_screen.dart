@@ -78,7 +78,7 @@ class _SilenceViewState extends ConsumerState<SilenceView> {
     // the right-hand pane so sensitivity / speed / colour edits are reflected
     // straight away. Phones get the same preview at the top of the column.
     return DecoratedBox(
-      decoration: const BoxDecoration(gradient: stilloraBackgroundGradient),
+      decoration: BoxDecoration(gradient: stilloraBackgroundGradient),
       child: SafeArea(
         top: false,
         child: SectionSplitView(
@@ -177,7 +177,7 @@ class _SilenceViewState extends ConsumerState<SilenceView> {
                     ),
                   ),
                   if (silence.hasVideo)
-                    const Icon(
+                    Icon(
                       Icons.refresh_rounded,
                       color: StilloraColors.onSurfaceVariant,
                     ),
@@ -260,7 +260,7 @@ class _SilenceViewState extends ConsumerState<SilenceView> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.music_note_rounded,
                       size: 20,
                       color: StilloraColors.primary,

@@ -332,7 +332,7 @@ class _HtmlToVideoViewState extends ConsumerState<HtmlToVideoView> {
         ),
       ),
       const SizedBox(height: StilloraSpacing.xs),
-      const Text(
+      Text(
         'Paste markup, drop an .html file, or enter a URL — pick a size and '
         'duration, export a clean MP4 in seconds.',
         style: TextStyle(color: StilloraColors.onSurfaceVariant, height: 1.4),

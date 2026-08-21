@@ -168,7 +168,7 @@ class _MediaThumb extends StatelessWidget {
                         ? Image.file(File(item.path), fit: BoxFit.cover)
                         : ColoredBox(
                             color: StilloraColors.surfaceContainerLowest,
-                            child: const Center(
+                            child: Center(
                               child: Icon(
                                 Icons.play_circle_outline_rounded,
                                 color: StilloraColors.primary,
@@ -180,7 +180,7 @@ class _MediaThumb extends StatelessWidget {
                 ),
               ),
               if (item.kind == MediaKind.video)
-                const Positioned(
+                Positioned(
                   right: 4,
                   bottom: 4,
                   child: Icon(
@@ -190,7 +190,7 @@ class _MediaThumb extends StatelessWidget {
                   ),
                 ),
               if (item.kind == MediaKind.video && item.isMuted)
-                const Positioned(
+                Positioned(
                   right: 4,
                   top: 4,
                   child: Icon(
@@ -217,7 +217,7 @@ class _MediaThumb extends StatelessWidget {
                       ),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.drag_indicator_rounded,
                       size: 16,
                       color: StilloraColors.onSurface,
@@ -226,7 +226,7 @@ class _MediaThumb extends StatelessWidget {
                 ),
               ),
               if (selected)
-                const Positioned(
+                Positioned(
                   left: 4,
                   top: 4,
                   child: Icon(
@@ -249,7 +249,7 @@ class _MediaThumb extends StatelessWidget {
                       ),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.close_rounded,
                       size: 16,
                       color: StilloraColors.onSurface,

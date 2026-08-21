@@ -79,7 +79,7 @@ class _SpeedViewState extends ConsumerState<SpeedView> {
     // immediately without scrolling back up. On phones the same preview simply
     // sits at the top of the single column.
     return DecoratedBox(
-      decoration: const BoxDecoration(gradient: stilloraBackgroundGradient),
+      decoration: BoxDecoration(gradient: stilloraBackgroundGradient),
       child: SafeArea(
         top: false,
         child: SectionSplitView(
@@ -170,7 +170,7 @@ class _SpeedViewState extends ConsumerState<SpeedView> {
                     ),
                   ),
                   if (speed.hasVideo)
-                    const Icon(
+                    Icon(
                       Icons.refresh_rounded,
                       color: StilloraColors.onSurfaceVariant,
                     ),
@@ -244,7 +244,7 @@ class _SpeedViewState extends ConsumerState<SpeedView> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.music_note_rounded,
                       size: 20,
                       color: StilloraColors.primary,

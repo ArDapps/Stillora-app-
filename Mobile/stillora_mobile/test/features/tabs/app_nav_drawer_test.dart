@@ -78,12 +78,12 @@ void main() {
 
       expect(tester.takeException(), isNull);
 
-      // Scroll the drawer list up; the bottom-most "Info" item comes into view.
+      // Scroll the drawer list up; the bottom-most "Settings" item comes into view.
       await tester.drag(find.text('Create'), const Offset(0, -400));
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
-      expect(find.text('Info'), findsOneWidget);
+      expect(find.text('Settings'), findsOneWidget);
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }

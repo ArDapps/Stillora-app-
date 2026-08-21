@@ -124,15 +124,24 @@ class _StudioHeader extends StatelessWidget {
               height: 44,
             ),
             const SizedBox(width: 10),
-            ShaderMask(
-              shaderCallback: (bounds) =>
-                  stilloraBrandGradient.createShader(bounds),
-              child: Text(
-                'Stillora',
-                style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.5,
+            // Flexible + scaleDown: the wordmark keeps its display size when
+            // there is room and shrinks instead of overflowing on narrow
+            // phones (it was blowing the row by ~8px at 390pt).
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: ShaderMask(
+                  shaderCallback: (bounds) =>
+                      stilloraBrandGradient.createShader(bounds),
+                  child: Text(
+                    'Stillora',
+                    maxLines: 1,
+                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -197,7 +206,7 @@ class _StepRow extends StatelessWidget {
               ],
             ),
           ),
-          const Icon(
+          Icon(
             Icons.chevron_right_rounded,
             color: StilloraColors.onSurfaceVariant,
           ),
@@ -230,7 +239,7 @@ class _MobilePreviewPanel extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.smart_display_rounded,
                 color: StilloraColors.primary,
                 size: 20,

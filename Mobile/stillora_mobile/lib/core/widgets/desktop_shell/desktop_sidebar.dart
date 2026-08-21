@@ -1,90 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../features/tabs/app_sections.dart';
 import '../../design/stillora_colors.dart';
 import '../../design/stillora_spacing.dart';
+import '../../i18n/app_strings.dart';
 import '../ad_widget.dart';
 import '../stillora_mark.dart';
 import 'glass_icon_button.dart';
-
-// Display order for the desktop sidebar. `index` is the underlying home tab
-// (matches app_tabs_screen views), so the list can be reordered for display
-// without changing which screen each item opens. Library sits directly before
-// Profile on desktop.
-const _navItems = [
-  (
-    index: 0,
-    label: 'Create',
-    icon: Icons.add_photo_alternate_outlined,
-    selectedIcon: Icons.add_photo_alternate_rounded,
-  ),
-  (
-    index: 9,
-    label: 'Text',
-    icon: Icons.text_fields_outlined,
-    selectedIcon: Icons.text_fields_rounded,
-  ),
-  (
-    index: 6,
-    label: 'Watermark',
-    icon: Icons.branding_watermark_outlined,
-    selectedIcon: Icons.branding_watermark_rounded,
-  ),
-  (
-    index: 5,
-    label: 'Remove Silence',
-    icon: Icons.content_cut_outlined,
-    selectedIcon: Icons.content_cut_rounded,
-  ),
-  (
-    index: 7,
-    label: 'Speed',
-    icon: Icons.fast_forward_outlined,
-    selectedIcon: Icons.fast_forward_rounded,
-  ),
-  (
-    index: 10,
-    label: 'Compress',
-    icon: Icons.compress_outlined,
-    selectedIcon: Icons.compress_rounded,
-  ),
-  (
-    index: 8,
-    label: 'Convert',
-    icon: Icons.swap_horiz_outlined,
-    selectedIcon: Icons.swap_horiz_rounded,
-  ),
-  (
-    index: 4,
-    label: 'Loop images',
-    icon: Icons.repeat_rounded,
-    selectedIcon: Icons.repeat_on_rounded,
-  ),
-  (
-    index: 11,
-    label: 'PDF Converter',
-    icon: Icons.picture_as_pdf_outlined,
-    selectedIcon: Icons.picture_as_pdf_rounded,
-  ),
-  (
-    index: 2,
-    label: 'HTML',
-    icon: Icons.html_outlined,
-    selectedIcon: Icons.html_rounded,
-  ),
-  (
-    index: 1,
-    label: 'Library',
-    icon: Icons.video_library_outlined,
-    selectedIcon: Icons.video_library_rounded,
-  ),
-  (
-    index: 3,
-    label: 'Info',
-    icon: Icons.person_outline_rounded,
-    selectedIcon: Icons.person_rounded,
-  ),
-];
 
 class DesktopSidebar extends ConsumerWidget {
   const DesktopSidebar({
@@ -102,6 +25,7 @@ class DesktopSidebar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final strings = context.strings;
     final hPad = collapsed ? StilloraSpacing.base : StilloraSpacing.snug;
     return Padding(
       padding: EdgeInsets.fromLTRB(
@@ -123,7 +47,7 @@ class DesktopSidebar extends ConsumerWidget {
                 const SizedBox(height: StilloraSpacing.base),
                 GlassIconButton(
                   icon: Icons.keyboard_double_arrow_right_rounded,
-                  tooltip: 'Expand sidebar',
+                  tooltip: strings.expandSidebar,
                   onTap: onToggle,
                 ),
               ],
@@ -148,7 +72,7 @@ class DesktopSidebar extends ConsumerWidget {
                   ),
                   GlassIconButton(
                     icon: Icons.keyboard_double_arrow_left_rounded,
-                    tooltip: 'Collapse sidebar',
+                    tooltip: strings.collapseSidebar,
                     onTap: onToggle,
                   ),
                 ],
@@ -156,7 +80,7 @@ class DesktopSidebar extends ConsumerWidget {
             ),
           const SizedBox(height: StilloraSpacing.md),
           if (!collapsed) ...[
-            const SidebarLabel('Workspace'),
+            SidebarLabel(strings.workspace),
             const SizedBox(height: StilloraSpacing.xs),
           ],
           // Scrolls when the window is short or the item list grows, so the
@@ -170,15 +94,16 @@ class DesktopSidebar extends ConsumerWidget {
                     ? CrossAxisAlignment.center
                     : CrossAxisAlignment.start,
                 children: [
-                  for (final item in _navItems)
-                    DesktopNavItem(
-                      selected: item.index == activeIndex,
-                      icon: item.icon,
-                      selectedIcon: item.selectedIcon,
-                      label: item.label,
-                      collapsed: collapsed,
-                      onTap: () => onSelect(item.index),
-                    ),
+                  for (final section in desktopNavOrder)
+                    if (section.isAvailable)
+                      DesktopNavItem(
+                        selected: section.viewIndex == activeIndex,
+                        icon: section.icon,
+                        selectedIcon: section.selectedIcon,
+                        label: section.title(strings),
+                        collapsed: collapsed,
+                        onTap: () => onSelect(section.viewIndex),
+                      ),
                 ],
               ),
             ),
@@ -191,7 +116,7 @@ class DesktopSidebar extends ConsumerWidget {
             const SizedBox(height: StilloraSpacing.snug),
             Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.shield_rounded,
                   color: StilloraColors.secondary,
                   size: 15,
@@ -199,7 +124,7 @@ class DesktopSidebar extends ConsumerWidget {
                 const SizedBox(width: StilloraSpacing.base + 2),
                 Expanded(
                   child: Text(
-                    'Files stay on this computer.',
+                    strings.filesStayOnComputer,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: StilloraColors.onSurfaceVariant,
                     ),
@@ -208,7 +133,7 @@ class DesktopSidebar extends ConsumerWidget {
               ],
             ),
           ] else
-            const Icon(
+            Icon(
               Icons.shield_rounded,
               color: StilloraColors.secondary,
               size: 16,
@@ -290,7 +215,7 @@ class _DesktopNavItemState extends State<DesktopNavItem> {
             child: Ink(
               decoration: BoxDecoration(
                 gradient: selected
-                    ? const LinearGradient(
+                    ? LinearGradient(
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
                         colors: [

@@ -76,7 +76,7 @@ class TextOverlayView extends ConsumerWidget {
     // live composite stays pinned in the right-hand pane, so dragging a layer
     // or nudging a fade is reflected without losing sight of the frame.
     return DecoratedBox(
-      decoration: const BoxDecoration(gradient: stilloraBackgroundGradient),
+      decoration: BoxDecoration(gradient: stilloraBackgroundGradient),
       child: SafeArea(
         top: false,
         child: SectionSplitView(

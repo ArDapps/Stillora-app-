@@ -81,7 +81,7 @@ class _VideoThumbnailState extends State<VideoThumbnail> {
           fit: StackFit.expand,
           children: [
             DecoratedBox(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: StilloraColors.surfaceContainerHighest,
               ),
             ),
@@ -98,7 +98,7 @@ class _VideoThumbnailState extends State<VideoThumbnail> {
             else
               Center(
                 child: _failed
-                    ? const Icon(
+                    ? Icon(
                         Icons.movie_outlined,
                         color: StilloraColors.onSurfaceVariant,
                         size: 22,

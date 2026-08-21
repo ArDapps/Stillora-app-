@@ -102,7 +102,7 @@ class WatermarkOverlayRow extends StatelessWidget {
             ),
             Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.schedule_rounded,
                   size: 15,
                   color: StilloraColors.onSurfaceVariant,

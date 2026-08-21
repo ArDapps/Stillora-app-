@@ -65,7 +65,7 @@ class _ExportProgressScreenState extends ConsumerState<ExportProgressScreen> {
     }
 
     final body = DecoratedBox(
-      decoration: const BoxDecoration(gradient: stilloraBackgroundGradient),
+      decoration: BoxDecoration(gradient: stilloraBackgroundGradient),
       child: _ExportProgressContent(
         export: export,
         message: _messageFor(export),
@@ -199,7 +199,9 @@ class _ExportStatusCard extends StatelessWidget {
                 hasError
                     ? Icons.error_outline_rounded
                     : Icons.movie_creation_rounded,
-                color: Colors.white,
+                color: hasError
+                    ? StilloraColors.onErrorContainer
+                    : Colors.white,
                 size: compact ? 24 : 34,
               ),
             ),

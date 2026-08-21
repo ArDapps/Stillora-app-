@@ -80,7 +80,7 @@ class PdfPageRow extends StatelessWidget {
                   page.label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w700,
                     color: StilloraColors.onSurface,
                     fontSize: 13,
@@ -93,7 +93,7 @@ class PdfPageRow extends StatelessWidget {
                   '${page.quarterTurns == 0 ? '' : ' · ${page.quarterTurns * 90}°'}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: StilloraColors.onSurfaceVariant,
                     fontSize: 11,
                   ),
@@ -149,7 +149,7 @@ class _PageNumber extends StatelessWidget {
       ),
       child: Text(
         '$number',
-        style: const TextStyle(
+        style: TextStyle(
           color: StilloraColors.accentText,
           fontWeight: FontWeight.w800,
           fontSize: 12,
@@ -180,7 +180,7 @@ class _Thumbnail extends StatelessWidget {
             fit: BoxFit.cover,
             cacheWidth: 120,
             gaplessPlayback: true,
-            errorBuilder: (context, error, stack) => const ColoredBox(
+            errorBuilder: (context, error, stack) => ColoredBox(
               color: StilloraColors.surfaceContainerHigh,
               child: Icon(
                 Icons.broken_image_outlined,

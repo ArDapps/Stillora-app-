@@ -59,7 +59,7 @@ class ReelDurationBanner extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Row(
         children: [
-          const Icon(
+          Icon(
             Icons.timer_outlined,
             color: StilloraColors.primary,
             size: 20,
@@ -98,7 +98,7 @@ class ReelAudioRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Row(
         children: [
-          const Icon(
+          Icon(
             Icons.music_note_rounded,
             color: StilloraColors.primary,
             size: 20,
@@ -206,7 +206,7 @@ class ReelPickCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 22),
       child: Column(
         children: [
-          const Icon(
+          Icon(
             Icons.video_call_rounded,
             color: StilloraColors.primary,
             size: 34,
@@ -263,7 +263,9 @@ class ReelChip extends StatelessWidget {
           child: Text(
             label,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: selected ? Colors.white : StilloraColors.onSurfaceVariant,
+              color: selected
+                  ? StilloraColors.onPrimary
+                  : StilloraColors.onSurfaceVariant,
               fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
             ),
           ),

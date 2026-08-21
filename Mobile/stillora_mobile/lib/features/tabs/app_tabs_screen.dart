@@ -3,80 +3,64 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/design/stillora_colors.dart';
 import '../../core/design/stillora_spacing.dart';
+import '../../core/i18n/app_strings.dart';
 import '../../core/platform/platform_info.dart';
 import '../../core/widgets/desktop_shell.dart';
 import '../../core/widgets/stillora_mark.dart';
-import '../editor/editor_screen.dart';
-import '../gallery/gallery_screen.dart';
-import '../silence/silence_screen.dart';
-import '../speed/speed_screen.dart';
 import '../compress/compress_screen.dart';
 import '../convert/convert_screen.dart';
+import '../editor/editor_screen.dart';
+import '../gallery/gallery_screen.dart';
 import '../html_to_video/html_to_video_screen.dart';
 import '../images_to_pdf/images_to_pdf_screen.dart';
 import '../loop_images/loop_images_screen.dart';
-import '../profile/profile_screen.dart';
+import '../settings/settings_screen.dart';
+import '../silence/silence_screen.dart';
+import '../speed/speed_screen.dart';
 import '../text_overlay/text_overlay_screen.dart';
 import '../watermark/watermark_screen.dart';
+import 'app_sections.dart';
 
 class AppTabsScreen extends ConsumerWidget {
   const AppTabsScreen({super.key});
 
   static const routePath = kHomeRoute;
 
+  /// Section bodies, indexed by [AppSection.viewIndex].
+  static const views = [
+    EditorView(),
+    GalleryView(),
+    HtmlToVideoView(),
+    SettingsView(),
+    LoopImagesView(),
+    SilenceView(),
+    WatermarkView(),
+    SpeedView(),
+    ConvertView(),
+    TextOverlayView(),
+    CompressView(),
+    ImagesToPdfView(),
+  ];
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final index = ref.watch(homeTabProvider);
-    const titles = [
-      'Create',
-      'Library',
-      'HTML',
-      'Info',
-      'Loop images',
-      'Remove Silence',
-      'Watermark',
-      'Speed',
-      'Convert',
-      'Text',
-      'Compress',
-      'PDF Converter',
-    ];
-    const views = [
-      EditorView(),
-      GalleryView(),
-      HtmlToVideoView(),
-      ProfileView(),
-      LoopImagesView(),
-      SilenceView(),
-      WatermarkView(),
-      SpeedView(),
-      ConvertView(),
-      TextOverlayView(),
-      CompressView(),
-      ImagesToPdfView(),
-    ];
+    final title = AppSection.fromIndex(index).title(context.strings);
 
     if (useDesktopLayout(context)) {
       return DesktopShell(
         activeIndex: index,
-        title: titles[index],
-        trailing: index == 3 ? const ProfileSettingsButton() : null,
+        title: title,
         child: views[index],
       );
     }
 
     // Mobile / tablet (narrow): navigation lives in a hamburger drawer (the
-    // desktop's persistent sidebar is shown via DesktopShell above). Display
-    // order: creation tools (Create / HTML / Loop) first, then Library, Info.
-    final selected = index;
-
+    // desktop's persistent sidebar is shown via DesktopShell above).
     return Scaffold(
-      appBar: AppBar(
-        title: Text(titles[index]),
-        actions: index == 3 ? const [ProfileSettingsButton()] : null,
-      ),
+      appBar: AppBar(title: Text(title)),
       drawer: AppNavDrawer(
-        activeView: selected,
+        activeView: index,
         onSelect: (view) => ref.read(homeTabProvider.notifier).state = view,
       ),
       // Each section screen embeds its own ad banner, so no persistent bottom
@@ -86,87 +70,10 @@ class AppTabsScreen extends ConsumerWidget {
   }
 }
 
-/// Items for the mobile navigation drawer. `view` is the underlying home-tab
-/// index (matches the `views` list in [AppTabsScreen]).
-const _drawerNavItems = [
-  (
-    view: 0,
-    icon: Icons.add_photo_alternate_outlined,
-    selectedIcon: Icons.add_photo_alternate_rounded,
-    label: 'Create',
-  ),
-  (
-    view: 9,
-    icon: Icons.text_fields_outlined,
-    selectedIcon: Icons.text_fields_rounded,
-    label: 'Text',
-  ),
-  (
-    view: 6,
-    icon: Icons.branding_watermark_outlined,
-    selectedIcon: Icons.branding_watermark_rounded,
-    label: 'Watermark',
-  ),
-  (
-    view: 5,
-    icon: Icons.content_cut_outlined,
-    selectedIcon: Icons.content_cut_rounded,
-    label: 'Remove Silence',
-  ),
-  (
-    view: 7,
-    icon: Icons.fast_forward_outlined,
-    selectedIcon: Icons.fast_forward_rounded,
-    label: 'Speed',
-  ),
-  (
-    view: 10,
-    icon: Icons.compress_outlined,
-    selectedIcon: Icons.compress_rounded,
-    label: 'Compress',
-  ),
-  (
-    view: 8,
-    icon: Icons.swap_horiz_outlined,
-    selectedIcon: Icons.swap_horiz_rounded,
-    label: 'Convert',
-  ),
-  (
-    view: 11,
-    icon: Icons.picture_as_pdf_outlined,
-    selectedIcon: Icons.picture_as_pdf_rounded,
-    label: 'PDF Converter',
-  ),
-  (
-    view: 2,
-    icon: Icons.public_outlined,
-    selectedIcon: Icons.public_rounded,
-    label: 'HTML',
-  ),
-  (
-    view: 4,
-    icon: Icons.repeat_rounded,
-    selectedIcon: Icons.repeat_on_rounded,
-    label: 'Loop images',
-  ),
-  (
-    view: 1,
-    icon: Icons.video_library_outlined,
-    selectedIcon: Icons.video_library_rounded,
-    label: 'Library',
-  ),
-  (
-    view: 3,
-    icon: Icons.person_outline_rounded,
-    selectedIcon: Icons.person_rounded,
-    label: 'Info',
-  ),
-];
-
 /// Slide-out navigation drawer for phones/tablets (opened by the AppBar ☰).
 /// Mirrors the desktop sidebar's brand + nav + privacy footer.
-/// The phone navigation drawer. Public so its scroll/overflow behaviour can be
-/// widget-tested in isolation (without the whole tab screen's gallery/ad deps).
+/// Public so its scroll/overflow behaviour can be widget-tested in isolation
+/// (without the whole tab screen's gallery/ad deps).
 class AppNavDrawer extends StatelessWidget {
   const AppNavDrawer({
     super.key,
@@ -179,6 +86,7 @@ class AppNavDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = context.strings;
     return Drawer(
       backgroundColor: StilloraColors.surfaceDim,
       child: SafeArea(
@@ -206,40 +114,24 @@ class AppNavDrawer extends StatelessWidget {
                 ],
               ),
             ),
-            const Divider(height: 1, color: StilloraColors.glassStroke),
+            Divider(height: 1, color: StilloraColors.glassStroke),
             const SizedBox(height: StilloraSpacing.xs),
             // Nav list scrolls so it never overflows on short screens, while the
             // privacy footer below stays pinned to the bottom.
-            // Per-section platform visibility:
-            //  • 5/6/7/9 (Silence/Watermark/Speed/Text) run on iOS's native
-            //    engine, so desktop + iOS show them; Android hides them.
-            //  • 10 (Compress) re-encodes under a size cap. macOS/iOS use the
-            //    native engine (AVFoundation's fileLengthLimit *is* honored);
-            //    Windows/Linux use bundled ffmpeg. Android reuses the
-            //    removeSilence pipeline it lacks, so it stays hidden there.
-            //  • 11 (PDF Converter) is pure Dart plus the printing plugin's
-            //    rasteriser, both of which ship on every platform — no gate.
             Expanded(
               child: ListView(
                 padding: EdgeInsets.zero,
                 children: [
-                  for (final item in _drawerNavItems)
-                    if (switch (item.view) {
-                      5 ||
-                      6 ||
-                      7 ||
-                      9 ||
-                      10 => isDesktopPlatform || isIosPlatform,
-                      _ => true,
-                    })
+                  for (final section in mobileNavOrder)
+                    if (section.isAvailable)
                       _DrawerNavTile(
-                        selected: item.view == activeView,
-                        icon: item.icon,
-                        selectedIcon: item.selectedIcon,
-                        label: item.label,
+                        selected: section.viewIndex == activeView,
+                        icon: section.icon,
+                        selectedIcon: section.selectedIcon,
+                        label: section.title(strings),
                         onTap: () {
                           Navigator.of(context).pop();
-                          onSelect(item.view);
+                          onSelect(section.viewIndex);
                         },
                       ),
                 ],
@@ -249,7 +141,7 @@ class AppNavDrawer extends StatelessWidget {
               padding: const EdgeInsets.all(StilloraSpacing.md),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.shield_rounded,
                     color: StilloraColors.secondary,
                     size: 16,
@@ -257,7 +149,7 @@ class AppNavDrawer extends StatelessWidget {
                   const SizedBox(width: StilloraSpacing.base + 2),
                   Expanded(
                     child: Text(
-                      'Files stay on this device.',
+                      strings.filesStayOnDevice,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: StilloraColors.onSurfaceVariant,
                       ),
@@ -319,11 +211,15 @@ class _DrawerNavTile extends StatelessWidget {
                   color: selected ? StilloraColors.accentText : fg,
                 ),
                 const SizedBox(width: StilloraSpacing.snug),
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                    color: fg,
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                      color: fg,
+                    ),
                   ),
                 ),
               ],

@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/analytics/usage_tracker.dart';
+import '../core/i18n/app_locale.dart';
+import '../core/i18n/app_strings.dart';
+import '../core/i18n/language_controller.dart';
 import '../features/export/export_controller.dart';
 import '../features/html_to_video/html_to_video_controller.dart';
 import '../features/html_to_video/html_to_video_service.dart';
 import 'router.dart';
 import 'theme.dart';
+import 'theme_controller.dart';
 
 /// App-wide messenger so background jobs (HTML → MP4, export) can surface a
 /// toast no matter which tab or screen is currently visible.
@@ -26,16 +31,38 @@ class StilloraApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
+    final themeMode = ref.watch(themeModeControllerProvider);
+    final language = ref.watch(languageControllerProvider);
 
     return MaterialApp.router(
       title: 'Stillora',
       debugShowCheckedModeBanner: false,
       scaffoldMessengerKey: stilloraMessengerKey,
-      theme: buildStilloraTheme(Brightness.light),
-      darkTheme: buildStilloraTheme(Brightness.dark),
+      theme: buildStilloraTheme(Brightness.light, language),
+      darkTheme: buildStilloraTheme(Brightness.dark, language),
+      themeMode: themeMode,
+      // Setting `locale` also sets the text direction, which is what flips the
+      // whole app to RTL for Arabic.
+      locale: language.locale,
+      supportedLocales: supportedAppLocales,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       routerConfig: router,
-      builder: (context, child) => UsageTrackerHost(
-        child: _BackgroundJobToasts(child: child ?? const SizedBox.shrink()),
+      // Both scopes sit *inside* MaterialApp: the palette one so it can read
+      // the brightness resolved from [themeMode] + the OS, and the strings one
+      // so every screen below can read `context.strings`.
+      builder: (context, child) => AppStringsScope(
+        strings: AppStrings.of(language),
+        child: StilloraPaletteScope(
+          child: UsageTrackerHost(
+            child: _BackgroundJobToasts(
+              child: child ?? const SizedBox.shrink(),
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -46,3 +46,6 @@ app.*.map.json
 
 # Kotlin compiler session cache (build artifact)
 .kotlin/
+
+# Artifacts written by `flutter drive` (integration_test/appearance_test.dart).
+screenshots/

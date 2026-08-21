@@ -103,7 +103,7 @@ class LoginAnimatedLogo extends StatelessWidget {
                 Container(
                   width: 92,
                   height: 92,
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: StilloraColors.surface,
                   ),
@@ -127,7 +127,7 @@ class LoginPrivacyNote extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
+        color: StilloraColors.onSurface.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(StilloraRadius.full),
         border: Border.all(color: StilloraColors.glassStroke),
       ),
@@ -174,7 +174,7 @@ class LoginBackButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white.withValues(alpha: 0.06),
+      color: StilloraColors.onSurface.withValues(alpha: 0.06),
       shape: const CircleBorder(),
       clipBehavior: Clip.antiAlias,
       child: InkWell(

@@ -58,7 +58,7 @@ class _AddAudioScreenState extends ConsumerState<AddAudioScreen> {
       desktopTitle: 'Add Soundtrack',
       appBar: AppBar(leading: const BackButton()),
       body: DecoratedBox(
-        decoration: const BoxDecoration(gradient: stilloraBackgroundGradient),
+        decoration: BoxDecoration(gradient: stilloraBackgroundGradient),
         child: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -139,7 +139,7 @@ class _AddAudioScreenState extends ConsumerState<AddAudioScreen> {
                     const SizedBox(height: 16),
                     Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.verified_user_rounded,
                           color: StilloraColors.brandCyan,
                           size: 18,
@@ -214,7 +214,7 @@ class _TrackCard extends StatelessWidget {
                   color: StilloraColors.primaryContainer,
                   borderRadius: BorderRadius.circular(StilloraRadius.xl),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.music_note_rounded,
                   color: StilloraColors.onPrimaryContainer,
                 ),
@@ -301,7 +301,7 @@ class _Waveform extends StatelessWidget {
             height: barH,
             decoration: BoxDecoration(
               gradient: played
-                  ? const LinearGradient(
+                  ? LinearGradient(
                       begin: Alignment.bottomCenter,
                       end: Alignment.topCenter,
                       colors: [

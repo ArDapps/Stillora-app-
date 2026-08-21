@@ -110,7 +110,7 @@ class _MediaDropZone extends StatelessWidget {
               ? Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.perm_media_rounded,
                       color: StilloraColors.primary,
                       size: 30,
@@ -145,7 +145,7 @@ class _MediaDropZone extends StatelessWidget {
               : Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.perm_media_rounded,
                       color: StilloraColors.primary,
                       size: 48,

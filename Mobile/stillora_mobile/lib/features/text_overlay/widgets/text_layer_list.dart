@@ -113,7 +113,7 @@ class TimelineStrip extends StatelessWidget {
                                 bottom: 0,
                                 child: Container(
                                   decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
+                                    gradient: LinearGradient(
                                       colors: [
                                         StilloraColors.brandMagenta,
                                         StilloraColors.brandViolet,

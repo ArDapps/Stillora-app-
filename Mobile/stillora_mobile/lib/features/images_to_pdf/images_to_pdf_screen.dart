@@ -109,7 +109,7 @@ class ImagesToPdfView extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: StilloraSpacing.xs),
-        const Text(
+        Text(
           'Add photos, scans and existing PDFs, order the pages, rotate the '
           'crooked ones, and export the whole set as a single file.',
           style: TextStyle(color: StilloraColors.onSurfaceVariant, height: 1.4),

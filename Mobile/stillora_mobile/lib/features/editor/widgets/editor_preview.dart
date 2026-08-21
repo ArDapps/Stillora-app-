@@ -41,7 +41,7 @@ class PreviewCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.smart_display_rounded,
                 color: StilloraColors.primary,
                 size: 20,
@@ -113,7 +113,7 @@ class _PreviewMedia extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
+              Icon(
                 Icons.auto_awesome_rounded,
                 color: StilloraColors.primary,
                 size: 36,
@@ -233,7 +233,7 @@ class _VideoFramePreviewState extends State<_VideoFramePreview> {
     }
     return Center(
       child: _failed
-          ? const Icon(
+          ? Icon(
               Icons.movie_outlined,
               color: StilloraColors.onSurfaceVariant,
               size: 36,

@@ -98,7 +98,7 @@ class EditorView extends ConsumerWidget {
     final isDesktop = useDesktopLayout(context);
 
     return DecoratedBox(
-      decoration: const BoxDecoration(gradient: stilloraBackgroundGradient),
+      decoration: BoxDecoration(gradient: stilloraBackgroundGradient),
       child: SafeArea(
         top: false,
         child: isDesktop

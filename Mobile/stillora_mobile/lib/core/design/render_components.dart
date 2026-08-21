@@ -10,11 +10,13 @@ class RenderTokens {
   const RenderTokens._();
 
   // Now aliases onto the unified StilloraColors palette so the render flows and
-  // the rest of the app share one colour language.
-  static const accent = StilloraColors.accent;
-  static const accentText = StilloraColors.accentText;
-  static const panel = StilloraColors.panel;
-  static const panelBorder = StilloraColors.panelBorder;
+  // the rest of the app share one colour language. These are getters, not
+  // `static const`/`static final`, so they follow the active light/dark palette
+  // instead of freezing whichever one happened to be live at first access.
+  static Color get accent => StilloraColors.accent;
+  static Color get accentText => StilloraColors.accentText;
+  static Color get panel => StilloraColors.panel;
+  static Color get panelBorder => StilloraColors.panelBorder;
 }
 
 /// A numbered panel: square number badge + title + optional trailing pill, with
@@ -54,7 +56,7 @@ class RenderStepCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 16,
                     color: StilloraColors.onSurface,
@@ -70,7 +72,7 @@ class RenderStepCard extends StatelessWidget {
             const SizedBox(height: StilloraSpacing.sm),
             Text(
               footer!,
-              style: const TextStyle(
+              style: TextStyle(
                 color: StilloraColors.onSurfaceVariant,
                 fontSize: 12,
               ),
@@ -99,7 +101,7 @@ class RenderNumberBadge extends StatelessWidget {
       ),
       child: Text(
         number,
-        style: const TextStyle(
+        style: TextStyle(
           color: RenderTokens.accentText,
           fontWeight: FontWeight.w800,
           fontSize: 13,
@@ -124,7 +126,7 @@ class RenderTagPill extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: const TextStyle(
+        style: TextStyle(
           color: StilloraColors.onSurfaceVariant,
           fontWeight: FontWeight.w600,
           fontSize: 11,
@@ -204,7 +206,7 @@ class RenderSelectTile extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w700,
                         color: StilloraColors.onSurface,
                       ),
@@ -212,7 +214,7 @@ class RenderSelectTile extends StatelessWidget {
                     ),
                     Text(
                       subtitle,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: StilloraColors.onSurfaceVariant,
                         fontSize: 12,
                       ),
@@ -332,7 +334,9 @@ class _SegChip extends StatelessWidget {
             label,
             style: TextStyle(
               fontWeight: FontWeight.w700,
-              color: selected ? Colors.white : StilloraColors.onSurfaceVariant,
+              color: selected
+                  ? StilloraColors.selectedOnSurface
+                  : StilloraColors.onSurfaceVariant,
             ),
           ),
         ),
@@ -378,7 +382,7 @@ class RenderDropZone extends StatelessWidget {
               Text(
                 title,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.w700,
                   color: StilloraColors.onSurface,
                 ),
@@ -387,7 +391,7 @@ class RenderDropZone extends StatelessWidget {
               Text(
                 hint,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   color: StilloraColors.onSurfaceVariant,
                   fontSize: 12,
                 ),
@@ -409,11 +413,11 @@ class RenderEyebrow extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(Icons.auto_awesome, size: 14, color: RenderTokens.accent),
+        Icon(Icons.auto_awesome, size: 14, color: RenderTokens.accent),
         const SizedBox(width: 6),
         Text(
           text,
-          style: const TextStyle(
+          style: TextStyle(
             color: RenderTokens.accent,
             fontWeight: FontWeight.w800,
             fontSize: 12,
@@ -430,7 +434,7 @@ class RenderHatchPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.03)
+      ..color = StilloraColors.onSurface.withValues(alpha: 0.03)
       ..strokeWidth = 8;
     const gap = 26.0;
     for (double x = -size.height; x < size.width; x += gap) {

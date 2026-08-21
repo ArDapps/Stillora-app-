@@ -165,7 +165,7 @@ class LivePreviewPanel extends StatelessWidget {
       children: [
         Row(
           children: [
-            const Icon(
+            Icon(
               Icons.visibility_rounded,
               size: 14,
               color: StilloraColors.onSurfaceVariant,

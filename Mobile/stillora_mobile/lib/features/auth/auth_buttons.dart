@@ -158,7 +158,7 @@ class AuthErrorBanner extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Row(
           children: [
-            const Icon(
+            Icon(
               Icons.error_outline_rounded,
               color: StilloraColors.error,
               size: 18,

@@ -59,7 +59,7 @@ class SoundscapeCard extends StatelessWidget {
                       color: StilloraColors.primaryContainer,
                       borderRadius: BorderRadius.circular(StilloraRadius.xl),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.music_note_rounded,
                       color: StilloraColors.onPrimaryContainer,
                     ),
@@ -108,7 +108,7 @@ class SoundscapeCard extends StatelessWidget {
             SizedBox(height: compact ? 6 : 10),
             Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.graphic_eq_rounded,
                   size: 15,
                   color: StilloraColors.secondary,

@@ -77,7 +77,7 @@ class _CompressViewState extends ConsumerState<CompressView> {
     // estimate pinned in the right-hand pane so every level change is reflected
     // immediately. Phones get the same preview at the top of the column.
     return DecoratedBox(
-      decoration: const BoxDecoration(gradient: stilloraBackgroundGradient),
+      decoration: BoxDecoration(gradient: stilloraBackgroundGradient),
       child: SafeArea(
         top: false,
         child: SectionSplitView(
@@ -169,7 +169,7 @@ class _CompressViewState extends ConsumerState<CompressView> {
                     ),
                   ),
                   if (compress.hasVideo)
-                    const Icon(
+                    Icon(
                       Icons.refresh_rounded,
                       color: StilloraColors.onSurfaceVariant,
                     ),

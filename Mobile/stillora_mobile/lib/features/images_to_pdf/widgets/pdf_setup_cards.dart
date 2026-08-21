@@ -234,7 +234,7 @@ class PdfMessageBanner extends ConsumerWidget {
             Expanded(
               child: Text(
                 message,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
                   color: StilloraColors.onSurface,
                 ),

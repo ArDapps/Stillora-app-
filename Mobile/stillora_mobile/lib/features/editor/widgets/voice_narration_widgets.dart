@@ -12,7 +12,7 @@ class VoiceNarrationPrivacyNote extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
+        color: StilloraColors.onSurface.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(StilloraRadius.xl),
         border: Border.all(color: StilloraColors.glassStroke),
       ),
@@ -20,7 +20,7 @@ class VoiceNarrationPrivacyNote extends StatelessWidget {
         padding: const EdgeInsets.all(StilloraSpacing.sm),
         child: Row(
           children: [
-            const Icon(
+            Icon(
               Icons.lock_rounded,
               color: StilloraColors.brandCyan,
               size: 20,
@@ -56,7 +56,7 @@ class VoiceNarrationPermissionDenied extends StatelessWidget {
     return StilloraGlassCard(
       child: Column(
         children: [
-          const Icon(
+          Icon(
             Icons.mic_off_rounded,
             color: StilloraColors.error,
             size: 44,

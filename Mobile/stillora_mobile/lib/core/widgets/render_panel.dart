@@ -71,14 +71,14 @@ class RenderFormatTile extends StatelessWidget {
                   children: [
                     Text(
                       label,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w700,
                         color: StilloraColors.onSurface,
                       ),
                     ),
                     Text(
                       ratio,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: StilloraColors.onSurfaceVariant,
                         fontSize: 12,
                       ),
@@ -109,12 +109,12 @@ class RenderErrorBanner extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.error_outline_rounded, color: StilloraColors.error),
+          Icon(Icons.error_outline_rounded, color: StilloraColors.error),
           const SizedBox(width: StilloraSpacing.xs),
           Expanded(
             child: Text(
               message,
-              style: const TextStyle(color: StilloraColors.onErrorContainer),
+              style: TextStyle(color: StilloraColors.onErrorContainer),
             ),
           ),
         ],

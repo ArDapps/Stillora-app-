@@ -20,9 +20,9 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
-  sign_in_with_apple: a9e97e744e8edc36aefc2723111f652102a7a727
-  stillora_video_engine: 4c1e2d41b8ded1e2a786b7d2c12e96e0ef253324
+  sign_in_with_apple: 6673c03c9e3643f6c8d33601943fbfa9ae99f94e
+  stillora_video_engine: 0c3b565ea5276a838192db42eea0fa8efb71f258
 
 PODFILE CHECKSUM: c0ca508e6a478b9edb6151f1961cdc72634da78d
 
-COCOAPODS: 1.17.0
+COCOAPODS: 1.16.2

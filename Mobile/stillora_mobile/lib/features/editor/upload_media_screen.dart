@@ -36,7 +36,7 @@ class UploadMediaScreen extends ConsumerWidget {
         ),
       ),
       body: DecoratedBox(
-        decoration: const BoxDecoration(gradient: stilloraBackgroundGradient),
+        decoration: BoxDecoration(gradient: stilloraBackgroundGradient),
         child: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -135,7 +135,7 @@ class _UploadDropZone extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
+            Icon(
               Icons.add_photo_alternate_rounded,
               size: 52,
               color: StilloraColors.primary,
@@ -197,7 +197,7 @@ class _MediaThumbnailRow extends StatelessWidget {
                         width: 90,
                         height: 90,
                         color: StilloraColors.surfaceContainerLowest,
-                        child: const Center(
+                        child: Center(
                           child: Icon(
                             Icons.play_circle_outline_rounded,
                             color: StilloraColors.primary,
@@ -271,7 +271,7 @@ class _PrivacyNote extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        const Icon(
+        Icon(
           Icons.verified_user_rounded,
           color: StilloraColors.brandCyan,
           size: 18,

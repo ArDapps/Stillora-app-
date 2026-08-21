@@ -30,6 +30,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # Ships the Material/Cupertino/Widgets localizations for the app's supported
+  # locales, and the RTL directionality Arabic needs.
+  flutter_localizations:
+    sdk: flutter
 
   cupertino_icons: ^1.0.8
   crypto: ^3.0.6
@@ -95,6 +99,26 @@ flutter:
 
   assets:
     - assets/logo/
+
+  fonts:
+    # Cairo (SIL OFL 1.1, see assets/fonts/OFL.txt) is used for Arabic, whose
+    # script the Latin-first UI font renders poorly. These are the Google Fonts
+    # `arabic` subset instances, which also carry Latin glyphs, so mixed
+    # Arabic/Latin strings ("Stillora", "10 ثانية") stay in one typeface.
+    - family: Cairo
+      fonts:
+        - asset: assets/fonts/Cairo-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Cairo-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Cairo-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Cairo-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Cairo-ExtraBold.ttf
+          weight: 800
+        - asset: assets/fonts/Cairo-Black.ttf
+          weight: 900
 
   # To add assets to your application, add an assets section, like this:
   # assets:

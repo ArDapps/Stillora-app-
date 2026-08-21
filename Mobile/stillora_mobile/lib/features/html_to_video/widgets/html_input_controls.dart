@@ -43,16 +43,16 @@ class HtmlSourceInput extends StatelessWidget {
     const radius = BorderRadius.all(Radius.circular(StilloraRadius.xl));
     return InputDecoration(
       hintText: hint,
-      hintStyle: const TextStyle(color: StilloraColors.onSurfaceVariant),
+      hintStyle: TextStyle(color: StilloraColors.onSurfaceVariant),
       prefixIcon: prefixIcon,
       alignLabelWithHint: true,
       filled: true,
       fillColor: StilloraColors.surfaceDim,
-      enabledBorder: const OutlineInputBorder(
+      enabledBorder: OutlineInputBorder(
         borderRadius: radius,
         borderSide: BorderSide(color: StilloraColors.panelBorder),
       ),
-      focusedBorder: const OutlineInputBorder(
+      focusedBorder: OutlineInputBorder(
         borderRadius: radius,
         borderSide: BorderSide(color: StilloraColors.accent, width: 1.5),
       ),
@@ -69,7 +69,7 @@ class HtmlSourceInput extends StatelessWidget {
           minLines: 5,
           maxLines: 10,
           keyboardType: TextInputType.multiline,
-          style: const TextStyle(
+          style: TextStyle(
             fontFamily: 'monospace',
             fontSize: 13,
             color: StilloraColors.onSurface,
@@ -88,7 +88,7 @@ class HtmlSourceInput extends StatelessWidget {
           controller: urlController,
           keyboardType: TextInputType.url,
           autocorrect: false,
-          style: const TextStyle(color: StilloraColors.onSurface),
+          style: TextStyle(color: StilloraColors.onSurface),
           decoration: fieldDecoration(
             'https://example.com/animation.html',
             prefixIcon: const Icon(Icons.link),

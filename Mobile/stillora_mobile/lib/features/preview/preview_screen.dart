@@ -119,7 +119,7 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(
+                Icon(
                   Icons.movie_filter_outlined,
                   size: 56,
                   color: StilloraColors.onSurfaceVariant,
@@ -145,7 +145,7 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Export Complete')),
       body: DecoratedBox(
-        decoration: const BoxDecoration(gradient: stilloraBackgroundGradient),
+        decoration: BoxDecoration(gradient: stilloraBackgroundGradient),
         child: SafeArea(
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
@@ -293,7 +293,7 @@ class _VideoCard extends StatelessWidget {
               width: 80,
               height: 80,
               color: StilloraColors.surfaceContainerLowest,
-              child: const Center(
+              child: Center(
                 child: Icon(
                   Icons.play_circle_fill_rounded,
                   color: StilloraColors.primary,
@@ -358,7 +358,7 @@ class _PlatformRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final platforms = [
       (FontAwesomeIcons.instagram, 'Reels', const Color(0xffe1306c)),
-      (FontAwesomeIcons.tiktok, 'TikTok', Colors.white),
+      (FontAwesomeIcons.tiktok, 'TikTok', StilloraColors.onSurface),
       (FontAwesomeIcons.facebook, 'Stories', const Color(0xff1877f2)),
       (FontAwesomeIcons.youtube, 'Shorts', const Color(0xffff0000)),
     ];

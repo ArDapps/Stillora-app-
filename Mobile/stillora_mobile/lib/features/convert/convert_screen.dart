@@ -53,7 +53,7 @@ class _ConvertViewState extends ConsumerState<ConvertView> {
     // picked images stay visible in the right-hand pane, so the batch being
     // converted is always in sight. Phones show the same grid on top.
     return DecoratedBox(
-      decoration: const BoxDecoration(gradient: stilloraBackgroundGradient),
+      decoration: BoxDecoration(gradient: stilloraBackgroundGradient),
       child: SafeArea(
         top: false,
         child: SectionSplitView(
@@ -81,7 +81,7 @@ class _ConvertViewState extends ConsumerState<ConvertView> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.add_photo_alternate_rounded,
                     color: StilloraColors.primary,
                     size: 26,
@@ -95,7 +95,7 @@ class _ConvertViewState extends ConsumerState<ConvertView> {
                       ),
                     ),
                   ),
-                  const Icon(
+                  Icon(
                     Icons.chevron_right_rounded,
                     color: StilloraColors.onSurfaceVariant,
                   ),
@@ -201,7 +201,7 @@ class _ConvertViewState extends ConsumerState<ConvertView> {
                         color: StilloraColors.onSurfaceVariant,
                       )
                     else
-                      const Icon(
+                      Icon(
                         Icons.chevron_right_rounded,
                         color: StilloraColors.onSurfaceVariant,
                       ),
@@ -256,7 +256,7 @@ class _ConvertPreview extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.photo_library_outlined,
                     size: 34,
                     color: StilloraColors.onSurfaceVariant,
@@ -297,7 +297,7 @@ class _ConvertPreview extends StatelessWidget {
           child: Image.file(
             File(paths[i]),
             fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => const Center(
+            errorBuilder: (_, _, _) => Center(
               child: Icon(
                 Icons.image_outlined,
                 color: StilloraColors.onSurfaceVariant,
@@ -325,7 +325,7 @@ class _ImageRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         child: Row(
           children: [
-            const Icon(
+            Icon(
               Icons.image_outlined,
               size: 20,
               color: StilloraColors.primary,

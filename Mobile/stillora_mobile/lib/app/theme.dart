@@ -1,70 +1,104 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../core/design/stillora_colors.dart';
 import '../core/design/stillora_spacing.dart';
+import '../core/i18n/app_locale.dart';
 
-ThemeData buildStilloraTheme(Brightness brightness) {
-  const colorScheme = ColorScheme(
-    brightness: Brightness.dark,
-    primary: StilloraColors.primary,
-    onPrimary: StilloraColors.onPrimary,
-    primaryContainer: StilloraColors.primaryContainer,
-    onPrimaryContainer: StilloraColors.onPrimaryContainer,
-    secondary: StilloraColors.secondary,
-    onSecondary: StilloraColors.onSecondary,
-    secondaryContainer: StilloraColors.secondaryContainer,
-    onSecondaryContainer: StilloraColors.onSecondaryContainer,
-    tertiary: StilloraColors.tertiary,
-    onTertiary: StilloraColors.onTertiary,
-    tertiaryContainer: StilloraColors.tertiaryContainer,
-    onTertiaryContainer: StilloraColors.onTertiaryContainer,
-    error: StilloraColors.error,
-    onError: StilloraColors.onError,
-    errorContainer: StilloraColors.errorContainer,
-    onErrorContainer: StilloraColors.onErrorContainer,
-    surface: StilloraColors.surface,
-    onSurface: StilloraColors.onSurface,
-    surfaceContainerLowest: StilloraColors.surfaceContainerLowest,
-    surfaceContainerLow: StilloraColors.surfaceContainerLow,
-    surfaceContainer: StilloraColors.surfaceContainer,
-    surfaceContainerHigh: StilloraColors.surfaceContainerHigh,
-    surfaceContainerHighest: StilloraColors.surfaceContainerHighest,
-    onSurfaceVariant: StilloraColors.onSurfaceVariant,
-    outline: StilloraColors.outline,
-    outlineVariant: StilloraColors.outlineVariant,
-    inverseSurface: StilloraColors.inverseSurface,
-    onInverseSurface: StilloraColors.inverseOnSurface,
-    inversePrimary: StilloraColors.inversePrimary,
+ThemeData buildStilloraTheme(
+  Brightness brightness, [
+  AppLanguage language = AppLanguage.english,
+]) => buildStilloraThemeFor(
+  StilloraPalette.forBrightness(brightness),
+  fontFamily: language.fontFamily,
+);
+
+/// Builds the app theme from an explicit [palette].
+///
+/// This deliberately reads `palette.x` rather than the ambient
+/// `StilloraColors.x`: `MaterialApp` builds *both* the light and the dark
+/// `ThemeData` up front, so during one of those two calls the ambient palette
+/// is the wrong one.
+ThemeData buildStilloraThemeFor(
+  StilloraPalette palette, {
+  String fontFamily = 'Geist',
+}) {
+  final isDark = palette.isDark;
+
+  final colorScheme = ColorScheme(
+    brightness: palette.brightness,
+    primary: palette.primary,
+    onPrimary: palette.onPrimary,
+    primaryContainer: palette.primaryContainer,
+    onPrimaryContainer: palette.onPrimaryContainer,
+    secondary: palette.secondary,
+    onSecondary: palette.onSecondary,
+    secondaryContainer: palette.secondaryContainer,
+    onSecondaryContainer: palette.onSecondaryContainer,
+    tertiary: palette.tertiary,
+    onTertiary: palette.onTertiary,
+    tertiaryContainer: palette.tertiaryContainer,
+    onTertiaryContainer: palette.onTertiaryContainer,
+    error: palette.error,
+    onError: palette.onError,
+    errorContainer: palette.errorContainer,
+    onErrorContainer: palette.onErrorContainer,
+    surface: palette.surface,
+    onSurface: palette.onSurface,
+    surfaceContainerLowest: palette.surfaceContainerLowest,
+    surfaceContainerLow: palette.surfaceContainerLow,
+    surfaceContainer: palette.surfaceContainer,
+    surfaceContainerHigh: palette.surfaceContainerHigh,
+    surfaceContainerHighest: palette.surfaceContainerHighest,
+    onSurfaceVariant: palette.onSurfaceVariant,
+    outline: palette.outline,
+    outlineVariant: palette.outlineVariant,
+    inverseSurface: palette.inverseSurface,
+    onInverseSurface: palette.inverseOnSurface,
+    inversePrimary: palette.inversePrimary,
   );
 
   return ThemeData(
     colorScheme: colorScheme,
-    brightness: Brightness.dark,
-    fontFamily: 'Geist',
+    brightness: palette.brightness,
+    fontFamily: fontFamily,
     useMaterial3: true,
-    scaffoldBackgroundColor: StilloraColors.surface,
-    appBarTheme: const AppBarTheme(
+    scaffoldBackgroundColor: palette.surface,
+    canvasColor: palette.surface,
+    dividerColor: palette.glassStroke,
+    dividerTheme: DividerThemeData(
+      color: palette.glassStroke,
+      space: 1,
+      thickness: 1,
+    ),
+    appBarTheme: AppBarTheme(
       centerTitle: false,
-      backgroundColor: StilloraColors.surfaceDim,
-      foregroundColor: StilloraColors.onSurface,
+      backgroundColor: palette.surfaceDim,
+      foregroundColor: palette.onSurface,
       elevation: 0,
       surfaceTintColor: Colors.transparent,
+      // Keep the iOS status bar legible against the app bar in both palettes.
+      systemOverlayStyle: isDark
+          ? SystemUiOverlayStyle.light
+          : SystemUiOverlayStyle.dark,
     ),
-    cardTheme: const CardThemeData(
+    cardTheme: CardThemeData(
       elevation: 0,
       margin: EdgeInsets.zero,
-      color: StilloraColors.surfaceContainer,
+      color: palette.surfaceContainer,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.all(Radius.circular(StilloraRadius.full)),
-        side: BorderSide(color: StilloraColors.glassStroke),
+        borderRadius: const BorderRadius.all(
+          Radius.circular(StilloraRadius.full),
+        ),
+        side: BorderSide(color: palette.glassStroke),
       ),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        backgroundColor: StilloraColors.primary,
-        foregroundColor: StilloraColors.onPrimary,
-        disabledBackgroundColor: StilloraColors.surfaceContainerHigh,
-        disabledForegroundColor: StilloraColors.onSurfaceVariant,
+        backgroundColor: palette.primary,
+        foregroundColor: palette.onPrimary,
+        disabledBackgroundColor: palette.surfaceContainerHigh,
+        disabledForegroundColor: palette.onSurfaceVariant,
         minimumSize: const Size.fromHeight(48),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(StilloraRadius.full),
@@ -73,35 +107,38 @@ ThemeData buildStilloraTheme(Brightness brightness) {
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        foregroundColor: StilloraColors.primary,
-        side: const BorderSide(color: StilloraColors.primary),
+        foregroundColor: palette.primary,
+        side: BorderSide(color: palette.primary),
         minimumSize: const Size.fromHeight(48),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(StilloraRadius.full),
         ),
       ),
     ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(foregroundColor: palette.primary),
+    ),
     segmentedButtonTheme: SegmentedButtonThemeData(
       style: SegmentedButton.styleFrom(
-        backgroundColor: StilloraColors.surfaceContainerHigh,
-        selectedBackgroundColor: StilloraColors.primaryContainer,
-        selectedForegroundColor: StilloraColors.onPrimaryContainer,
-        foregroundColor: StilloraColors.onSurfaceVariant,
-        side: const BorderSide(color: StilloraColors.outlineVariant),
+        backgroundColor: palette.surfaceContainerHigh,
+        selectedBackgroundColor: palette.primaryContainer,
+        selectedForegroundColor: palette.onPrimaryContainer,
+        foregroundColor: palette.onSurfaceVariant,
+        side: BorderSide(color: palette.outlineVariant),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(StilloraRadius.xl),
         ),
       ),
     ),
     navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: StilloraColors.surfaceDim.withValues(alpha: 0.94),
-      indicatorColor: StilloraColors.primaryContainer,
+      backgroundColor: palette.surfaceDim.withValues(alpha: 0.94),
+      indicatorColor: palette.primaryContainer,
       labelTextStyle: WidgetStateProperty.resolveWith((states) {
         final selected = states.contains(WidgetState.selected);
         return TextStyle(
           color: selected
-              ? StilloraColors.onPrimaryContainer
-              : StilloraColors.onSurfaceVariant,
+              ? palette.onPrimaryContainer
+              : palette.onSurfaceVariant,
           fontSize: 12,
           fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
         );
@@ -110,35 +147,88 @@ ThemeData buildStilloraTheme(Brightness brightness) {
         final selected = states.contains(WidgetState.selected);
         return IconThemeData(
           color: selected
-              ? StilloraColors.onPrimaryContainer
-              : StilloraColors.onSurfaceVariant,
+              ? palette.onPrimaryContainer
+              : palette.onSurfaceVariant,
         );
       }),
     ),
-    listTileTheme: const ListTileThemeData(
-      iconColor: StilloraColors.primary,
-      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+    drawerTheme: DrawerThemeData(backgroundColor: palette.surfaceDim),
+    dialogTheme: DialogThemeData(
+      backgroundColor: palette.surfaceContainerHigh,
+      surfaceTintColor: Colors.transparent,
+    ),
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: palette.surfaceContainerHigh,
+      surfaceTintColor: Colors.transparent,
+    ),
+    popupMenuTheme: PopupMenuThemeData(
+      color: palette.surfaceContainerHigh,
+      surfaceTintColor: Colors.transparent,
+    ),
+    listTileTheme: ListTileThemeData(
+      iconColor: palette.primary,
+      textColor: palette.onSurface,
+      subtitleTextStyle: TextStyle(
+        color: palette.onSurfaceVariant,
+        fontSize: 14,
+        height: 20 / 14,
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+    ),
+    switchTheme: SwitchThemeData(
+      thumbColor: WidgetStateProperty.resolveWith(
+        (states) => states.contains(WidgetState.selected)
+            ? palette.onPrimary
+            : palette.onSurfaceVariant,
+      ),
+      trackColor: WidgetStateProperty.resolveWith(
+        (states) => states.contains(WidgetState.selected)
+            ? palette.accent
+            : palette.surfaceContainerHigh,
+      ),
+    ),
+    progressIndicatorTheme: ProgressIndicatorThemeData(
+      color: palette.accent,
+      linearTrackColor: palette.surfaceContainerHigh,
+      circularTrackColor: palette.surfaceContainerHigh,
     ),
     sliderTheme: SliderThemeData(
       // Consistent violet brand slider: violet active track, faded-violet
       // inactive track, and a violet thumb.
-      activeTrackColor: StilloraColors.accent,
-      inactiveTrackColor: StilloraColors.accent.withValues(alpha: 0.24),
-      thumbColor: StilloraColors.accent,
-      overlayColor: StilloraColors.accent.withValues(alpha: 0.18),
-      valueIndicatorColor: StilloraColors.accent,
+      activeTrackColor: palette.accent,
+      inactiveTrackColor: palette.accent.withValues(alpha: 0.24),
+      thumbColor: palette.accent,
+      overlayColor: palette.accent.withValues(alpha: 0.18),
+      valueIndicatorColor: palette.accent,
       valueIndicatorTextStyle: const TextStyle(
         color: Colors.white,
         fontWeight: FontWeight.w700,
       ),
       trackHeight: 5,
     ),
-    chipTheme: const ChipThemeData(
-      backgroundColor: StilloraColors.surfaceContainerHigh,
-      selectedColor: StilloraColors.primaryContainer,
-      labelStyle: TextStyle(color: StilloraColors.onSurfaceVariant),
-      side: BorderSide(color: StilloraColors.outlineVariant),
-      shape: StadiumBorder(),
+    chipTheme: ChipThemeData(
+      backgroundColor: palette.surfaceContainerHigh,
+      selectedColor: palette.primaryContainer,
+      labelStyle: TextStyle(color: palette.onSurfaceVariant),
+      side: BorderSide(color: palette.outlineVariant),
+      shape: const StadiumBorder(),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: palette.surfaceContainerHigh,
+      hintStyle: TextStyle(color: palette.onSurfaceVariant),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(StilloraRadius.md),
+        borderSide: BorderSide(color: palette.outlineVariant),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(StilloraRadius.md),
+        borderSide: BorderSide(color: palette.outlineVariant),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(StilloraRadius.md),
+        borderSide: BorderSide(color: palette.accent, width: 2),
+      ),
     ),
     textTheme:
         const TextTheme(
@@ -193,8 +283,55 @@ ThemeData buildStilloraTheme(Brightness brightness) {
             fontWeight: FontWeight.w600,
           ),
         ).apply(
-          bodyColor: StilloraColors.onSurface,
-          displayColor: StilloraColors.onSurface,
+          bodyColor: palette.onSurface,
+          displayColor: palette.onSurface,
         ),
   );
+}
+
+/// Keeps the ambient [StilloraColors] palette pointed at whichever theme
+/// `MaterialApp` resolved, and re-runs every build method when that flips.
+///
+/// The design tokens are read as plain statics from ~80 files, so they are not
+/// an inherited dependency — a theme change alone would leave those widgets
+/// holding stale colours. Marking the tree dirty once per switch is what makes
+/// the toggle take effect everywhere without threading a `BuildContext` through
+/// every token lookup.
+class StilloraPaletteScope extends StatefulWidget {
+  const StilloraPaletteScope({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  State<StilloraPaletteScope> createState() => _StilloraPaletteScopeState();
+}
+
+class _StilloraPaletteScopeState extends State<StilloraPaletteScope> {
+  bool _rebuildScheduled = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = StilloraPalette.forBrightness(
+      Theme.of(context).brightness,
+    );
+    if (StilloraColors.activate(palette) && !_rebuildScheduled) {
+      // Can't mark the tree dirty mid-build; do it as soon as this frame ends.
+      _rebuildScheduled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _rebuildScheduled = false;
+        _markTreeDirty();
+      });
+    }
+    return widget.child;
+  }
+
+  static void _markTreeDirty() {
+    void visit(Element element) {
+      element.markNeedsBuild();
+      element.visitChildren(visit);
+    }
+
+    final root = WidgetsBinding.instance.rootElement;
+    if (root != null) visit(root);
+  }
 }

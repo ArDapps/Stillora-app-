@@ -76,7 +76,7 @@ class WatermarkView extends ConsumerWidget {
     // the live composite stays pinned in the right-hand pane, so dragging or
     // resizing an overlay is reflected without scrolling back to the frame.
     return DecoratedBox(
-      decoration: const BoxDecoration(gradient: stilloraBackgroundGradient),
+      decoration: BoxDecoration(gradient: stilloraBackgroundGradient),
       child: SafeArea(
         top: false,
         child: SectionSplitView(

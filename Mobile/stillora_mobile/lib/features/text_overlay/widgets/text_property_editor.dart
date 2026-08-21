@@ -387,7 +387,11 @@ class _SwatchRow extends StatelessWidget {
           ),
         ),
         child: color == null
-            ? const Icon(Icons.block_rounded, size: 16, color: Colors.white54)
+            ? Icon(
+                Icons.block_rounded,
+                size: 16,
+                color: StilloraColors.onSurfaceVariant,
+              )
             : null,
       ),
     );

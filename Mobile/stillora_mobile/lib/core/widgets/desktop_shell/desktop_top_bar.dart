@@ -3,43 +3,36 @@ import 'package:go_router/go_router.dart';
 
 import '../../design/stillora_colors.dart';
 import '../../design/stillora_spacing.dart';
+import '../../i18n/app_strings.dart';
 import 'glass_icon_button.dart';
-
-/// Short descriptive subtitle per section, shown under the title in the desktop
-/// header so the chrome feels intentional rather than a bare app-bar.
-const _sectionSubtitles = {
-  'Create': 'Turn images into video, on this device',
-  'Text': 'Add animated captions & titles onto a video',
-  'Watermark': 'Add a logo or overlay onto a video',
-  'Library': 'Every render you\'ve made',
-  'HTML': 'Capture any web page as a clip',
-  'Remove Silence': 'Auto-cut the quiet gaps from a video',
-  'Speed': 'Speed up a video 1x–4x, mute or add audio',
-  'Compress': 'Shrink a video to a smaller MP4',
-  'Convert': 'Batch-convert HEIC & others to JPEG/PNG',
-  'Loop images': 'Batch loops & slideshows',
-  'Info': 'Account & subscription',
-};
 
 class DesktopTopBar extends StatelessWidget {
   const DesktopTopBar({
     super.key,
     required this.title,
     required this.trailing,
+    this.subtitle,
     this.onToggleSidebar,
   });
 
   final String? title;
+
+  /// Short descriptive line under the title, so the chrome feels intentional
+  /// rather than a bare app-bar. Supplied by the caller (translated) instead of
+  /// looked up from the English title.
+  final String? subtitle;
   final Widget? trailing;
   final VoidCallback? onToggleSidebar;
 
   @override
   Widget build(BuildContext context) {
     final canPop = context.canPop();
-    final subtitle = _sectionSubtitles[title];
+    final strings = context.strings;
+    // Local copy so the null check below promotes (public fields don't).
+    final subtitle = this.subtitle;
     return Container(
       height: StilloraSpacing.desktopTopBarHeight + 8,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: StilloraColors.glassStroke)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: StilloraSpacing.md),
@@ -48,7 +41,7 @@ class DesktopTopBar extends StatelessWidget {
           if (onToggleSidebar != null) ...[
             GlassIconButton(
               icon: Icons.view_sidebar_outlined,
-              tooltip: 'Toggle sidebar',
+              tooltip: strings.toggleSidebar,
               onTap: onToggleSidebar!,
             ),
             const SizedBox(width: StilloraSpacing.snug),
@@ -56,7 +49,7 @@ class DesktopTopBar extends StatelessWidget {
           if (canPop) ...[
             GlassIconButton(
               icon: Icons.arrow_back_rounded,
-              tooltip: 'Back',
+              tooltip: strings.back,
               onTap: () => context.pop(),
             ),
             const SizedBox(width: StilloraSpacing.snug),
