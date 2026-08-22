@@ -179,11 +179,14 @@ class SidebarLabel extends StatelessWidget {
       padding: const EdgeInsets.only(left: StilloraSpacing.snug),
       child: Text(
         text.toUpperCase(),
+        // Brand violet rather than the nav-item grey: the heading has to read
+        // as a *heading*, not as another (disabled-looking) destination. Sized
+        // and weighted up for the same reason.
         style: Theme.of(context).textTheme.labelMedium?.copyWith(
-          color: StilloraColors.onSurfaceVariant,
-          letterSpacing: 1.4,
-          fontWeight: FontWeight.w800,
-          fontSize: 11,
+          color: StilloraColors.accentText,
+          letterSpacing: 1.1,
+          fontWeight: FontWeight.w900,
+          fontSize: 12,
         ),
       ),
     );

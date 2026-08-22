@@ -105,6 +105,36 @@ export function ensureSchema(): Promise<void> {
       CREATE INDEX IF NOT EXISTS admin_screen_views_created_at_idx ON admin_screen_views (created_at DESC);
       CREATE INDEX IF NOT EXISTS admin_screen_views_screen_idx ON admin_screen_views (screen);
 
+      -- One row per user who owns lifetime Pro, whatever granted it. This is
+      -- what makes the unlock follow the Stillora *account* rather than a
+      -- store account, so Linux and Windows -- which have no store at all --
+      -- and a buyer who switches between Apple and Google can still be Pro.
+      --
+      -- The source column is where the entitlement came from: 'apple' or
+      -- 'google' from a real purchase, 'admin' for a comp granted from the
+      -- panel. The store's own token is kept verbatim in store_token so a
+      -- purchase recorded today can be verified against Apple/Google
+      -- retroactively, once those server credentials exist.
+      --
+      -- Revoking sets revoked_at rather than deleting: a support case needs
+      -- to see that a comp was given and taken back, not a missing row.
+      CREATE TABLE IF NOT EXISTS pro_entitlements (
+        user_sub     TEXT PRIMARY KEY,
+        source       TEXT NOT NULL,
+        product_id   TEXT NOT NULL DEFAULT '',
+        store_token  TEXT NOT NULL DEFAULT '',
+        platform     TEXT NOT NULL DEFAULT '',
+        verified     BOOLEAN NOT NULL DEFAULT false,
+        granted_by   TEXT NOT NULL DEFAULT '',
+        note         TEXT NOT NULL DEFAULT '',
+        granted_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+        revoked_at   TIMESTAMPTZ,
+        revoked_by   TEXT NOT NULL DEFAULT ''
+      );
+
+      CREATE INDEX IF NOT EXISTS pro_entitlements_granted_at_idx
+        ON pro_entitlements (granted_at DESC);
+
       -- Server-side IP -> location cache so we don't call the geo API on every
       -- heartbeat. Keyed by raw IP; sessions only persist a hashed IP.
       CREATE TABLE IF NOT EXISTS admin_geo_cache (

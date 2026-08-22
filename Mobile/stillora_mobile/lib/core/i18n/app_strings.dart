@@ -267,6 +267,21 @@ class AppStrings {
   String get proUnlockedBody => _('proUnlockedBody');
   String get proRestore => _('proRestore');
   String get proOneTime => _('proOneTime');
+  String get proContinueFree => _('proContinueFree');
+  String get proFreeStaysFree => _('proFreeStaysFree');
+
+  // ── Your plan (Info tab) ──────────────────────────────────────────────────
+  String get yourPlan => _('yourPlan');
+  String get planFree => _('planFree');
+  String get planPro => _('planPro');
+  String get planFreeBody => _('planFreeBody');
+  String get planProBody => _('planProBody');
+  String get planIncludesTools => _('planIncludesTools');
+  String get planIncludesQuality => _('planIncludesQuality');
+  String get planIncludesNoWatermark => _('planIncludesNoWatermark');
+  String get planIncludesLocal => _('planIncludesLocal');
+  String get planIncludesAds => _('planIncludesAds');
+  String get planSeePro => _('planSeePro');
   String get proContacting => _('proContacting');
   String get proUnlockCta => _('proUnlockCta');
   String get proPrivacyBody => _('proPrivacyBody');
@@ -1000,6 +1015,21 @@ const _en = <String, String>{
       'no ads — with nothing left to renew.',
   'proRestore': 'Restore Purchase',
   'proOneTime': 'One-time purchase. No subscription.',
+  'proContinueFree': 'Continue with Free',
+  'proFreeStaysFree':
+      'Nothing is locked away. Every tool stays usable on Free, with no '
+      'watermark and exports up to 720p.',
+  'yourPlan': 'Your plan',
+  'planFree': 'Free',
+  'planPro': 'Pro — Lifetime',
+  'planFreeBody': 'You are on the free plan. This is what it includes:',
+  'planProBody': 'Lifetime Pro is active on this device.',
+  'planIncludesTools': 'Every tool, unlimited use',
+  'planIncludesQuality': 'Exports up to 720p',
+  'planIncludesNoWatermark': 'No Stillora watermark',
+  'planIncludesLocal': 'Files stay on this device',
+  'planIncludesAds': 'Includes sponsored content',
+  'planSeePro': 'See what Pro adds',
   'proContacting': 'Contacting the store…',
   'proUnlockCta': 'Unlock Lifetime Pro',
   'proPrivacyBody':
@@ -1747,6 +1777,21 @@ const _ar = <String, String>{
       'بلا إعلانات — ولا شيء يحتاج إلى تجديد.',
   'proRestore': 'استعادة الشراء',
   'proOneTime': 'شراء لمرة واحدة. بلا اشتراك.',
+  'proContinueFree': 'المتابعة بالنسخة المجانية',
+  'proFreeStaysFree':
+      'لا شيء محجوب. تبقى كل الأدوات متاحة في النسخة المجانية، بدون علامة '
+      'مائية وبتصدير حتى 720p.',
+  'yourPlan': 'خطتك',
+  'planFree': 'مجاني',
+  'planPro': 'Pro — مدى الحياة',
+  'planFreeBody': 'أنت على الخطة المجانية. هذا ما تتضمنه:',
+  'planProBody': 'Pro مدى الحياة مفعّل على هذا الجهاز.',
+  'planIncludesTools': 'كل الأدوات، استخدام بلا حدود',
+  'planIncludesQuality': 'تصدير حتى 720p',
+  'planIncludesNoWatermark': 'بدون علامة Stillora المائية',
+  'planIncludesLocal': 'تبقى الملفات على هذا الجهاز',
+  'planIncludesAds': 'يتضمن محتوى برعاية',
+  'planSeePro': 'اطّلع على ما يضيفه Pro',
   'proContacting': 'جارٍ الاتصال بالمتجر…',
   'proUnlockCta': 'فعّل Pro مدى الحياة',
   'proPrivacyBody':
@@ -2483,6 +2528,21 @@ const _fr = <String, String>{
       'avancés, sans publicité — et rien à renouveler.',
   'proRestore': 'Restaurer l\'achat',
   'proOneTime': 'Achat unique. Sans abonnement.',
+  'proContinueFree': 'Continuer en version gratuite',
+  'proFreeStaysFree':
+      'Rien n\'est verrouillé. Tous les outils restent utilisables en version '
+      'gratuite, sans filigrane et avec des exports jusqu\'à 720p.',
+  'yourPlan': 'Votre formule',
+  'planFree': 'Gratuit',
+  'planPro': 'Pro — à vie',
+  'planFreeBody': 'Vous êtes sur la formule gratuite. Elle comprend :',
+  'planProBody': 'Pro à vie est actif sur cet appareil.',
+  'planIncludesTools': 'Tous les outils, sans limite',
+  'planIncludesQuality': 'Exports jusqu\'à 720p',
+  'planIncludesNoWatermark': 'Aucun filigrane Stillora',
+  'planIncludesLocal': 'Les fichiers restent sur cet appareil',
+  'planIncludesAds': 'Contient du contenu sponsorisé',
+  'planSeePro': 'Voir ce qu\'apporte Pro',
   'proContacting': 'Connexion à la boutique…',
   'proUnlockCta': 'Débloquer Pro à vie',
   'proPrivacyBody':

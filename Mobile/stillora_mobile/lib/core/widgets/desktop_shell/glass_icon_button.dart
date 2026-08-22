@@ -16,9 +16,20 @@ class GlassIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Opaque fill + a full-strength outline rather than a translucent one. In
+    // the light palette a 60%-alpha surfaceContainer over the shell gradient
+    // landed within a couple of percent of the backdrop, so the collapse/expand
+    // control was effectively invisible until you hovered it.
+    //
+    // On a control this small the *ring* is what carries the shape — the fill
+    // can only ever be a hair different from the page behind it (~1.2:1 in
+    // light), so the border does the work and uses `outline` undiluted, which
+    // clears 3:1 against the surface in both palettes.
     final button = Material(
-      color: StilloraColors.surfaceContainer.withValues(alpha: 0.6),
-      shape: CircleBorder(side: BorderSide(color: StilloraColors.glassStroke)),
+      color: StilloraColors.surfaceContainerHigh,
+      shape: CircleBorder(
+        side: BorderSide(color: StilloraColors.outline, width: 1.2),
+      ),
       child: InkWell(
         onTap: onTap,
         customBorder: const CircleBorder(),

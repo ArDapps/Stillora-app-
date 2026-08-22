@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:stillora_mobile/core/pro/pro_config.dart';
 import 'package:stillora_mobile/core/pro/pro_controller.dart';
 import 'package:stillora_mobile/core/pro/pro_gate.dart';
 import 'package:stillora_mobile/core/pro/pro_purchase_service.dart';
@@ -222,6 +223,10 @@ class _OwnedElsewhereService implements ProPurchaseService {
   @override
   Future<ProPurchaseResult> restorePurchases(config) async =>
       const ProPurchaseResult(ProPurchaseStatus.purchased);
+  @override
+  Future<StorePrice?> storePrice(config) async => null;
+  @override
+  Stream<void> get entitlementGranted => const Stream<void>.empty();
 }
 
 /// A store that cannot be reached — offline launch, or a rate-limited query.
@@ -234,4 +239,8 @@ class _UnreachableService implements ProPurchaseService {
   @override
   Future<ProPurchaseResult> restorePurchases(config) async =>
       const ProPurchaseResult(ProPurchaseStatus.failed);
+  @override
+  Future<StorePrice?> storePrice(config) async => null;
+  @override
+  Stream<void> get entitlementGranted => const Stream<void>.empty();
 }

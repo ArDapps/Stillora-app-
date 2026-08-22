@@ -118,9 +118,9 @@ Use an email that has never been an Apple ID. On device, sign out of the real ac
 
 ## What the app still has to implement
 
-Billing is **not wired yet**. Everything store-related goes through one interface — `ProPurchaseService` in `lib/core/pro/pro_purchase_service.dart` — so this is one new implementation and a provider override. No screen, badge, gate or paywall changes with it.
+**Implemented**, in `lib/core/pro/store_pro_purchase_service.dart` — one `ProPurchaseService` implementation over `in_app_purchase`, shared with the Android side. No screen, badge, gate or paywall changed. Not yet exercised in the sandbox; the passes in [Before submitting](#before-submitting) are still open.
 
-Until then the release default is `UnavailableProPurchaseService`, which tells the user billing is unavailable and that nothing was charged. It never silently grants Pro.
+`in_app_purchase_storekit` 0.4.11 defaults to **StoreKit 2**, which is what makes the non-prompting rule below hold: there, `restorePurchases()` reads `Transaction.currentEntitlements` rather than calling `SKPaymentQueue.restoreCompletedTransactions()`, so the launch-time check cannot raise a password box.
 
 ### The three methods
 
@@ -153,13 +153,13 @@ Deployment targets already satisfy it:
 
 ### Xcode
 
-Add the **In-App Purchase** capability to both the iOS and macOS `Runner` targets. The macOS target keeps App Sandbox on with `com.apple.security.network.client`, which `Release.entitlements` already has.
+Add the **In-App Purchase** capability to both the iOS and macOS `Runner` targets. This is a portal/provisioning change only — it writes no key into either entitlements file, and both files are already correct as they stand: `macos/Runner/Release.entitlements` keeps App Sandbox on with `com.apple.security.network.client`, which is all StoreKit needs.
 
 ---
 
 ## Before submitting
 
-- [ ] Billing implemented — the listing advertises Pro, and Apple rejects listings describing features the binary lacks. A non-functional IAP fails review outright.
+- [x] Billing implemented — shared with Android, see the Play equivalent. Sandbox passes below are still outstanding.
 - [ ] Paid Applications agreement **Active**, or the IAP will not load for the reviewer.
 - [ ] Small Business Program application submitted.
 - [ ] Purchase tested end to end in sandbox on **both** iPhone and Mac with one tester account.

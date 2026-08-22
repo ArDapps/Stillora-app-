@@ -342,15 +342,23 @@ class _SegChip extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Scale the label down rather than ellipsing it. Four chips plus
+              // three PRO badges leave very little width on a phone, and
+              // "1080p" was rendering as "10…" — a resolution the user cannot
+              // read is no more useful than one they cannot see.
               Flexible(
-                child: Text(
-                  label,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: selected
-                        ? StilloraColors.selectedOnSurface
-                        : StilloraColors.onSurfaceVariant,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.center,
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: selected
+                          ? StilloraColors.onAccent
+                          : StilloraColors.onSurfaceVariant,
+                    ),
                   ),
                 ),
               ),

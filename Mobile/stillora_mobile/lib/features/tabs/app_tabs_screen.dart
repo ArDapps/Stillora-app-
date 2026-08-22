@@ -135,13 +135,17 @@ class AppNavDrawer extends StatelessWidget {
                           StilloraSpacing.md,
                           StilloraSpacing.base,
                         ),
+                        // Matches the desktop sidebar heading exactly: brand
+                        // violet, heavier and a size up, so the group reads as
+                        // a heading instead of a greyed-out nav row.
                         child: Text(
                           group.group.label(strings).toUpperCase(),
                           style: Theme.of(context).textTheme.labelSmall
                               ?.copyWith(
-                                color: StilloraColors.onSurfaceVariant,
-                                letterSpacing: 1.4,
-                                fontWeight: FontWeight.w800,
+                                color: StilloraColors.accentText,
+                                letterSpacing: 1.1,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 12,
                               ),
                         ),
                       ),

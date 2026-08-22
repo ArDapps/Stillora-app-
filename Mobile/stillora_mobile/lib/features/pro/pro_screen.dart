@@ -293,6 +293,31 @@ class _PurchaseBlock extends StatelessWidget {
           onPressed: status.busy ? null : onRestore,
           child: Text(context.strings.proRestore),
         ),
+
+        // The way out. The paywall can open by itself — after onboarding, and
+        // on the 48-hour reminder — and on the desktop shell it renders with no
+        // app bar, so there was no visible dismiss at all: the only exit was
+        // guessing that a sidebar item still worked. Staying on Free is a
+        // legitimate choice and needs a control that says so.
+        //
+        // Shown only when there is something to dismiss. Reached as the
+        // Stillora Pro *tab* this is the page itself, not an interruption, and
+        // a "continue" button there would lead nowhere.
+        // Navigator rather than GoRouter's context.canPop(): the paywall is
+        // also pumped bare in widget tests, where no router is in scope and
+        // the GoRouter extension throws. A pushed GoRoute is an ordinary
+        // Navigator route, so this pops it just the same.
+        if (Navigator.of(context).canPop()) ...[
+          const SizedBox(height: StilloraSpacing.xs),
+          OutlinedButton.icon(
+            onPressed: status.busy
+                ? null
+                : () => Navigator.of(context).maybePop(),
+            icon: const Icon(Icons.arrow_back_rounded, size: 18),
+            label: Text(context.strings.proContinueFree),
+          ),
+        ],
+
         const SizedBox(height: StilloraSpacing.base),
         Text(
           context.strings.proOneTime,
@@ -300,6 +325,14 @@ class _PurchaseBlock extends StatelessWidget {
           style: text.bodySmall?.copyWith(
             color: StilloraColors.onSurfaceVariant,
             fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: StilloraSpacing.base),
+        Text(
+          context.strings.proFreeStaysFree,
+          textAlign: TextAlign.center,
+          style: text.bodySmall?.copyWith(
+            color: StilloraColors.onSurfaceVariant,
           ),
         ),
       ],

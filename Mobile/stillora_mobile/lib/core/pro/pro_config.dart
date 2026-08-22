@@ -1,8 +1,28 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../constants/app_constants.dart';
+import 'pro_purchase_service.dart';
 import 'pro_store.dart';
+
+/// A price as the store itself reports it, already converted and formatted for
+/// the buyer's storefront. Always wins over the configured [ProConfig] values,
+/// which are only what to show before the store has answered.
+@immutable
+class StorePrice {
+  const StorePrice({
+    required this.label,
+    required this.currencyCode,
+    required this.amount,
+  });
+
+  /// Display string straight from the store, e.g. `R$ 99,90`.
+  final String label;
+
+  final String currencyCode;
+  final double amount;
+}
 
 /// Everything about the one-time "Stillora Pro — Lifetime" purchase that a
 /// build or the backend may want to change without shipping a new binary: the
@@ -121,9 +141,15 @@ class ProConfigController extends Notifier<ProConfig> {
     return ProConfig.merge(ProConfig.fromEnvironment, cached);
   }
 
-  /// Pulls the latest price/product id. Safe to call on every paywall open —
-  /// a failure is swallowed and the current value stays put.
+  /// Pulls the latest price/product id, then lets the store overrule the price
+  /// with its own localized one. Safe to call on every paywall open — every
+  /// step is independent and a failure leaves the current value in place.
   Future<void> refresh() async {
+    await _refreshRemote();
+    await _refreshStorePrice();
+  }
+
+  Future<void> _refreshRemote() async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
         '${AppConstants.apiBaseUrl}/api/pro-config',
@@ -132,9 +158,35 @@ class ProConfigController extends Notifier<ProConfig> {
       if (data == null) return;
       final next = ProConfig.merge(ProConfig.fromEnvironment, data);
       state = next;
-      await ref.read(proStoreProvider).setCachedConfig(next.toJson());
+      await _cache(next);
     } catch (_) {
       // Offline, 404, malformed JSON — keep whatever we are already showing.
     }
   }
+
+  /// Replaces the price with what the store quotes for this storefront, so the
+  /// paywall shows the currency the user will actually be charged in. Cached
+  /// like the remote payload, so the next launch renders it on the first frame
+  /// instead of flashing the configured US price first.
+  ///
+  /// The product id is never taken from here — that is the input to the query,
+  /// not an answer.
+  Future<void> _refreshStorePrice() async {
+    try {
+      final price = await ref.read(proPurchaseServiceProvider).storePrice(state);
+      if (price == null || price.label.isEmpty) return;
+      final next = state.copyWith(
+        priceLabel: price.label,
+        currencyCode: price.currencyCode,
+        amount: price.amount,
+      );
+      state = next;
+      await _cache(next);
+    } catch (_) {
+      // No store, no product, no network — the configured price stands.
+    }
+  }
+
+  Future<void> _cache(ProConfig config) =>
+      ref.read(proStoreProvider).setCachedConfig(config.toJson());
 }

@@ -73,7 +73,7 @@ class StilloraPalette {
     required this.inverseSurface,
     required this.inverseOnSurface,
     required this.inversePrimary,
-    required this.selectedOnSurface,
+    required this.onAccent,
     required this.glassStroke,
     required this.primaryGlow,
     required this.overlay,
@@ -155,10 +155,12 @@ class StilloraPalette {
   final Color inverseOnSurface;
   final Color inversePrimary;
 
-  /// Foreground for a control that reads as "selected" but is painted on the
-  /// page surface itself rather than on a brand fill — white only works on
-  /// the latter.
-  final Color selectedOnSurface;
+  /// Foreground for anything painted *on* the brand [accent] fill — a selected
+  /// pill chip, an accent-filled button. White in both palettes: the accent is
+  /// a saturated violet in each, so a palette-tinted foreground would sink into
+  /// it (the light accent and the old tinted value were the same #6d28d9, which
+  /// made selected chip labels invisible).
+  final Color onAccent;
 
   // Glass / glow / overlay helpers.
   /// Hairline stroke for glass cards and dividers. Light-on-dark in the dark
@@ -254,7 +256,7 @@ class StilloraPalette {
     inverseOnSurface: Color(0xff2a2640),
     inversePrimary: Color(0xff6b4fa6),
 
-    selectedOnSurface: Color(0xffffffff),
+    onAccent: Color(0xffffffff),
     glassStroke: Color(0x2effffff),
     primaryGlow: Color(0x4d8b5cf6),
     overlay: Color(0x8c05040d),
@@ -350,7 +352,7 @@ class StilloraPalette {
     inverseOnSurface: Color(0xfff4f0fb),
     inversePrimary: Color(0xffd2bbff),
 
-    selectedOnSurface: Color(0xff6d28d9),
+    onAccent: Color(0xffffffff),
     // Dark hairline instead of a white one — a white stroke is invisible here.
     glassStroke: Color(0x2117122b),
     primaryGlow: Color(0x3d8b5cf6),
@@ -464,7 +466,7 @@ class StilloraColors {
   static Color get inverseOnSurface => _active.inverseOnSurface;
   static Color get inversePrimary => _active.inversePrimary;
 
-  static Color get selectedOnSurface => _active.selectedOnSurface;
+  static Color get onAccent => _active.onAccent;
   static Color get glassStroke => _active.glassStroke;
   static Color get primaryGlow => _active.primaryGlow;
   static Color get overlay => _active.overlay;

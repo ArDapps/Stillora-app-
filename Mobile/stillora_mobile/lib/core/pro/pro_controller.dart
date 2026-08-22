@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -42,6 +44,16 @@ class ProController extends Notifier<ProStatus> {
   @override
   ProStatus build() {
     final status = ProStatus(isPro: ref.read(proStoreProvider).isPro);
+
+    // Unlocks nobody asked for: a slow payment method clearing while the app
+    // is open, or a purchase made on another device. Without this the user
+    // would have paid and still be looking at a Free app until they relaunch.
+    final StreamSubscription<void> granted = ref
+        .read(proPurchaseServiceProvider)
+        .entitlementGranted
+        .listen((_) => _grant());
+    ref.onDispose(granted.cancel);
+
     // Ask the store what this account already owns, once per launch. Without
     // this, someone who bought Pro on their iPhone would open the Mac app and
     // be shown Free until they thought to press "Restore Purchase".
@@ -58,6 +70,11 @@ class ProController extends Notifier<ProStatus> {
         .read(proPurchaseServiceProvider)
         .hasActiveEntitlement(ref.read(proConfigProvider));
     if (!owned) return;
+    await _grant();
+  }
+
+  Future<void> _grant() async {
+    if (state.isPro) return;
     await ref.read(proStoreProvider).setPro(true);
     state = state.copyWith(isPro: true);
   }

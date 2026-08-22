@@ -1,5 +1,7 @@
 import { getUsersPage } from "@/lib/admin-store";
+import { getEntitlementsFor } from "@/lib/pro-store";
 import { Pagination } from "../pagination";
+import { ProControl, type ProState } from "./pro-control";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +15,8 @@ export default async function AdminUsersPage({
   const sp = await searchParams;
   const pageRaw = Array.isArray(sp.page) ? sp.page[0] : sp.page;
   const users = await getUsersPage(pageRaw ? parseInt(pageRaw, 10) : 1, PAGE_SIZE);
+  // One lookup for the whole page rather than a per-row query.
+  const entitlements = await getEntitlementsFor(users.rows.map((u) => u.sub));
 
   return (
     <div className="space-y-6">
@@ -35,7 +39,7 @@ export default async function AdminUsersPage({
           <table className="w-full text-sm" style={{ background: "var(--color-card)" }}>
             <thead>
               <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
-                {["User", "Email", "First seen", "Last active", "Exports"].map((h) => (
+                {["User", "Email", "Plan", "First seen", "Last active", "Exports"].map((h) => (
                   <th
                     key={h}
                     className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
@@ -66,6 +70,9 @@ export default async function AdminUsersPage({
                     </div>
                   </td>
                   <td className="px-4 py-3" style={{ color: "var(--color-muted)" }}>{u.email}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <ProControl userSub={u.sub} state={proStateFor(entitlements.get(u.sub))} />
+                  </td>
                   <td className="px-4 py-3 whitespace-nowrap" style={{ color: "var(--color-muted)" }}>
                     {fmt(u.firstSeen)}
                   </td>
@@ -95,6 +102,22 @@ export default async function AdminUsersPage({
       )}
     </div>
   );
+}
+
+function proStateFor(
+  entitlement: Awaited<ReturnType<typeof getEntitlementsFor>> extends Map<string, infer T>
+    ? T | undefined
+    : never,
+): ProState {
+  if (!entitlement) {
+    return { source: null, active: false, grantedBy: "", note: "" };
+  }
+  return {
+    source: entitlement.source,
+    active: !entitlement.revokedAt,
+    grantedBy: entitlement.grantedBy,
+    note: entitlement.note,
+  };
 }
 
 function fmt(iso: string) {
