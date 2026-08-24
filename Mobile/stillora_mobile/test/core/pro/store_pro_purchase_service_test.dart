@@ -22,6 +22,9 @@ void main() {
       platform: store,
       queryTimeout: const Duration(milliseconds: 50),
       purchaseTimeout: const Duration(milliseconds: 200),
+      // Most tests want the current single-shot behaviour; the retry path has
+      // its own test that opts in.
+      productQueryRetries: 0,
     );
   });
 
@@ -55,12 +58,15 @@ void main() {
       expect(store.completed, <String>['some_other_product']);
     });
 
-    test('a purchase that does not ask to be completed is left alone', () async {
-      store.emit(_purchase(PurchaseStatus.purchased, pendingComplete: false));
-      await _settle();
+    test(
+      'a purchase that does not ask to be completed is left alone',
+      () async {
+        store.emit(_purchase(PurchaseStatus.purchased, pendingComplete: false));
+        await _settle();
 
-      expect(store.completed, isEmpty);
-    });
+        expect(store.completed, isEmpty);
+      },
+    );
 
     test('nothing is ever consumed — the unlock is non-consumable', () async {
       store.emit(_purchase(PurchaseStatus.purchased));
@@ -91,63 +97,122 @@ void main() {
       expect(value.message, isNull, reason: 'a plain cancel says nothing');
     });
 
-    test('a slow payment method reports pending, and unlocks when it clears',
-        () async {
-      final granted = <void>[];
-      service.entitlementGranted.listen(granted.add);
+    test(
+      'a slow payment method reports pending, and unlocks when it clears',
+      () async {
+        final granted = <void>[];
+        service.entitlementGranted.listen(granted.add);
 
-      final result = service.purchaseLifetime(_config);
-      await _settle();
-      store.emit(_purchase(PurchaseStatus.pending));
+        final result = service.purchaseLifetime(_config);
+        await _settle();
+        store.emit(_purchase(PurchaseStatus.pending));
 
-      final value = await result;
-      expect(value.status, ProPurchaseStatus.pending);
-      expect(value.unlocked, isFalse);
-      expect(granted, isEmpty);
+        final value = await result;
+        expect(value.status, ProPurchaseStatus.pending);
+        expect(value.unlocked, isFalse);
+        expect(granted, isEmpty);
 
-      // Hours later, still in the same session.
-      store.emit(_purchase(PurchaseStatus.purchased));
-      await _settle();
+        // Hours later, still in the same session.
+        store.emit(_purchase(PurchaseStatus.purchased));
+        await _settle();
 
-      expect(granted, hasLength(1));
-    });
+        expect(granted, hasLength(1));
+      },
+    );
 
-    test('a product the store will not sell fails without opening a sheet',
-        () async {
-      store.products.clear();
+    test(
+      'a product the store will not sell fails without opening a sheet',
+      () async {
+        store.products.clear();
 
-      final value = await service.purchaseLifetime(_config);
-      expect(value.status, ProPurchaseStatus.failed);
-      expect(store.buyCalls, isZero);
-    });
+        final value = await service.purchaseLifetime(_config);
+        expect(value.status, ProPurchaseStatus.failed);
+        expect(store.buyCalls, isZero);
+      },
+    );
 
-    test('an unreachable store reports unavailable, never a silent unlock',
-        () async {
-      store.available = false;
+    test(
+      'an unreachable store reports unavailable, never a silent unlock',
+      () async {
+        store.available = false;
 
-      final value = await service.purchaseLifetime(_config);
-      expect(value.status, ProPurchaseStatus.unavailable);
-      expect(value.unlocked, isFalse);
-    });
+        final value = await service.purchaseLifetime(_config);
+        expect(value.status, ProPurchaseStatus.unavailable);
+        expect(value.unlocked, isFalse);
+      },
+    );
 
-    test('the order carries an obfuscated account id, never the raw one', () async {
-      service.dispose();
-      service = StoreProPurchaseService(
-        productId: () => _id,
-        accountId: () => 'user-42',
-        platform: store,
-        purchaseTimeout: const Duration(milliseconds: 200),
-      );
+    test(
+      'a product that loads on the second fetch still opens the sheet — a '
+      'cold-network first miss is retried, not surfaced as a failure',
+      () async {
+        service.dispose();
+        service = StoreProPurchaseService(
+          productId: () => _id,
+          platform: store,
+          purchaseTimeout: const Duration(milliseconds: 200),
+          productQueryRetries: 2,
+          productQueryBackoff: Duration.zero,
+        );
+        // Empty on the first query, present from the second.
+        store.productAvailableAfterQueries = 2;
 
-      final result = service.purchaseLifetime(_config);
-      await _settle();
-      store.emit(_purchase(PurchaseStatus.purchased));
-      await result;
+        final result = service.purchaseLifetime(_config);
+        // Let the retry run and the sheet open before the store answers.
+        for (var i = 0; i < 20 && store.buyCalls == 0; i++) {
+          await _settle();
+        }
+        store.emit(_purchase(PurchaseStatus.purchased));
+        final value = await result;
 
-      final sent = store.lastPurchaseParam!.applicationUserName!;
-      expect(sent, isNot(contains('user-42')));
-      expect(sent, hasLength(64), reason: "Play caps it at 64");
-    });
+        expect(value.status, ProPurchaseStatus.purchased);
+        expect(store.productQueries, 2);
+        expect(store.buyCalls, 1);
+      },
+    );
+
+    test(
+      'a product that never loads still fails after the retries are spent',
+      () async {
+        service.dispose();
+        service = StoreProPurchaseService(
+          productId: () => _id,
+          platform: store,
+          purchaseTimeout: const Duration(milliseconds: 200),
+          productQueryRetries: 2,
+          productQueryBackoff: Duration.zero,
+        );
+        store.products
+            .clear(); // e.g. still in App Store review — never returned.
+
+        final value = await service.purchaseLifetime(_config);
+        expect(value.status, ProPurchaseStatus.failed);
+        expect(store.productQueries, 3); // initial + 2 retries
+        expect(store.buyCalls, isZero);
+      },
+    );
+
+    test(
+      'the order carries an obfuscated account id, never the raw one',
+      () async {
+        service.dispose();
+        service = StoreProPurchaseService(
+          productId: () => _id,
+          accountId: () => 'user-42',
+          platform: store,
+          purchaseTimeout: const Duration(milliseconds: 200),
+        );
+
+        final result = service.purchaseLifetime(_config);
+        await _settle();
+        store.emit(_purchase(PurchaseStatus.purchased));
+        await result;
+
+        final sent = store.lastPurchaseParam!.applicationUserName!;
+        expect(sent, isNot(contains('user-42')));
+        expect(sent, hasLength(64), reason: "Play caps it at 64");
+      },
+    );
 
     test('a signed-out buyer sends no account id at all', () async {
       final result = service.purchaseLifetime(_config);
@@ -160,13 +225,15 @@ void main() {
   });
 
   group('ownership', () {
-    test('an unlock owned on another device is found without prompting',
-        () async {
-      store.owned.add(_purchase(PurchaseStatus.restored));
+    test(
+      'an unlock owned on another device is found without prompting',
+      () async {
+        store.owned.add(_purchase(PurchaseStatus.restored));
 
-      expect(await service.hasActiveEntitlement(_config), isTrue);
-      expect(store.buyCalls, isZero, reason: 'a silent check never charges');
-    });
+        expect(await service.hasActiveEntitlement(_config), isTrue);
+        expect(store.buyCalls, isZero, reason: 'a silent check never charges');
+      },
+    );
 
     test('an account that owns nothing reports nothing to restore', () async {
       final value = await service.restorePurchases(_config);
@@ -180,25 +247,32 @@ void main() {
 
       final value = await service.restorePurchases(_config);
       expect(value.unlocked, isFalse);
-      expect(value.status, ProPurchaseStatus.nothingToRestore,
-          reason: 'the caller may only ever grant on this path');
-    });
-
-    test('an offline store never claims the account owns nothing on a buy path',
-        () async {
-      store.available = false;
-
-      expect(await service.hasActiveEntitlement(_config), isFalse);
-    });
-
-    test("someone else's product in the account does not unlock Stillora Pro",
-        () async {
-      store.owned.add(
-        _purchase(PurchaseStatus.restored, id: 'another_app_product'),
+      expect(
+        value.status,
+        ProPurchaseStatus.nothingToRestore,
+        reason: 'the caller may only ever grant on this path',
       );
-
-      expect(await service.hasActiveEntitlement(_config), isFalse);
     });
+
+    test(
+      'an offline store never claims the account owns nothing on a buy path',
+      () async {
+        store.available = false;
+
+        expect(await service.hasActiveEntitlement(_config), isFalse);
+      },
+    );
+
+    test(
+      "someone else's product in the account does not unlock Stillora Pro",
+      () async {
+        store.owned.add(
+          _purchase(PurchaseStatus.restored, id: 'another_app_product'),
+        );
+
+        expect(await service.hasActiveEntitlement(_config), isFalse);
+      },
+    );
   });
 
   group('price', () {
@@ -274,6 +348,11 @@ class _FakeStore extends InAppPurchasePlatform {
   bool available = true;
   bool queryThrows = false;
   int buyCalls = 0;
+  int productQueries = 0;
+
+  /// When set, the product is withheld until this many queries have run — a
+  /// stand-in for a cold-network first fetch that returns empty, then loads.
+  int? productAvailableAfterQueries;
   PurchaseParam? lastPurchaseParam;
 
   void emit(PurchaseDetails purchase) =>
@@ -288,12 +367,22 @@ class _FakeStore extends InAppPurchasePlatform {
   Future<bool> isAvailable() async => available;
 
   @override
-  Future<ProductDetailsResponse> queryProductDetails(Set<String> identifiers) async {
-    final found =
-        products.where((p) => identifiers.contains(p.id)).toList();
+  Future<ProductDetailsResponse> queryProductDetails(
+    Set<String> identifiers,
+  ) async {
+    productQueries++;
+    // Simulate a cold-network first fetch: empty until enough queries have run.
+    final withheld =
+        productAvailableAfterQueries != null &&
+        productQueries < productAvailableAfterQueries!;
+    final found = withheld
+        ? <ProductDetails>[]
+        : products.where((p) => identifiers.contains(p.id)).toList();
     return ProductDetailsResponse(
       productDetails: found,
-      notFoundIDs: identifiers.difference(found.map((p) => p.id).toSet()).toList(),
+      notFoundIDs: identifiers
+          .difference(found.map((p) => p.id).toSet())
+          .toList(),
     );
   }
 

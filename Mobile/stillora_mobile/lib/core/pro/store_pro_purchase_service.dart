@@ -35,6 +35,8 @@ class StoreProPurchaseService implements ProPurchaseService {
     InAppPurchasePlatform? platform,
     this.queryTimeout = const Duration(seconds: 12),
     this.purchaseTimeout = const Duration(minutes: 5),
+    this.productQueryRetries = 2,
+    this.productQueryBackoff = const Duration(milliseconds: 1200),
   }) : _productId = productId,
        _accountId = accountId,
        _iap = platform ?? _registeredPlatform() {
@@ -56,6 +58,19 @@ class StoreProPurchaseService implements ProPurchaseService {
   /// may be typing card details, and a timeout here shows an error for a
   /// purchase that may still be about to succeed.
   final Duration purchaseTimeout;
+
+  /// Extra attempts to fetch the product before giving up. The first product
+  /// query on a cold launch occasionally times out or comes back empty on a
+  /// slow network even though the product exists, so a bounded retry turns that
+  /// transient miss into a load instead of making the user tap again. A product
+  /// that is genuinely absent (e.g. still in App Store review) stays empty on
+  /// every attempt, so this never invents an unlock — it only adds a few
+  /// seconds before the honest "not available" message.
+  final int productQueryRetries;
+
+  /// Delay before each retry, multiplied by the attempt number (linear
+  /// backoff): 1×, 2×, … so a wedged store is not hammered.
+  final Duration productQueryBackoff;
 
   final InAppPurchasePlatform _iap;
   final String Function() _productId;
@@ -220,22 +235,29 @@ class StoreProPurchaseService implements ProPurchaseService {
   }
 
   Future<ProductDetails?> _findProduct(String id) async {
-    try {
-      final response = await _iap.queryProductDetails(<String>{id});
-      for (final product in response.productDetails) {
-        if (product.id == id) return product;
+    // attempt 0 is the initial try; up to [productQueryRetries] more follow.
+    for (var attempt = 0; ; attempt++) {
+      try {
+        final response = await _iap.queryProductDetails(<String>{id});
+        for (final product in response.productDetails) {
+          if (product.id == id) return product;
+        }
+        // An empty list with the id flagged invalid is the classic symptom of a
+        // product that exists but is not activated, or a payments profile that
+        // is not approved yet.
+        debugPrint(
+          'Stillora billing: product "$id" not returned by the store '
+          '(attempt ${attempt + 1}, invalid: ${response.notFoundIDs}, '
+          'error: ${response.error?.message})',
+        );
+      } catch (error) {
+        debugPrint(
+          'Stillora billing: product lookup failed '
+          '(attempt ${attempt + 1}): $error',
+        );
       }
-      // An empty list with the id flagged invalid is the classic symptom of a
-      // product that exists but is not activated, or a payments profile that
-      // is not approved yet.
-      debugPrint(
-        'Stillora billing: product "$id" not returned by the store '
-        '(invalid: ${response.notFoundIDs}, error: ${response.error?.message})',
-      );
-      return null;
-    } catch (error) {
-      debugPrint('Stillora billing: product lookup failed: $error');
-      return null;
+      if (attempt >= productQueryRetries) return null;
+      await Future<void>.delayed(productQueryBackoff * (attempt + 1));
     }
   }
 
@@ -365,8 +387,7 @@ class _PendingOp {
   /// True for a buy flow, false for a silent/explicit ownership query.
   final bool isPurchase;
 
-  final Completer<ProPurchaseResult> completer =
-      Completer<ProPurchaseResult>();
+  final Completer<ProPurchaseResult> completer = Completer<ProPurchaseResult>();
 
   void resolve(ProPurchaseResult result) {
     if (!completer.isCompleted) completer.complete(result);
