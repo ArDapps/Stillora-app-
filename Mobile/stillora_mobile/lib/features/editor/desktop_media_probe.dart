@@ -46,6 +46,51 @@ class DesktopMediaProbe {
     }
   }
 
+  /// Native pixel size of a video's first video stream, or null when it can't
+  /// be read. Used on Linux/Windows where `video_player` has no desktop plugin.
+  static Future<({int width, int height})?> dimensions(String path) async {
+    final ffprobe = await _resolveFfprobe();
+    if (ffprobe == null) {
+      return null;
+    }
+    try {
+      final result = await Process.run(ffprobe, [
+        '-v',
+        'quiet',
+        '-print_format',
+        'json',
+        '-select_streams',
+        'v:0',
+        '-show_entries',
+        'stream=width,height',
+        path,
+      ]);
+      if (result.exitCode != 0) {
+        return null;
+      }
+      final decoded = jsonDecode(result.stdout as String);
+      if (decoded is! Map) {
+        return null;
+      }
+      final streams = decoded['streams'];
+      if (streams is! List || streams.isEmpty) {
+        return null;
+      }
+      final stream = streams.first;
+      if (stream is! Map) {
+        return null;
+      }
+      final w = stream['width'];
+      final h = stream['height'];
+      if (w is int && h is int && w > 0 && h > 0) {
+        return (width: w, height: h);
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   static Future<String?> _resolveFfprobe() async {
     final cached = _ffprobeExecutable;
     if (cached != null) {

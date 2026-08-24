@@ -232,8 +232,10 @@ class _MobilePreviewPanel extends StatelessWidget {
   final EditorController controller;
 
   double get _aspectRatio {
-    final p = editor.preset;
-    return (p.width > 0 && p.height > 0) ? p.width / p.height : 9 / 16;
+    // Match the resolved output size so "Original Size"/"Custom" preview at the
+    // real export shape rather than a fixed 9:16.
+    final res = editor.outputResolution;
+    return (res.width > 0 && res.height > 0) ? res.width / res.height : 9 / 16;
   }
 
   @override

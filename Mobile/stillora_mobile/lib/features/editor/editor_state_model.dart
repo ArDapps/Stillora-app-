@@ -26,10 +26,22 @@ class EditorState extends Equatable {
     this.effect = ClipEffect.none,
     this.transition = FrameTransition.none,
     this.color = ColorAdjust.identity,
+    this.originalReferenceIndex = 0,
+    this.customWidth,
+    this.customHeight,
   });
 
   final List<MediaItem> media;
   final int selectedIndex;
+
+  /// With "Original Size" and several clips of different sizes, the export
+  /// still needs one canvas size — this is the media whose native dimensions
+  /// are used. Defaults to the first clip; the user can pick another.
+  final int originalReferenceIndex;
+
+  /// Exact output size for the "Custom" preset (null until the user sets one).
+  final int? customWidth;
+  final int? customHeight;
   final String? audioPath;
   final int? audioDurationSeconds;
 
@@ -49,10 +61,41 @@ class EditorState extends Equatable {
   final ResizeMode resizeMode;
   final ExportQuality exportQuality;
 
-  /// Final encode dimensions: the preset's aspect ratio scaled to the chosen
-  /// [exportQuality].
-  ({int width, int height}) get outputResolution =>
-      scaledResolution(preset, exportQuality);
+  /// The clip whose native size feeds "Original Size", or null when none is
+  /// measured yet.
+  MediaItem? get originalReferenceMedia {
+    if (media.isEmpty) return null;
+    final i = originalReferenceIndex.clamp(0, media.length - 1);
+    return media[i];
+  }
+
+  /// True once a custom size has been fully entered.
+  bool get hasCustomSize =>
+      customWidth != null &&
+      customHeight != null &&
+      customWidth! > 0 &&
+      customHeight! > 0;
+
+  /// Final encode dimensions.
+  ///
+  ///  • **Custom** — the exact width/height the user typed (even-adjusted).
+  ///  • **Original Size** — the reference clip's native size scaled to the
+  ///    chosen [exportQuality], so it keeps the source's real aspect instead of
+  ///    a fixed square. Falls back to a 1:1 tier size until a clip is measured.
+  ///  • Otherwise — the preset's aspect scaled to the quality tier.
+  ({int width, int height}) get outputResolution {
+    if (preset.usesCustomSize && hasCustomSize) {
+      int even(int v) => v.isOdd ? v + 1 : v;
+      return (width: even(customWidth!), height: even(customHeight!));
+    }
+    if (preset.usesOriginalSize) {
+      final ref = originalReferenceMedia;
+      if (ref != null && ref.hasDimensions) {
+        return scaleDimensionsToQuality(ref.width, ref.height, exportQuality);
+      }
+    }
+    return scaledResolution(preset, exportQuality);
+  }
 
   /// Rough estimate of the exported file size in bytes for the Create flow.
   int get estimatedExportBytes => estimateExportBytes(
@@ -123,6 +166,9 @@ class EditorState extends Equatable {
     ClipEffect? effect,
     FrameTransition? transition,
     ColorAdjust? color,
+    int? originalReferenceIndex,
+    Object? customWidth = _unset,
+    Object? customHeight = _unset,
   }) {
     final int? nextAudioDurationSeconds;
     if (clearAudio) {
@@ -150,6 +196,14 @@ class EditorState extends Equatable {
       effect: effect ?? this.effect,
       transition: transition ?? this.transition,
       color: color ?? this.color,
+      originalReferenceIndex:
+          originalReferenceIndex ?? this.originalReferenceIndex,
+      customWidth: identical(customWidth, _unset)
+          ? this.customWidth
+          : customWidth as int?,
+      customHeight: identical(customHeight, _unset)
+          ? this.customHeight
+          : customHeight as int?,
     );
   }
 
@@ -164,6 +218,9 @@ class EditorState extends Equatable {
     durationSeconds,
     resizeMode,
     exportQuality,
+    originalReferenceIndex,
+    customWidth,
+    customHeight,
     effect,
     transition,
     color,

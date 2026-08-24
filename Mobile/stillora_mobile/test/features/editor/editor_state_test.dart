@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:stillora_mobile/features/editor/editor_state.dart';
+import 'package:stillora_mobile/features/editor/video_preset.dart';
 
 void main() {
   test('duration selection supports MVP values', () {
@@ -8,6 +9,64 @@ void main() {
     state = state.copyWith(durationSeconds: 30);
 
     expect(state.durationSeconds, 30);
+  });
+
+  group('output size', () {
+    final original = presetById('original');
+    final custom = presetById('custom');
+
+    test(
+      'Original Size uses the source clip dimensions, not a fixed square',
+      () {
+        final state = EditorState(
+          preset: original,
+          exportQuality: ExportQuality.fhd1080,
+          media: [MediaItem.fromPath('/clip.mp4', width: 3840, height: 2160)],
+        );
+        // 4K 16:9 source at the 1080p tier keeps the aspect (1920×1080), rather
+        // than the old 1080×1080 square.
+        expect(state.outputResolution, (width: 1920, height: 1080));
+      },
+    );
+
+    test(
+      'Original Size follows the chosen reference clip when several exist',
+      () {
+        var state = EditorState(
+          preset: original,
+          exportQuality: ExportQuality.fhd1080,
+          media: [
+            MediaItem.fromPath('/wide.mp4', width: 1920, height: 1080),
+            MediaItem.fromPath('/tall.mp4', width: 1080, height: 1920),
+          ],
+        );
+        expect(state.outputResolution, (width: 1920, height: 1080));
+
+        state = state.copyWith(originalReferenceIndex: 1);
+        expect(state.outputResolution, (width: 1080, height: 1920));
+      },
+    );
+
+    test(
+      'Original Size falls back to the tier square until a clip is measured',
+      () {
+        final state = EditorState(
+          preset: original,
+          exportQuality: ExportQuality.fhd1080,
+          media: [MediaItem.fromPath('/clip.mp4')], // width/height still 0
+        );
+        expect(state.outputResolution, (width: 1080, height: 1080));
+      },
+    );
+
+    test('Custom Size uses the exact typed dimensions, even-adjusted', () {
+      final state = EditorState(
+        preset: custom,
+        customWidth: 1281, // odd → bumped to even
+        customHeight: 721,
+      );
+      expect(state.outputResolution, (width: 1282, height: 722));
+    });
   });
 
   test('custom duration has no artificial upper limit', () {

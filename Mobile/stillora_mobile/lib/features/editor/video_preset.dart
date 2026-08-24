@@ -12,6 +12,7 @@ class VideoPreset extends Equatable {
     required this.ratioLabel,
     required this.icon,
     this.usesOriginalSize = false,
+    this.usesCustomSize = false,
   });
 
   final String id;
@@ -26,6 +27,10 @@ class VideoPreset extends Equatable {
   final FaIconData icon;
   final bool usesOriginalSize;
 
+  /// True for the "Custom" preset: dimensions come from the user-entered
+  /// width/height on [EditorState], not from [width]/[height] here.
+  final bool usesCustomSize;
+
   @override
   List<Object?> get props => [
     id,
@@ -34,6 +39,7 @@ class VideoPreset extends Equatable {
     height,
     ratioLabel,
     usesOriginalSize,
+    usesCustomSize,
   ];
 }
 
@@ -79,6 +85,15 @@ const videoPresets = [
     icon: FontAwesomeIcons.image,
     usesOriginalSize: true,
   ),
+  VideoPreset(
+    id: 'custom',
+    label: 'Custom Size',
+    width: 0,
+    height: 0,
+    ratioLabel: 'Custom',
+    icon: FontAwesomeIcons.penToSquare,
+    usesCustomSize: true,
+  ),
 ];
 
 const defaultVideoPreset = VideoPreset(
@@ -98,6 +113,7 @@ extension VideoPresetMeta on VideoPreset {
     'portrait' => s.vpPortraitPost,
     'landscape' => s.vpYoutube,
     'original' => s.vpOriginalSize,
+    'custom' => label,
     _ => label,
   };
 

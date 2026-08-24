@@ -10,6 +10,7 @@ import '../editor_state.dart';
 import '../video_preset.dart';
 import 'duration_chip.dart';
 import 'editor_shared.dart';
+import 'output_size_controls.dart';
 import '../../../core/i18n/app_strings.dart';
 
 class PresetCard extends StatelessWidget {
@@ -42,6 +43,11 @@ class PresetCard extends StatelessWidget {
                   onTap: () => controller.setPreset(preset),
                 ),
             ],
+          ),
+          OutputSizeControls(
+            editor: editor,
+            onCustomSize: controller.setCustomSize,
+            onReferenceSelected: controller.setOriginalReferenceIndex,
           ),
           const SizedBox(height: StilloraSpacing.sm),
           Text(

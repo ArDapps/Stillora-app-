@@ -10,6 +10,7 @@ import '../../core/widgets/desktop_shell.dart';
 import 'editor_state.dart';
 import 'video_preset.dart';
 import 'video_styles.dart';
+import 'widgets/output_size_controls.dart';
 import '../../core/pro/pro_quality_picker.dart';
 import '../../core/i18n/app_strings.dart';
 
@@ -107,6 +108,11 @@ class ChoosePresetScreen extends ConsumerWidget {
                         );
                       },
                     ),
+                    OutputSizeControls(
+                      editor: editor,
+                      onCustomSize: controller.setCustomSize,
+                      onReferenceSelected: controller.setOriginalReferenceIndex,
+                    ),
                     const SizedBox(height: 20),
                     Text(
                       context.strings.edResize,
@@ -138,10 +144,7 @@ class ChoosePresetScreen extends ConsumerWidget {
                     const SizedBox(height: 8),
                     Builder(
                       builder: (context) {
-                        final res = scaledResolution(
-                          editor.preset,
-                          editor.exportQuality,
-                        );
+                        final res = editor.outputResolution;
                         return Text(
                           '${res.width} × ${res.height}'
                           '  ·  ≈ ${formatFileSize(editor.estimatedExportBytes)}'

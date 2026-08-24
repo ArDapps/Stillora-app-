@@ -11,6 +11,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../core/storage/app_preferences.dart';
 import '../color/color_adjust.dart';
 import 'editor_duration.dart';
+import 'editor_media_dimensions.dart';
 import 'editor_media_duration.dart';
 import 'editor_media_item.dart';
 import 'editor_state_model.dart';
@@ -32,7 +33,18 @@ class EditorController extends Notifier<EditorState> {
   @override
   EditorState build() {
     final prefs = ref.read(appPreferencesProvider);
-    return _restoreSession(prefs) ?? const EditorState();
+    final restored = _restoreSession(prefs) ?? const EditorState();
+    // Sessions saved before dimensions were tracked (or that failed to probe)
+    // come back with 0×0 media, which would make "Original Size" fall back to a
+    // square. Measure any un-sized clip in the background so it fits correctly.
+    final unsized = [
+      for (final item in restored.media)
+        if (!item.hasDimensions) item.path,
+    ];
+    if (unsized.isNotEmpty) {
+      unawaited(_applyMediaDimensions(unsized));
+    }
+    return restored;
   }
 
   /// Restores the last saved session. Returns null if nothing was saved or
@@ -51,6 +63,8 @@ class EditorController extends Notifier<EditorState> {
               item['path'] as String,
               durationSeconds: (item['d'] as int?) ?? defaultDurationSeconds,
               volume: (item['vol'] as num?)?.toDouble() ?? defaultClipVolume,
+              width: (item['w'] as int?) ?? 0,
+              height: (item['h'] as int?) ?? 0,
             ),
       ];
       final audioPath = data['audioPath'] as String?;
@@ -67,6 +81,9 @@ class EditorController extends Notifier<EditorState> {
         audioIsNarration:
             validAudio != null && (data['audioIsNarration'] as bool? ?? false),
         preset: presetById(data['presetId'] as String? ?? 'reels'),
+        originalReferenceIndex: (data['originalRef'] as int?) ?? 0,
+        customWidth: data['customW'] as int?,
+        customHeight: data['customH'] as int?,
         durationSeconds: normalizeDurationSeconds(
           (data['durationSeconds'] as int?) ?? defaultDurationSeconds,
         ),
@@ -91,8 +108,17 @@ class EditorController extends Notifier<EditorState> {
       prefs.saveEditorSession({
         'media': [
           for (final item in state.media)
-            {'path': item.path, 'd': item.durationSeconds, 'vol': item.volume},
+            {
+              'path': item.path,
+              'd': item.durationSeconds,
+              'vol': item.volume,
+              'w': item.width,
+              'h': item.height,
+            },
         ],
+        'originalRef': state.originalReferenceIndex,
+        'customW': state.customWidth,
+        'customH': state.customHeight,
         'audioPath': state.audioPath,
         'audioDurationSeconds': state.audioDurationSeconds,
         'audioIsNarration': state.audioIsNarration,
@@ -124,6 +150,8 @@ class EditorController extends Notifier<EditorState> {
     // A video clip should default to its own length (images keep the baseline).
     // Measured off the main path; patches durations in as each one resolves.
     unawaited(_applyNaturalVideoDurations(paths));
+    // Native pixel size feeds the "Original Size" preset; measured the same way.
+    unawaited(_applyMediaDimensions(paths));
   }
 
   /// Appends more media to the current selection.
@@ -149,6 +177,7 @@ class EditorController extends Notifier<EditorState> {
     _persist();
     // Default each newly added video to its own length (no-op under audio fit).
     unawaited(_applyNaturalVideoDurations([for (final a in additions) a.path]));
+    unawaited(_applyMediaDimensions([for (final a in additions) a.path]));
   }
 
   /// Sets each *video* clip's duration to the source file's real length so a
@@ -184,6 +213,47 @@ class EditorController extends Notifier<EditorState> {
         ),
       );
     }
+    _persist();
+  }
+
+  /// Measures each clip's native pixel size and patches it onto the matching
+  /// [MediaItem] by path, so "Original Size" can export at the source's real
+  /// dimensions. Mirrors [_applyNaturalVideoDurations]: off the main path,
+  /// patched by path so a clip removed mid-probe is simply left untouched.
+  Future<void> _applyMediaDimensions(List<String> paths) async {
+    for (final path in paths) {
+      final size = await readMediaDimensions(path);
+      if (size == null) continue;
+      final next = [
+        for (final item in state.media)
+          (item.path == path && !item.hasDimensions)
+              ? item.copyWith(width: size.width, height: size.height)
+              : item,
+      ];
+      state = state.copyWith(media: next);
+    }
+    _persist();
+  }
+
+  /// Picks which clip's native size feeds the "Original Size" preset.
+  void setOriginalReferenceIndex(int index) {
+    if (index < 0 || index >= state.media.length) return;
+    state = state.copyWith(originalReferenceIndex: index);
+    _persist();
+  }
+
+  /// Sets the exact output size for the "Custom" preset (even-adjusted,
+  /// clamped to a sane range so a typo can't produce an un-encodable size).
+  void setCustomSize(int width, int height) {
+    int clean(int v) {
+      final c = v.clamp(16, 7680);
+      return c.isOdd ? c + 1 : c;
+    }
+
+    state = state.copyWith(
+      customWidth: clean(width),
+      customHeight: clean(height),
+    );
     _persist();
   }
 

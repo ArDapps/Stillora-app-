@@ -25,11 +25,13 @@ class PreviewCard extends StatelessWidget {
   final double maxPreviewWidth;
 
   double get _aspectRatio {
-    final preset = editor.preset;
-    if (preset.width <= 0 || preset.height <= 0) {
+    // Use the resolved output size so "Original Size" and "Custom" match the
+    // real export shape, not a fixed 9:16 canvas.
+    final res = editor.outputResolution;
+    if (res.width <= 0 || res.height <= 0) {
       return 9 / 16;
     }
-    return preset.width / preset.height;
+    return res.width / res.height;
   }
 
   @override
