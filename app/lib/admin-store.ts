@@ -1,40 +1,29 @@
 import { query } from "./db";
+import { logError } from "./error-log";
+import { normalizePage, rangeFilter, type AnalyticsRange, type Paginated } from "./analytics/range";
 
-export type UserRecord = {
-  sub: string;
-  email: string;
-  name: string;
-  picture: string;
-  firstSeen: string;
-  lastSeen: string;
-  exportCount: number;
-};
-
+/**
+ * Export telemetry. Stillora has no accounts, so an export belongs to a
+ * *device*, not a person: `deviceId` is the stable per-install id the client
+ * sends with every beacon. The `user*` fields only ever hold data from rows
+ * written back when sign-in still existed.
+ */
 export type ExportRecord = {
   id: string;
-  userSub: string;
-  userEmail: string;
-  userName: string;
-  timestamp: string;
+  deviceId: string;
+  platform: string;
+  /** Which tool produced it: create, html, loop, watermark, silence, speed… */
+  tool: string;
   presetId: string;
   duration: number;
-};
-
-type UserRow = {
-  sub: string;
-  email: string;
-  name: string;
-  picture: string;
-  first_seen: Date;
-  last_seen: Date;
-  export_count: number;
+  timestamp: string;
 };
 
 type ExportRow = {
   id: string;
-  user_sub: string;
-  user_email: string;
-  user_name: string;
+  device_id: string;
+  platform: string;
+  tool: string;
   preset_id: string;
   duration: number;
   created_at: Date;
@@ -44,167 +33,93 @@ function toIso(value: Date | string): string {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
 }
 
-function mapUser(row: UserRow): UserRecord {
-  return {
-    sub: row.sub,
-    email: row.email,
-    name: row.name,
-    picture: row.picture,
-    firstSeen: toIso(row.first_seen),
-    lastSeen: toIso(row.last_seen),
-    exportCount: Number(row.export_count) || 0,
-  };
-}
-
 function mapExport(row: ExportRow): ExportRecord {
   return {
     id: row.id,
-    userSub: row.user_sub,
-    userEmail: row.user_email,
-    userName: row.user_name,
-    timestamp: toIso(row.created_at),
+    deviceId: row.device_id,
+    platform: row.platform,
+    tool: row.tool || "create",
     presetId: row.preset_id,
     duration: Number(row.duration) || 0,
+    timestamp: toIso(row.created_at),
   };
 }
 
-export async function recordUserLogin(user: {
-  sub: string;
-  email: string;
-  name: string;
-  picture: string;
+/** Records one completed export. Fire-and-forget: never fails the export. */
+export async function recordExport(input: {
+  deviceId: string;
+  platform: string;
+  tool: string;
+  presetId: string;
+  duration: number;
 }): Promise<void> {
   try {
     await query(
-      `INSERT INTO admin_users (sub, email, name, picture, first_seen, last_seen)
-       VALUES ($1, $2, $3, $4, now(), now())
-       ON CONFLICT (sub) DO UPDATE
-         SET email = EXCLUDED.email,
-             name = EXCLUDED.name,
-             picture = EXCLUDED.picture,
-             last_seen = now()`,
-      [user.sub, user.email, user.name, user.picture],
-    );
-  } catch (error) {
-    // Never fail a login because of store errors.
-    console.error("recordUserLogin failed:", error);
-  }
-}
-
-/**
- * Returns the `sub` of an existing user with this exact email, if any. Used to
- * link an Apple sign-in to a pre-existing (e.g. Google) account when the email
- * is verified, so both providers resolve to the same Stillora user.
- */
-export async function findUserSubByEmail(
-  email: string,
-): Promise<string | null> {
-  const normalized = email.trim().toLowerCase();
-  if (!normalized) {
-    return null;
-  }
-  try {
-    const rows = await query<{ sub: string }>(
-      `SELECT sub FROM admin_users
-       WHERE lower(email) = $1
-       ORDER BY first_seen ASC
-       LIMIT 1`,
-      [normalized],
-    );
-    return rows[0]?.sub ?? null;
-  } catch (error) {
-    console.error("findUserSubByEmail failed:", error);
-    return null;
-  }
-}
-
-export async function recordExport(
-  user: { sub: string; email: string; name: string },
-  data: { presetId: string; duration: number },
-): Promise<void> {
-  try {
-    // Ensure the user row exists even if the login event was missed (e.g. a
-    // returning native client that only restored its session).
-    await query(
-      `INSERT INTO admin_users (sub, email, name, last_seen)
-       VALUES ($1, $2, $3, now())
-       ON CONFLICT (sub) DO UPDATE SET last_seen = now()`,
-      [user.sub, user.email, user.name],
-    );
-    await query(
-      `INSERT INTO admin_exports (user_sub, user_email, user_name, preset_id, duration)
+      `INSERT INTO admin_exports (device_id, platform, tool, preset_id, duration)
        VALUES ($1, $2, $3, $4, $5)`,
-      [user.sub, user.email, user.name, data.presetId, data.duration],
+      [
+        input.deviceId.slice(0, 100),
+        input.platform.slice(0, 40),
+        (input.tool || "create").slice(0, 40),
+        input.presetId.slice(0, 80),
+        Math.max(0, Math.round(input.duration)),
+      ],
     );
   } catch (error) {
-    // Never fail an export because of store errors.
-    console.error("recordExport failed:", error);
+    void logError({ source: "admin-store/recordExport", error, platform: input.platform });
   }
 }
 
-export async function getUsers(): Promise<UserRecord[]> {
-  try {
-    const rows = await query<UserRow>(
-      `SELECT u.sub, u.email, u.name, u.picture, u.first_seen, u.last_seen,
-              COUNT(e.id)::int AS export_count
-       FROM admin_users u
-       LEFT JOIN admin_exports e ON e.user_sub = u.sub
-       GROUP BY u.sub
-       ORDER BY u.last_seen DESC`,
-    );
-    return rows.map(mapUser);
-  } catch (error) {
-    console.error("getUsers failed:", error);
-    return [];
-  }
-}
-
-export type Page<T> = {
-  rows: T[];
+export type ExportStats = {
   total: number;
-  page: number;
-  pageSize: number;
+  today: number;
+  inRange: number;
+  devices: number;
+  totalVideoSeconds: number;
+  avgDurationSeconds: number;
 };
 
-function normalizePage(page: unknown, pageSize: number) {
-  const n = typeof page === "string" ? parseInt(page, 10) : Number(page);
-  const safePage = Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1;
-  return { page: safePage, offset: (safePage - 1) * pageSize };
-}
-
-/** One page of users (with export counts), newest activity first. */
-export async function getUsersPage(page = 1, pageSize = 25): Promise<Page<UserRecord>> {
-  const { page: safePage, offset } = normalizePage(page, pageSize);
+/** Headline export counters. `total`/`today` are absolute; the rest follow the range. */
+export async function getExportStats(range: AnalyticsRange = "all"): Promise<ExportStats> {
+  const rf = rangeFilter(range, "created_at");
   try {
-    const [rows, totals] = await Promise.all([
-      query<UserRow>(
-        `SELECT u.sub, u.email, u.name, u.picture, u.first_seen, u.last_seen,
-                COUNT(e.id)::int AS export_count
-         FROM admin_users u
-         LEFT JOIN admin_exports e ON e.user_sub = u.sub
-         GROUP BY u.sub
-         ORDER BY u.last_seen DESC
-         LIMIT $1 OFFSET $2`,
-        [pageSize, offset],
-      ),
-      query<{ count: number }>(`SELECT COUNT(*)::int AS count FROM admin_users`),
-    ]);
+    const rows = await query<{
+      total: number;
+      today: number;
+      in_range: number;
+      devices: number;
+      video_seconds: number;
+      avg_duration: number;
+    }>(
+      `SELECT
+         (SELECT COUNT(*) FROM admin_exports)::int AS total,
+         (SELECT COUNT(*) FROM admin_exports
+            WHERE created_at >= date_trunc('day', now()))::int AS today,
+         (SELECT COUNT(*) FROM admin_exports WHERE ${rf})::int AS in_range,
+         (SELECT COUNT(DISTINCT device_id) FROM admin_exports
+            WHERE ${rf} AND device_id <> '')::int AS devices,
+         (SELECT COALESCE(SUM(duration), 0) FROM admin_exports WHERE ${rf})::bigint AS video_seconds,
+         (SELECT COALESCE(AVG(duration), 0) FROM admin_exports WHERE ${rf})::int AS avg_duration`,
+    );
+    const r = rows[0];
     return {
-      rows: rows.map(mapUser),
-      total: Number(totals[0]?.count) || 0,
-      page: safePage,
-      pageSize,
+      total: Number(r?.total) || 0,
+      today: Number(r?.today) || 0,
+      inRange: Number(r?.in_range) || 0,
+      devices: Number(r?.devices) || 0,
+      totalVideoSeconds: Number(r?.video_seconds) || 0,
+      avgDurationSeconds: Number(r?.avg_duration) || 0,
     };
   } catch (error) {
-    console.error("getUsersPage failed:", error);
-    return { rows: [], total: 0, page: safePage, pageSize };
+    void logError({ source: "admin-store/getExportStats", error });
+    return { total: 0, today: 0, inRange: 0, devices: 0, totalVideoSeconds: 0, avgDurationSeconds: 0 };
   }
 }
 
-export async function getRecentExports(limit = 50): Promise<ExportRecord[]> {
+export async function getRecentExports(limit = 20): Promise<ExportRecord[]> {
   try {
     const rows = await query<ExportRow>(
-      `SELECT id, user_sub, user_email, user_name, preset_id, duration, created_at
+      `SELECT id, device_id, platform, tool, preset_id, duration, created_at
        FROM admin_exports
        ORDER BY created_at DESC
        LIMIT $1`,
@@ -212,24 +127,30 @@ export async function getRecentExports(limit = 50): Promise<ExportRecord[]> {
     );
     return rows.map(mapExport);
   } catch (error) {
-    console.error("getRecentExports failed:", error);
+    void logError({ source: "admin-store/getRecentExports", error });
     return [];
   }
 }
 
-/** One page of exports, newest first. */
-export async function getExportsPage(page = 1, pageSize = 25): Promise<Page<ExportRecord>> {
+/** One page of exports for the selected range, newest first. */
+export async function getExportsPage(
+  range: AnalyticsRange = "all",
+  page = 1,
+  pageSize = 25,
+): Promise<Paginated<ExportRecord>> {
+  const rf = rangeFilter(range, "created_at");
   const { page: safePage, offset } = normalizePage(page, pageSize);
   try {
     const [rows, totals] = await Promise.all([
       query<ExportRow>(
-        `SELECT id, user_sub, user_email, user_name, preset_id, duration, created_at
+        `SELECT id, device_id, platform, tool, preset_id, duration, created_at
          FROM admin_exports
+         WHERE ${rf}
          ORDER BY created_at DESC
          LIMIT $1 OFFSET $2`,
         [pageSize, offset],
       ),
-      query<{ count: number }>(`SELECT COUNT(*)::int AS count FROM admin_exports`),
+      query<{ count: number }>(`SELECT COUNT(*)::int AS count FROM admin_exports WHERE ${rf}`),
     ]);
     return {
       rows: rows.map(mapExport),
@@ -238,41 +159,65 @@ export async function getExportsPage(page = 1, pageSize = 25): Promise<Page<Expo
       pageSize,
     };
   } catch (error) {
-    console.error("getExportsPage failed:", error);
+    void logError({ source: "admin-store/getExportsPage", error });
     return { rows: [], total: 0, page: safePage, pageSize };
   }
 }
 
-export async function deleteUser(sub: string): Promise<void> {
-  await query(`DELETE FROM admin_exports WHERE user_sub = $1`, [sub]);
-  await query(`DELETE FROM admin_users WHERE sub = $1`, [sub]);
-}
+export type ToolStat = {
+  tool: string;
+  exports: number;
+  devices: number;
+  videoSeconds: number;
+};
 
-export async function getStats(): Promise<{
-  totalUsers: number;
-  totalExports: number;
-  exportsToday: number;
-}> {
+/** Which tool people actually export from, ranked. */
+export async function getToolStats(range: AnalyticsRange = "all"): Promise<ToolStat[]> {
   try {
     const rows = await query<{
-      total_users: number;
-      total_exports: number;
-      exports_today: number;
+      tool: string;
+      exports: number;
+      devices: number;
+      video_seconds: number;
     }>(
-      `SELECT
-         (SELECT COUNT(*)::int FROM admin_users) AS total_users,
-         (SELECT COUNT(*)::int FROM admin_exports) AS total_exports,
-         (SELECT COUNT(*)::int FROM admin_exports
-            WHERE created_at >= date_trunc('day', now())) AS exports_today`,
+      `SELECT COALESCE(NULLIF(tool, ''), 'create') AS tool,
+              COUNT(*)::int AS exports,
+              COUNT(DISTINCT device_id)::int AS devices,
+              COALESCE(SUM(duration), 0)::bigint AS video_seconds
+       FROM admin_exports
+       WHERE ${rangeFilter(range, "created_at")}
+       GROUP BY 1
+       ORDER BY exports DESC`,
     );
-    const row = rows[0];
-    return {
-      totalUsers: Number(row?.total_users) || 0,
-      totalExports: Number(row?.total_exports) || 0,
-      exportsToday: Number(row?.exports_today) || 0,
-    };
+    return rows.map((r) => ({
+      tool: r.tool,
+      exports: Number(r.exports) || 0,
+      devices: Number(r.devices) || 0,
+      videoSeconds: Number(r.video_seconds) || 0,
+    }));
   } catch (error) {
-    console.error("getStats failed:", error);
-    return { totalUsers: 0, totalExports: 0, exportsToday: 0 };
+    void logError({ source: "admin-store/getToolStats", error });
+    return [];
+  }
+}
+
+export type PresetStat = { presetId: string; exports: number };
+
+/** Most-used aspect-ratio presets, for the overview breakdown. */
+export async function getPresetStats(range: AnalyticsRange = "all", limit = 8): Promise<PresetStat[]> {
+  try {
+    const rows = await query<{ preset_id: string; exports: number }>(
+      `SELECT preset_id, COUNT(*)::int AS exports
+       FROM admin_exports
+       WHERE ${rangeFilter(range, "created_at")}
+       GROUP BY preset_id
+       ORDER BY exports DESC
+       LIMIT $1`,
+      [limit],
+    );
+    return rows.map((r) => ({ presetId: r.preset_id || "unknown", exports: Number(r.exports) || 0 }));
+  } catch (error) {
+    void logError({ source: "admin-store/getPresetStats", error });
+    return [];
   }
 }

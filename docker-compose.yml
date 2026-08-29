@@ -13,8 +13,10 @@ services:
       PORT: "3087"
       HOSTNAME: 0.0.0.0
       AUTH_SECRET: ${AUTH_SECRET}
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      # The admin panel is the only thing that authenticates — Stillora has no
+      # user accounts. Without these two, /admin/login cannot let anyone in.
+      ADMIN_EMAILS: ${ADMIN_EMAILS}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       DATABASE_URL: postgresql://${POSTGRES_USER:-stillora}:${POSTGRES_PASSWORD:-change-me}@postgres:55432/${POSTGRES_DB:-stillora}
       MEDIA_ROOT: /data/stillora
       PUBLIC_MEDIA_BASE_URL: ${PUBLIC_MEDIA_BASE_URL:-}

@@ -1,5 +1,26 @@
-import { AppNavbar, Logo } from "@/app/components/app-navbar";
+import Link from "next/link";
+
 import { TECNOBLOCKS_URL } from "@/lib/site";
+
+/**
+ * Brand lockup, also the way back to the landing page. Deliberately standalone:
+ * the landing page is one self-contained design component, and the legal pages
+ * should not have to mount all of it just to show a header.
+ */
+function Logo() {
+  return (
+    <Link href="/" className="flex items-center gap-2.5">
+      <span
+        aria-hidden
+        className="size-7 rounded-lg"
+        style={{ background: "var(--brand-mark)" }}
+      />
+      <span className="text-sm font-extrabold" style={{ color: "var(--color-foreground)" }}>
+        Stillora
+      </span>
+    </Link>
+  );
+}
 
 type LegalSection = {
   title: string;
@@ -17,8 +38,15 @@ export function LegalDocument({
 }) {
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <AppNavbar />
-      <main className="mx-auto w-full max-w-4xl px-4 pb-20 pt-28 sm:px-6 sm:pt-32">
+      <header
+        className="border-b"
+        style={{ borderColor: "var(--color-border)", background: "var(--color-header)" }}
+      >
+        <div className="mx-auto flex w-full max-w-4xl items-center px-4 py-4 sm:px-6">
+          <Logo />
+        </div>
+      </header>
+      <main className="mx-auto w-full max-w-4xl px-4 pb-20 pt-12 sm:px-6 sm:pt-16">
         <div className="mb-10">
           <p className="mb-4 text-sm font-semibold text-primary">Stillora apps</p>
           <h1 className="mb-4 text-4xl font-extrabold tracking-tight sm:text-5xl">{title}</h1>

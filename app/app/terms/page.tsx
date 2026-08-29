@@ -18,7 +18,7 @@ const sections = [
     title: "Using Stillora",
     body: [
       "Stillora lets you upload images, video clips, and audio tracks, choose format settings, and render MP4 exports for personal or commercial projects.",
-      "You are responsible for your account, your uploads, your export settings, and your use of the finished files.",
+      "You are responsible for your uploads, your export settings, and your use of the finished files.",
     ],
   },
   {
@@ -36,10 +36,10 @@ const sections = [
     ],
   },
   {
-    title: "Accounts and Access",
+    title: "Access",
     body: [
-      "Some features may work without an account, while others may require sign-in. You are responsible for keeping your sign-in method secure.",
-      "We may suspend or restrict access if we believe an account or project violates these terms, creates risk, or harms the service.",
+      "Stillora has no accounts and no sign-in. The apps and their tools are open to use as provided.",
+      "We may suspend or restrict access if we believe use of the service violates these terms, creates risk, or harms the service.",
     ],
   },
   {

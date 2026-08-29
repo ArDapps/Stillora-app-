@@ -38,6 +38,9 @@ dependencies:
   cupertino_icons: ^1.0.8
   crypto: ^3.0.6
   image: ^4.3.0
+  # Store Screenshots exports every rendered size as one .zip. Already present
+  # transitively (via `printing`); declared directly because we import it.
+  archive: ^4.0.7
   dio: ^5.9.0
   equatable: ^2.0.7
   file_picker: ^10.3.7

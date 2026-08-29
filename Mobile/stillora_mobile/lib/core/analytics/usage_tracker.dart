@@ -2,12 +2,11 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/api_client.dart';
-import '../auth/auth_controller.dart';
+import '../platform/platform_info.dart';
 import '../storage/app_preferences.dart';
 
 /// How often the buffered usage is flushed to the backend. The app never sends
@@ -75,11 +74,14 @@ class UsageTracker {
     if (startedAt != null) {
       final duration = DateTime.now().difference(startedAt).inSeconds;
       if (duration >= _minSessionSeconds) {
+        final prefs = _ref.read(appPreferencesProvider);
         await _bufferSession({
           'clientId': _clientId,
+          'deviceId': prefs.deviceId,
+          'isPro': prefs.isProUnlocked,
           'startedAt': startedAt.toUtc().toIso8601String(),
           'durationSeconds': duration,
-          'platform': _platformName(),
+          'platform': platformName(),
           'screens': List<String>.from(_screens),
         });
       }
@@ -139,18 +141,20 @@ class UsageTracker {
     List<Map<String, dynamic>> sent,
   ) async {
     try {
-      final token = _ref.read(authControllerProvider).asData?.value?.token;
       await _ref
           .read(dioProvider)
           .post<void>(
             '/api/track',
             data: {
               'event': 'batch',
-              'platform': _platformName(),
+              'platform': platformName(),
+              // Envelope copies, so sessions buffered by an older build still
+              // land against the right device.
+              'deviceId': prefs.deviceId,
+              'isPro': prefs.isProUnlocked,
               'sessions': sent,
             },
             options: Options(
-              headers: {if (token != null) 'Authorization': 'Bearer $token'},
               // A late batch is still worth sending, but don't hang forever.
               sendTimeout: const Duration(seconds: 15),
               receiveTimeout: const Duration(seconds: 15),
@@ -164,18 +168,6 @@ class UsageTracker {
       // Keep the buffer and retry on a later open once the window elapses again.
     }
   }
-}
-
-String _platformName() {
-  if (kIsWeb) return 'web';
-  return switch (defaultTargetPlatform) {
-    TargetPlatform.iOS => 'ios',
-    TargetPlatform.android => 'android',
-    TargetPlatform.macOS => 'macos',
-    TargetPlatform.windows => 'windows',
-    TargetPlatform.linux => 'linux',
-    _ => 'web',
-  };
 }
 
 final _random = Random();

@@ -134,6 +134,63 @@ class MediaActions {
     }
   }
 
+  /// Opens the native share sheet for a zip at [path]. On a phone this is how
+  /// the user gets the archive off the device — the sheet offers "Save to
+  /// Files", AirDrop and Mail. Returns false if the file is missing.
+  static Future<bool> shareZip(
+    BuildContext context,
+    String path, {
+    String text = 'Store screenshots from Stillora',
+  }) async {
+    if (!File(path).existsSync()) {
+      return false;
+    }
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile(path, mimeType: 'application/zip')],
+        text: text,
+        sharePositionOrigin: _popoverAnchor(context),
+      ),
+    );
+    return true;
+  }
+
+  /// Desktop save: open a native "Save As" dialog and write the zip to the
+  /// chosen location. [SaveOutcome.cancelled] when the dialog is dismissed.
+  static Future<SaveOutcome> saveZipToFile(
+    String path, {
+    String suggestedName = 'stillora-store-screenshots.zip',
+    String? dialogTitle,
+  }) async {
+    final source = File(path);
+    if (!source.existsSync()) {
+      return SaveOutcome.missingFile;
+    }
+    try {
+      final bytes = await source.readAsBytes();
+      final destination = await FilePicker.platform.saveFile(
+        dialogTitle: dialogTitle ?? 'Save zip',
+        fileName: suggestedName,
+        type: FileType.custom,
+        allowedExtensions: const ['zip'],
+        bytes: bytes,
+        initialDirectory: await lastImportDirectory(),
+      );
+      await rememberImportPath(destination);
+      if (destination == null) {
+        return SaveOutcome.cancelled;
+      }
+      // Some platforms write the bytes themselves; others only return the path.
+      final out = File(destination);
+      if (!out.existsSync() || await out.length() != bytes.length) {
+        await out.writeAsBytes(bytes, flush: true);
+      }
+      return SaveOutcome.saved;
+    } catch (_) {
+      return SaveOutcome.failed;
+    }
+  }
+
   /// Desktop save: open a native "Save As" dialog and write the MP3 to the
   /// chosen location. Returns [SaveOutcome.cancelled] when the user dismisses
   /// the dialog so the caller can stay silent.

@@ -7,7 +7,7 @@
 | **Web App** | Live | Runs in any browser, no install |
 | **iOS** | Live | Apple App Store — "Stillora - MP4 Video Maker" (universal iPhone/iPad) |
 | **macOS** | Live | Same App Store universal listing (Apple Silicon Macs) |
-| **Android** | Live (direct APK) | Installable APK from Stillora's domain; Google Play listing not live yet |
+| **Android** | Live | Google Play — `app.loopara.stillora`; a signed APK is also served from Stillora's domain for sideloading |
 | **Windows** | Live | Zipped desktop build from Stillora's domain |
 | **Linux** | Marketed as available | Desktop build |
 

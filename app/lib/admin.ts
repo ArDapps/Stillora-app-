@@ -64,6 +64,19 @@ export async function getAdminFromRequest(request: Request | NextRequest): Promi
   return decodeAdminSession(token);
 }
 
+/**
+ * The origin the request arrived on, honouring the proxy headers a deployment
+ * sits behind. Used to decide whether the admin session cookie can be marked
+ * Secure — localhost is served over plain http.
+ */
+export function resolveBaseUrl(request: NextRequest) {
+  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? "";
+  const proto =
+    request.headers.get("x-forwarded-proto") ??
+    (host.startsWith("localhost") || host.startsWith("127.0.0.1") ? "http" : "https");
+  return `${proto}://${host}`;
+}
+
 export function adminCookieOptions(secure: boolean) {
   return {
     httpOnly: true,

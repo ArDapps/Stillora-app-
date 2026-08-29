@@ -3,8 +3,9 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 
+import { getClientId, getDeviceId } from "./device-id";
+
 const HEARTBEAT_MS = 30_000;
-const STORAGE_KEY = "stillora-session-id";
 
 /**
  * Fire-and-forget usage tracker for the web app. On mount it opens a session,
@@ -23,6 +24,7 @@ export function SessionTracker() {
     if (!pathname || pathname.startsWith("/admin")) return;
     const payload = JSON.stringify({
       clientId: getClientId(),
+      deviceId: getDeviceId(),
       event: "screen",
       platform: "web",
       screen: pathname,
@@ -37,9 +39,10 @@ export function SessionTracker() {
 
   useEffect(() => {
     const clientId = getClientId();
+    const deviceId = getDeviceId();
 
     const send = (event: "start" | "heartbeat" | "end", useBeacon = false) => {
-      const payload = JSON.stringify({ clientId, event, platform: "web" });
+      const payload = JSON.stringify({ clientId, deviceId, event, platform: "web" });
       // sendBeacon survives page unload; fetch is used while the page is alive.
       if (useBeacon && typeof navigator !== "undefined" && navigator.sendBeacon) {
         navigator.sendBeacon("/api/track", new Blob([payload], { type: "application/json" }));
@@ -77,21 +80,4 @@ export function SessionTracker() {
   }, []);
 
   return null;
-}
-
-/** A stable per-tab session id, regenerated each new browsing session. */
-function getClientId(): string {
-  try {
-    const existing = sessionStorage.getItem(STORAGE_KEY);
-    if (existing) return existing;
-    const id =
-      typeof crypto !== "undefined" && crypto.randomUUID
-        ? crypto.randomUUID()
-        : `s-${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    sessionStorage.setItem(STORAGE_KEY, id);
-    return id;
-  } catch {
-    // Private-mode / storage-disabled fallback: a volatile id (won't dedupe across reloads).
-    return `s-${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-  }
 }

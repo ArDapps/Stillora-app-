@@ -1,5 +1,6 @@
 import { DOWNLOAD_LABELS, DOWNLOAD_PLATFORMS } from "@/lib/downloads";
 import { getDownloadLinks } from "@/lib/downloads-store";
+import { PageHeader } from "../ui";
 import { DownloadsManager, type PlatformState } from "./downloads-manager";
 
 export const dynamic = "force-dynamic";
@@ -23,18 +24,12 @@ export default async function AdminDownloadsPage() {
   });
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold" style={{ color: "var(--color-foreground)" }}>
-          Downloads
-        </h1>
-        <p className="mt-1 text-sm" style={{ color: "var(--color-muted)" }}>
-          Upload a build or paste a link for each platform. These power the download
-          buttons on the landing page. Unset platforms use the shipped defaults.
-        </p>
-      </div>
-
+    <>
+      <PageHeader
+        title="Downloads"
+        subtitle="Upload a build or paste a link for each platform. These power the download buttons on the landing page; unset platforms use the shipped defaults."
+      />
       <DownloadsManager platforms={platforms} />
-    </div>
+    </>
   );
 }

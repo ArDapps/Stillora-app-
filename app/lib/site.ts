@@ -26,13 +26,23 @@ export const APP_STORE_URL =
  * iOS and macOS both ship from the universal App Store listing above.
  * Windows ships as a zipped desktop build served from this site's own
  * `public/downloads` folder, so the download stays on our domain.
- * Google Play is not live yet — leave empty and the UI renders it as "Soon".
  */
 export const MACOS_DOWNLOAD_URL = APP_STORE_URL;
-export const GOOGLE_PLAY_URL = "";
-export const WINDOWS_DOWNLOAD_URL = "/downloads/stillora-windows.zip";
+
 /**
- * Android ships as a directly-installable APK served from this site's own
- * `public/downloads` folder until the Google Play listing is live.
+ * Live Google Play listing. No `hl` parameter on purpose: Play then opens in
+ * the visitor's own language, which matters for a site that ships English,
+ * French and Arabic.
  */
-export const ANDROID_DOWNLOAD_URL = "/downloads/stillora-android.apk";
+export const GOOGLE_PLAY_URL =
+  "https://play.google.com/store/apps/details?id=app.loopara.stillora";
+
+export const WINDOWS_DOWNLOAD_URL = "/downloads/stillora-windows.zip";
+
+/**
+ * Android now installs from Play. The signed APK stays served at
+ * `/downloads/stillora-android.apk` for sideloading and for regions without
+ * Play — point the Downloads panel at it to make that the public link again.
+ */
+export const ANDROID_DOWNLOAD_URL = GOOGLE_PLAY_URL;
+export const ANDROID_APK_URL = "/downloads/stillora-android.apk";

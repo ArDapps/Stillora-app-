@@ -26,27 +26,19 @@ let schemaReady: Promise<void> | undefined;
 export function ensureSchema(): Promise<void> {
   schemaReady ??= getPool()
     .query(`
-      CREATE TABLE IF NOT EXISTS admin_users (
-        sub        TEXT PRIMARY KEY,
-        email      TEXT NOT NULL,
-        name       TEXT NOT NULL,
-        picture    TEXT NOT NULL DEFAULT '',
-        first_seen TIMESTAMPTZ NOT NULL DEFAULT now(),
-        last_seen  TIMESTAMPTZ NOT NULL DEFAULT now()
-      );
-
+      -- One row per completed export, from any surface. Stillora has no
+      -- accounts, so exports are attributed to a device, never to a person.
       CREATE TABLE IF NOT EXISTS admin_exports (
         id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_sub   TEXT NOT NULL,
-        user_email TEXT NOT NULL,
-        user_name  TEXT NOT NULL,
+        device_id  TEXT NOT NULL DEFAULT '',
+        platform   TEXT NOT NULL DEFAULT '',
+        tool       TEXT NOT NULL DEFAULT 'create',
         preset_id  TEXT NOT NULL,
         duration   INTEGER NOT NULL DEFAULT 0,
         created_at TIMESTAMPTZ NOT NULL DEFAULT now()
       );
 
       CREATE INDEX IF NOT EXISTS admin_exports_created_at_idx ON admin_exports (created_at DESC);
-      CREATE INDEX IF NOT EXISTS admin_exports_user_sub_idx ON admin_exports (user_sub);
 
       CREATE TABLE IF NOT EXISTS download_links (
         platform     TEXT PRIMARY KEY,
@@ -66,9 +58,6 @@ export function ensureSchema(): Promise<void> {
       CREATE TABLE IF NOT EXISTS admin_sessions (
         id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         client_id        TEXT NOT NULL UNIQUE,
-        user_sub         TEXT,
-        user_email       TEXT NOT NULL DEFAULT '',
-        user_name        TEXT NOT NULL DEFAULT '',
         platform         TEXT NOT NULL DEFAULT 'web',
         app_version      TEXT NOT NULL DEFAULT '',
         country          TEXT NOT NULL DEFAULT '',
@@ -87,7 +76,6 @@ export function ensureSchema(): Promise<void> {
       );
 
       CREATE INDEX IF NOT EXISTS admin_sessions_started_at_idx ON admin_sessions (started_at DESC);
-      CREATE INDEX IF NOT EXISTS admin_sessions_user_sub_idx ON admin_sessions (user_sub);
       CREATE INDEX IF NOT EXISTS admin_sessions_country_idx ON admin_sessions (country_code);
       CREATE INDEX IF NOT EXISTS admin_sessions_platform_idx ON admin_sessions (platform);
 
@@ -96,7 +84,6 @@ export function ensureSchema(): Promise<void> {
       CREATE TABLE IF NOT EXISTS admin_screen_views (
         id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         client_id  TEXT NOT NULL DEFAULT '',
-        user_sub   TEXT,
         platform   TEXT NOT NULL DEFAULT 'web',
         screen     TEXT NOT NULL,
         created_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -105,35 +92,11 @@ export function ensureSchema(): Promise<void> {
       CREATE INDEX IF NOT EXISTS admin_screen_views_created_at_idx ON admin_screen_views (created_at DESC);
       CREATE INDEX IF NOT EXISTS admin_screen_views_screen_idx ON admin_screen_views (screen);
 
-      -- One row per user who owns lifetime Pro, whatever granted it. This is
-      -- what makes the unlock follow the Stillora *account* rather than a
-      -- store account, so Linux and Windows -- which have no store at all --
-      -- and a buyer who switches between Apple and Google can still be Pro.
-      --
-      -- The source column is where the entitlement came from: 'apple' or
-      -- 'google' from a real purchase, 'admin' for a comp granted from the
-      -- panel. The store's own token is kept verbatim in store_token so a
-      -- purchase recorded today can be verified against Apple/Google
-      -- retroactively, once those server credentials exist.
-      --
-      -- Revoking sets revoked_at rather than deleting: a support case needs
-      -- to see that a comp was given and taken back, not a missing row.
-      CREATE TABLE IF NOT EXISTS pro_entitlements (
-        user_sub     TEXT PRIMARY KEY,
-        source       TEXT NOT NULL,
-        product_id   TEXT NOT NULL DEFAULT '',
-        store_token  TEXT NOT NULL DEFAULT '',
-        platform     TEXT NOT NULL DEFAULT '',
-        verified     BOOLEAN NOT NULL DEFAULT false,
-        granted_by   TEXT NOT NULL DEFAULT '',
-        note         TEXT NOT NULL DEFAULT '',
-        granted_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
-        revoked_at   TIMESTAMPTZ,
-        revoked_by   TEXT NOT NULL DEFAULT ''
-      );
-
-      CREATE INDEX IF NOT EXISTS pro_entitlements_granted_at_idx
-        ON pro_entitlements (granted_at DESC);
+      -- NOTE: admin_users and pro_entitlements are no longer created here.
+      -- Both were keyed by a signed-in account, and Stillora has no accounts:
+      -- Pro now lives on the device (the store plus local preferences), and
+      -- usage is counted per device. Existing databases keep whatever rows
+      -- those tables already hold; nothing reads or writes them.
 
       -- Server-side IP -> location cache so we don't call the geo API on every
       -- heartbeat. Keyed by raw IP; sessions only persist a hashed IP.
@@ -145,6 +108,70 @@ export function ensureSchema(): Promise<void> {
         city         TEXT NOT NULL DEFAULT '',
         fetched_at   TIMESTAMPTZ NOT NULL DEFAULT now()
       );
+
+      -- Every failure the app reports, from any surface: a server route or store
+      -- function that threw, or an uncaught error in a client (web/mobile).
+      -- Rows are deduped by the fingerprint column (scope + source + normalized message)
+      -- so one broken function is a single row with a rising count, not a
+      -- flood that buries everything else.
+      CREATE TABLE IF NOT EXISTS admin_errors (
+        id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        fingerprint TEXT NOT NULL UNIQUE,
+        scope       TEXT NOT NULL DEFAULT 'server',
+        source      TEXT NOT NULL DEFAULT '',
+        name        TEXT NOT NULL DEFAULT '',
+        message     TEXT NOT NULL DEFAULT '',
+        stack       TEXT NOT NULL DEFAULT '',
+        url         TEXT NOT NULL DEFAULT '',
+        platform    TEXT NOT NULL DEFAULT '',
+        app_version TEXT NOT NULL DEFAULT '',
+        device_id   TEXT NOT NULL DEFAULT '',
+        user_agent  TEXT NOT NULL DEFAULT '',
+        count       INTEGER NOT NULL DEFAULT 1,
+        first_seen  TIMESTAMPTZ NOT NULL DEFAULT now(),
+        last_seen   TIMESTAMPTZ NOT NULL DEFAULT now(),
+        resolved_at TIMESTAMPTZ
+      );
+
+      CREATE INDEX IF NOT EXISTS admin_errors_last_seen_idx ON admin_errors (last_seen DESC);
+      CREATE INDEX IF NOT EXISTS admin_errors_scope_idx ON admin_errors (scope);
+
+      -- One row, tracking when housekeeping last ran. Kept in the database so
+      -- several app instances share the schedule rather than each keeping its
+      -- own timer.
+      CREATE TABLE IF NOT EXISTS admin_maintenance (
+        id            TEXT PRIMARY KEY,
+        last_purge_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+
+      -- Migrations for installs created before anonymous (account-less) tracking.
+      -- Stillora has no sign-in any more, so every counter is keyed by device.
+      ALTER TABLE admin_sessions     ADD COLUMN IF NOT EXISTS device_id TEXT NOT NULL DEFAULT '';
+      ALTER TABLE admin_sessions     ADD COLUMN IF NOT EXISTS is_pro BOOLEAN NOT NULL DEFAULT false;
+      ALTER TABLE admin_screen_views ADD COLUMN IF NOT EXISTS device_id TEXT NOT NULL DEFAULT '';
+      ALTER TABLE admin_exports      ADD COLUMN IF NOT EXISTS device_id TEXT NOT NULL DEFAULT '';
+      ALTER TABLE admin_exports      ADD COLUMN IF NOT EXISTS platform TEXT NOT NULL DEFAULT '';
+      ALTER TABLE admin_exports      ADD COLUMN IF NOT EXISTS tool TEXT NOT NULL DEFAULT 'create';
+
+      -- A database created back when exports belonged to a signed-in account
+      -- still has admin_exports.user_sub, declared NOT NULL. Nothing writes it
+      -- any more, so it has to stop being required or every insert fails. The
+      -- guard is what makes this safe to run against a fresh database too,
+      -- where the column was never created.
+      DO $do$
+      BEGIN
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name = 'admin_exports' AND column_name = 'user_sub'
+        ) THEN
+          ALTER TABLE admin_exports ALTER COLUMN user_sub DROP NOT NULL;
+        END IF;
+      END
+      $do$;
+
+      CREATE INDEX IF NOT EXISTS admin_sessions_device_id_idx ON admin_sessions (device_id);
+      CREATE INDEX IF NOT EXISTS admin_exports_device_id_idx ON admin_exports (device_id);
+      CREATE INDEX IF NOT EXISTS admin_exports_tool_idx ON admin_exports (tool);
     `)
     .then(() => undefined)
     .catch((error) => {

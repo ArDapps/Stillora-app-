@@ -1,6 +1,5 @@
 import { type NextRequest } from "next/server";
-import { getAdminFromRequest, isAdminEmail } from "@/lib/admin";
-import { getCurrentUser } from "@/lib/auth";
+import { getAdminFromRequest } from "@/lib/admin";
 import { isDownloadPlatform, MAX_DOWNLOAD_BYTES } from "@/lib/downloads";
 import {
   getDownloadLinks,
@@ -12,14 +11,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 async function requireAdmin(request: NextRequest): Promise<boolean> {
-  const [adminSession, userSession] = await Promise.all([
-    getAdminFromRequest(request),
-    getCurrentUser(),
-  ]);
-  return (
-    adminSession !== null ||
-    (userSession !== null && isAdminEmail(userSession.email))
-  );
+  return (await getAdminFromRequest(request)) !== null;
 }
 
 export async function GET(request: NextRequest) {

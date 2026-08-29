@@ -780,6 +780,61 @@ class AppStrings {
   String get authAppleCancelled => _('authAppleCancelled');
   String get authAppleUnavailable => _('authAppleUnavailable');
   String get authAppleConnection => _('authAppleConnection');
+
+  // Store Screenshots
+  String get storeShots => _('storeShots');
+  String get storeShotsSubtitle => _('storeShotsSubtitle');
+  String get ssEyebrow => _('ssEyebrow');
+  String get ssHeading => _('ssHeading');
+  String get ssIntro => _('ssIntro');
+  String get ssSourceImages => _('ssSourceImages');
+  String get ssAddImages => _('ssAddImages');
+  String get ssAddMore => _('ssAddMore');
+  String get ssClear => _('ssClear');
+  String get ssEmpty => _('ssEmpty');
+  String get ssDropHint => _('ssDropHint');
+  String get ssSizes => _('ssSizes');
+  String get ssRequiredOnly => _('ssRequiredOnly');
+  String get ssRequired => _('ssRequired');
+  String get ssPickSizes => _('ssPickSizes');
+  String get ssLook => _('ssLook');
+  String get ssFit => _('ssFit');
+  String get ssFill => _('ssFill');
+  String get ssBackground => _('ssBackground');
+  String get ssBlack => _('ssBlack');
+  String get ssWhite => _('ssWhite');
+  String get ssMidnight => _('ssMidnight');
+  String get ssFormat => _('ssFormat');
+  String get ssOrientation => _('ssOrientation');
+  String get ssPortrait => _('ssPortrait');
+  String get ssLandscape => _('ssLandscape');
+  String get ssNoAlphaNote => _('ssNoAlphaNote');
+  String get ssZipLayout => _('ssZipLayout');
+  String get ssExport => _('ssExport');
+  String get ssExporting => _('ssExporting');
+  String get ssNothing => _('ssNothing');
+  String get ssAndroidPhone => _('ssAndroidPhone');
+  String get ssAndroidTablet => _('ssAndroidTablet');
+  String get ssPreviewCaption => _('ssPreviewCaption');
+  String get ssClearWarning => _('ssClearWarning');
+  String get ssSaveZip => _('ssSaveZip');
+  String get ssSavedZip => _('ssSavedZip');
+  String get ssSaveFailed => _('ssSaveFailed');
+  String get ssGone => _('ssGone');
+
+  /// "12 files - 3 sizes"
+  String ssOutputCount(int files, int sizes) => _('ssOutputCount')
+      .replaceFirst('{files}', '$files')
+      .replaceFirst('{sizes}', '$sizes');
+
+  /// "8 images"
+  String ssImageCount(int count) =>
+      _('ssImageCount').replaceFirst('{count}', '$count');
+
+  /// "Rendering 4 / 12"
+  String ssProgress(int done, int total) => _('ssProgress')
+      .replaceFirst('{done}', '$done')
+      .replaceFirst('{total}', '$total');
 }
 
 const _en = <String, String>{
@@ -791,7 +846,7 @@ const _en = <String, String>{
   'removeSilence': 'Remove Silence',
   'watermark': 'Watermark',
   'speed': 'Speed',
-  'convert': 'Convert',
+  'convert': 'Reformat Image',
   'text': 'Text',
   'compress': 'Compress',
   'pdfConverter': 'PDF Converter',
@@ -1543,6 +1598,53 @@ const _en = <String, String>{
   'authAppleCancelled': 'Sign in with Apple was cancelled.',
   'authAppleUnavailable': 'Sign in with Apple is unavailable right now. Please try again.',
   'authAppleConnection': 'Sign in with Apple failed. Please check your connection and try again.',
+  // Store Screenshots
+  'storeShots': 'Store Screenshots',
+  'storeShotsSubtitle': 'App Store & Play sizes, exported as one zip',
+  'ssEyebrow': 'STORE EXPORT',
+  'ssHeading': 'App Store & Play screenshots',
+  'ssIntro':
+      'Add your screens once, pick the sizes each store asks for, and export '
+      'a single zip with every render in its own folder.',
+  'ssSourceImages': 'Source images',
+  'ssAddImages': 'Add screenshots',
+  'ssAddMore': 'Add more',
+  'ssClear': 'Clear',
+  'ssEmpty': 'Add screenshots to see them here',
+  'ssDropHint': 'Add your app screens',
+  'ssSizes': 'Sizes',
+  'ssRequiredOnly': 'Required only',
+  'ssRequired': 'required',
+  'ssPickSizes': 'Pick at least one size',
+  'ssLook': 'How images fit',
+  'ssFit': 'Fit',
+  'ssFill': 'Fill',
+  'ssBackground': 'Background',
+  'ssBlack': 'Black',
+  'ssWhite': 'White',
+  'ssMidnight': 'Midnight',
+  'ssFormat': 'Format',
+  'ssOrientation': 'Orientation',
+  'ssPortrait': 'Portrait',
+  'ssLandscape': 'Landscape',
+  'ssNoAlphaNote':
+      'Both stores reject transparency, so every render is flattened onto '
+      'the background colour.',
+  'ssZipLayout': 'Zipped as Store / size / 01-name',
+  'ssExport': 'Export zip',
+  'ssExporting': 'Rendering...',
+  'ssNothing': 'Nothing was rendered.',
+  'ssAndroidPhone': 'Android phone',
+  'ssAndroidTablet': 'Android tablet',
+  'ssPreviewCaption': 'Every image is rendered at every selected size',
+  'ssClearWarning': 'This removes every image and resets the sizes.',
+  'ssSaveZip': 'Save zip',
+  'ssSavedZip': 'Zip saved',
+  'ssSaveFailed': 'Could not save the zip.',
+  'ssGone': 'The zip is no longer available.',
+  'ssOutputCount': '{files} files \u00b7 {sizes} sizes',
+  'ssImageCount': '{count} images',
+  'ssProgress': 'Rendering {done} / {total}',
 };
 
 const _ar = <String, String>{
@@ -1554,7 +1656,7 @@ const _ar = <String, String>{
   'removeSilence': 'إزالة الصمت',
   'watermark': 'علامة مائية',
   'speed': 'السرعة',
-  'convert': 'تحويل',
+  'convert': 'إعادة تنسيق الصور',
   'text': 'نص',
   'compress': 'ضغط',
   'pdfConverter': 'محوّل PDF',
@@ -2288,6 +2390,51 @@ const _ar = <String, String>{
   'authAppleCancelled': 'تم إلغاء تسجيل الدخول عبر Apple.',
   'authAppleUnavailable': 'تسجيل الدخول عبر Apple غير متاح حاليًا. حاول مرة أخرى.',
   'authAppleConnection': 'فشل تسجيل الدخول عبر Apple. تحقّق من اتصالك وحاول مرة أخرى.',
+  // Store Screenshots
+  'storeShots': 'لقطات المتاجر',
+  'storeShotsSubtitle': 'مقاسات App Store وGoogle Play في ملف مضغوط واحد',
+  'ssEyebrow': 'تصدير للمتاجر',
+  'ssHeading': 'لقطات App Store وGoogle Play',
+  'ssIntro':
+      'أضف لقطات تطبيقك مرة واحدة، واختر المقاسات التي يطلبها كل متجر، '
+      'ثم صدّر ملفًا مضغوطًا واحدًا يضم كل المقاسات في مجلدات منفصلة.',
+  'ssSourceImages': 'الصور المصدر',
+  'ssAddImages': 'أضف لقطات',
+  'ssAddMore': 'أضف المزيد',
+  'ssClear': 'مسح',
+  'ssEmpty': 'أضف لقطات لعرضها هنا',
+  'ssDropHint': 'أضف شاشات تطبيقك',
+  'ssSizes': 'المقاسات',
+  'ssRequiredOnly': 'المطلوبة فقط',
+  'ssRequired': 'مطلوب',
+  'ssPickSizes': 'اختر مقاسًا واحدًا على الأقل',
+  'ssLook': 'طريقة ملاءمة الصور',
+  'ssFit': 'احتواء',
+  'ssFill': 'ملء',
+  'ssBackground': 'الخلفية',
+  'ssBlack': 'أسود',
+  'ssWhite': 'أبيض',
+  'ssMidnight': 'أزرق داكن',
+  'ssFormat': 'الصيغة',
+  'ssOrientation': 'الاتجاه',
+  'ssPortrait': 'طولي',
+  'ssLandscape': 'عرضي',
+  'ssNoAlphaNote': 'يرفض المتجران الشفافية، لذا تُدمج كل صورة فوق لون الخلفية.',
+  'ssZipLayout': 'يُضغط بترتيب: المتجر / المقاس / 01-الاسم',
+  'ssExport': 'تصدير ملف مضغوط',
+  'ssExporting': 'جارٍ التحويل...',
+  'ssNothing': 'لم يتم إنشاء أي ملف.',
+  'ssAndroidPhone': 'هاتف أندرويد',
+  'ssAndroidTablet': 'جهاز أندرويد اللوحي',
+  'ssPreviewCaption': 'تُنشأ كل صورة بكل المقاسات المحددة',
+  'ssClearWarning': 'سيؤدي هذا إلى حذف كل الصور وإعادة ضبط المقاسات.',
+  'ssSaveZip': 'حفظ الملف المضغوط',
+  'ssSavedZip': 'تم حفظ الملف المضغوط',
+  'ssSaveFailed': 'تعذّر حفظ الملف المضغوط.',
+  'ssGone': 'الملف المضغوط لم يعد متاحًا.',
+  'ssOutputCount': '{files} ملفًا \u00b7 {sizes} مقاسًا',
+  'ssImageCount': '{count} صورة',
+  'ssProgress': 'جارٍ التحويل {done} / {total}',
 };
 
 const _fr = <String, String>{
@@ -2299,7 +2446,7 @@ const _fr = <String, String>{
   'removeSilence': 'Supprimer les silences',
   'watermark': 'Filigrane',
   'speed': 'Vitesse',
-  'convert': 'Convertir',
+  'convert': 'Reformater l’image',
   'text': 'Texte',
   'compress': 'Compresser',
   'pdfConverter': 'Convertisseur PDF',
@@ -3065,6 +3212,56 @@ const _fr = <String, String>{
   'authAppleCancelled': 'Connexion Apple annulée.',
   'authAppleUnavailable': 'La connexion Apple est indisponible pour le moment. Veuillez réessayer.',
   'authAppleConnection': 'Échec de la connexion Apple. Vérifiez votre connexion et réessayez.',
+  // Store Screenshots
+  'storeShots': 'Captures des stores',
+  'storeShotsSubtitle': 'Tailles App Store et Play, exportées en un seul zip',
+  'ssEyebrow': 'EXPORT STORES',
+  'ssHeading': 'Captures App Store et Play',
+  'ssIntro':
+      'Ajoutez vos écrans une fois, choisissez les tailles demandées par '
+      'chaque store, puis exportez un seul zip contenant chaque rendu dans '
+      'son dossier.',
+  'ssSourceImages': 'Images source',
+  'ssAddImages': 'Ajouter des captures',
+  'ssAddMore': 'Ajouter',
+  'ssClear': 'Effacer',
+  'ssEmpty': 'Ajoutez des captures pour les voir ici',
+  'ssDropHint': 'Ajoutez les écrans de votre app',
+  'ssSizes': 'Tailles',
+  'ssRequiredOnly': 'Obligatoires seulement',
+  'ssRequired': 'obligatoire',
+  'ssPickSizes': 'Choisissez au moins une taille',
+  'ssLook': 'Ajustement des images',
+  'ssFit': 'Ajuster',
+  'ssFill': 'Remplir',
+  'ssBackground': 'Arrière-plan',
+  'ssBlack': 'Noir',
+  'ssWhite': 'Blanc',
+  'ssMidnight': 'Minuit',
+  'ssFormat': 'Format',
+  'ssOrientation': 'Orientation',
+  'ssPortrait': 'Portrait',
+  'ssLandscape': 'Paysage',
+  'ssNoAlphaNote':
+      'Les deux stores refusent la transparence : chaque rendu est aplati '
+      'sur la couleur d’arrière-plan.',
+  'ssZipLayout': 'Zip organisé en Store / taille / 01-nom',
+  'ssExport': 'Exporter le zip',
+  'ssExporting': 'Rendu en cours...',
+  'ssNothing': 'Aucun fichier généré.',
+  'ssAndroidPhone': 'Téléphone Android',
+  'ssAndroidTablet': 'Tablette Android',
+  'ssPreviewCaption':
+      'Chaque image est rendue dans toutes les tailles choisies',
+  'ssClearWarning':
+      'Cela supprime toutes les images et réinitialise les tailles.',
+  'ssSaveZip': 'Enregistrer le zip',
+  'ssSavedZip': 'Zip enregistré',
+  'ssSaveFailed': 'Impossible d’enregistrer le zip.',
+  'ssGone': 'Le zip n’est plus disponible.',
+  'ssOutputCount': '{files} fichiers \u00b7 {sizes} tailles',
+  'ssImageCount': '{count} images',
+  'ssProgress': 'Rendu {done} / {total}',
 };
 
 /// Publishes the active [AppStrings] to the widget tree. Installed once in

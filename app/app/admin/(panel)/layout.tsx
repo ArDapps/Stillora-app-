@@ -1,72 +1,88 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
+
 import { getCurrentAdmin } from "@/lib/admin-server";
-import { isAdminEmail } from "@/lib/admin";
-import { getCurrentUser } from "@/lib/auth";
+import { getErrorStats } from "@/lib/error-log";
+import { RETENTION_DAYS, maybePurge } from "@/lib/retention";
+
 import { AdminLogoutButton } from "./logout-button";
+import { AdminNav } from "./nav";
 
 export const metadata = { title: "Admin — Stillora" };
+export const dynamic = "force-dynamic";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const [adminSession, userSession] = await Promise.all([
-    getCurrentAdmin(),
-    getCurrentUser(),
-  ]);
+  const adminSession = await getCurrentAdmin();
+  if (adminSession === null) redirect("/admin/login");
 
-  const allowed =
-    adminSession !== null ||
-    (userSession !== null && isAdminEmail(userSession.email));
+  // Loaded in the shell so the open-error count rides along on every page: a
+  // failure that starts while you are reading the dashboard is visible without
+  // going looking for it.
+  // Housekeeping also runs from the tracking beacon; doing it here means a
+  // quiet week with no app traffic still gets its purge when you look.
+  void maybePurge();
 
-  if (!allowed) redirect("/admin/login");
+  const errors = await getErrorStats();
+  const who = adminSession.email;
 
   return (
     <div className="flex min-h-screen" style={{ background: "var(--color-surface-dim)" }}>
-      {/* Sidebar */}
       <aside
-        className="flex w-52 shrink-0 flex-col border-r"
+        className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r md:flex"
         style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}
       >
-        <div
-          className="flex h-14 items-center gap-2 border-b px-4"
-          style={{ borderColor: "var(--color-border)" }}
-        >
+        <div className="flex h-16 items-center gap-2.5 px-4">
           <span
-            className="text-xs font-extrabold uppercase tracking-widest"
-            style={{ color: "var(--color-primary)" }}
-          >
-            Admin
+            aria-hidden
+            className="size-8 shrink-0 rounded-xl"
+            style={{ background: "var(--brand-mark)", boxShadow: `0 8px 24px -6px var(--brand-mark-glow)` }}
+          />
+          <span className="min-w-0">
+            <span className="block text-sm font-bold leading-tight" style={{ color: "var(--color-foreground)" }}>
+              Stillora
+            </span>
+            <span
+              className="block text-[10px] font-bold uppercase tracking-[0.18em]"
+              style={{ color: "var(--color-primary)" }}
+            >
+              Admin
+            </span>
           </span>
         </div>
 
-        <nav className="flex flex-1 flex-col gap-0.5 p-2">
-          <NavItem href="/admin">Dashboard</NavItem>
-          <NavItem href="/admin/analytics">Analytics</NavItem>
-          <NavItem href="/admin/users">Users</NavItem>
-          <NavItem href="/admin/activity">Activity</NavItem>
-          <NavItem href="/admin/downloads">Downloads</NavItem>
-        </nav>
+        <AdminNav errorCount={errors.open} />
 
-        <div className="border-t p-2" style={{ borderColor: "var(--color-border)" }}>
-          <NavItem href="/editor">Editor</NavItem>
-          <NavItem href="/html-to-video">HTML → Video</NavItem>
+        <div className="border-t p-3" style={{ borderColor: "var(--color-border)" }}>
+          {who ? (
+            <p className="mb-2 truncate px-3 text-[11px]" style={{ color: "var(--color-muted)" }} title={who}>
+              {who}
+            </p>
+          ) : null}
+          <p className="mb-2 px-3 text-[11px]" style={{ color: "var(--color-muted-strong)" }}>
+            Data older than {Math.round(RETENTION_DAYS / 30)} months is deleted
+            automatically.
+          </p>
           <AdminLogoutButton />
         </div>
       </aside>
 
-      {/* Content */}
-      <main className="flex-1 overflow-auto p-8">{children}</main>
-    </div>
-  );
-}
+      <div className="min-w-0 flex-1">
+        {/* The sidebar collapses on phones; the same routes ride along here. */}
+        <div
+          className="sticky top-0 z-10 flex items-center gap-2 border-b backdrop-blur md:hidden"
+          style={{ borderColor: "var(--color-border)", background: "var(--color-header)" }}
+        >
+          <span
+            aria-hidden
+            className="ml-3 size-7 shrink-0 rounded-lg"
+            style={{ background: "var(--brand-mark)" }}
+          />
+          <AdminNav errorCount={errors.open} orientation="horizontal" />
+        </div>
 
-function NavItem({ href, children }: { href: string; children: React.ReactNode }) {
-  return (
-    <Link
-      href={href}
-      className="rounded-md px-3 py-2 text-sm font-medium transition"
-      style={{ color: "var(--color-muted)" }}
-    >
-      {children}
-    </Link>
+        <main className="overflow-x-hidden px-5 py-8 sm:px-8">
+          <div className="mx-auto w-full max-w-[1400px] space-y-8">{children}</div>
+        </main>
+      </div>
+    </div>
   );
 }

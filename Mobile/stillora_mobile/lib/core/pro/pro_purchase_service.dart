@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../auth/auth_controller.dart';
 import 'pro_config.dart';
 import 'store_pro_purchase_service.dart';
 
@@ -197,9 +196,6 @@ final proPurchaseServiceProvider = Provider<ProPurchaseService>((ref) {
   try {
     final service = StoreProPurchaseService(
       productId: () => ref.read(proConfigProvider).productId,
-      // Read at purchase time, not now: someone may sign in after launch and
-      // before they buy.
-      accountId: () => ref.read(authControllerProvider).value?.user.id,
     );
     ref.onDispose(service.dispose);
     return service;

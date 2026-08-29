@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -202,6 +204,33 @@ class AppPreferences {
 
   static const _analyticsBufferKey = 'stillora.analytics.buffer.v1';
   static const _analyticsLastFlushKey = 'stillora.analytics.lastFlushMs';
+  static const _deviceIdKey = 'stillora.analytics.deviceId';
+
+  /// Stable id for this install, created on first read and kept for the life of
+  /// the app on this device.
+  ///
+  /// Stillora has no accounts, so this is the only thing that ties a person's
+  /// sessions, exports and crash reports together in the admin dashboard. It is
+  /// a random id — nothing about it identifies the device or its owner — and it
+  /// disappears with the app.
+  String get deviceId {
+    final existing = _preferences.getString(_deviceIdKey);
+    if (existing != null && existing.isNotEmpty) return existing;
+    final generated = _newDeviceId();
+    // Fire-and-forget: the id is returned now and persisted a moment later, so
+    // a first launch that crashes before the write just gets a new one.
+    unawaited(_preferences.setString(_deviceIdKey, generated));
+    return generated;
+  }
+
+  static String _newDeviceId() {
+    final random = Random();
+    final suffix = List.generate(
+      16,
+      (_) => random.nextInt(16).toRadixString(16),
+    ).join();
+    return 'd-${DateTime.now().microsecondsSinceEpoch}-$suffix';
+  }
 
   /// Completed usage sessions waiting to be flushed to the backend. Each entry
   /// is the JSON payload for one session (clientId, startedAt, durationSeconds,

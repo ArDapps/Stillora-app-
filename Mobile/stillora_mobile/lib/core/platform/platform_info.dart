@@ -73,3 +73,18 @@ bool get colorGradingSupported => !kIsWeb;
 bool useDesktopLayout(BuildContext context) {
   return isDesktopPlatform && MediaQuery.sizeOf(context).width >= 900;
 }
+
+/// The platform name the backend records for sessions, exports and crash
+/// reports. Matches the values the admin dashboard groups by, so mobile,
+/// desktop and web all land in the same buckets.
+String platformName() {
+  if (kIsWeb) return 'web';
+  return switch (defaultTargetPlatform) {
+    TargetPlatform.iOS => 'ios',
+    TargetPlatform.android => 'android',
+    TargetPlatform.macOS => 'macos',
+    TargetPlatform.windows => 'windows',
+    TargetPlatform.linux => 'linux',
+    _ => 'web',
+  };
+}

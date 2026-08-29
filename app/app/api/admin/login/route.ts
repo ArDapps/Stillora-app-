@@ -4,9 +4,9 @@ import {
   adminCookieOptions,
   encodeAdminSession,
   isAdminEmail,
+  resolveBaseUrl,
   verifyAdminPassword,
 } from "@/lib/admin";
-import { resolveBaseUrl } from "@/lib/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

@@ -1,4 +1,5 @@
 import { createReadStream } from "node:fs";
+import { logError } from "@/lib/error-log";
 import { stat } from "node:fs/promises";
 import { Readable } from "node:stream";
 import { isDownloadPlatform } from "@/lib/downloads";
@@ -45,7 +46,7 @@ export async function GET(
         },
       });
     } catch (error) {
-      console.error("download stream failed:", error);
+      void logError({ source: "download/[platform]", error });
       return Response.json({ error: "Download is unavailable." }, { status: 404 });
     }
   }

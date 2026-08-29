@@ -26,7 +26,6 @@ class MobileEditorFlow extends StatelessWidget {
   const MobileEditorFlow({
     super.key,
     required this.editor,
-    required this.session,
     required this.controller,
     required this.onPickAudio,
     required this.onConvert,
@@ -34,7 +33,6 @@ class MobileEditorFlow extends StatelessWidget {
   });
 
   final EditorState editor;
-  final Object? session;
   final EditorController controller;
   final VoidCallback onPickAudio;
   final VoidCallback onConvert;

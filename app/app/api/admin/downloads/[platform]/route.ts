@@ -1,6 +1,5 @@
 import { type NextRequest } from "next/server";
-import { getAdminFromRequest, isAdminEmail } from "@/lib/admin";
-import { getCurrentUser } from "@/lib/auth";
+import { getAdminFromRequest } from "@/lib/admin";
 import { isDownloadPlatform } from "@/lib/downloads";
 import { deleteDownloadLink } from "@/lib/downloads-store";
 
@@ -11,14 +10,7 @@ export async function DELETE(
   request: NextRequest,
   context: { params: Promise<{ platform: string }> },
 ) {
-  const [adminSession, userSession] = await Promise.all([
-    getAdminFromRequest(request),
-    getCurrentUser(),
-  ]);
-  const allowed =
-    adminSession !== null ||
-    (userSession !== null && isAdminEmail(userSession.email));
-  if (!allowed) {
+  if ((await getAdminFromRequest(request)) === null) {
     return Response.json({ error: "Unauthorized." }, { status: 401 });
   }
 

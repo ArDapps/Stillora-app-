@@ -4,6 +4,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app/app.dart';
+import 'core/analytics/error_reporter.dart';
 import 'core/design/stillora_colors.dart';
 import 'core/pro/pro_store.dart';
 import 'core/storage/app_preferences.dart';
@@ -24,14 +25,20 @@ Future<void> main() async {
         WidgetsBinding.instance.platformDispatcher.platformBrightness,
     }),
   );
+  final container = ProviderContainer(
+    overrides: [
+      appPreferencesProvider.overrideWithValue(appPreferences),
+      // Lifetime-Pro entitlement + cached price, read synchronously by the
+      // sidebar and every ad slot from the first frame.
+      proStoreProvider.overrideWithValue(PreferencesProStore(appPreferences)),
+    ],
+  );
+  // Installed before the first frame so a crash during startup is reported too.
+  container.read(errorReporterProvider).install();
+
   runApp(
-    ProviderScope(
-      overrides: [
-        appPreferencesProvider.overrideWithValue(appPreferences),
-        // Lifetime-Pro entitlement + cached price, read synchronously by the
-        // sidebar and every ad slot from the first frame.
-        proStoreProvider.overrideWithValue(PreferencesProStore(appPreferences)),
-      ],
+    UncontrolledProviderScope(
+      container: container,
       child: const StilloraApp(),
     ),
   );

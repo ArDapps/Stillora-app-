@@ -17,7 +17,7 @@ const sections = [
   {
     title: "Information We Collect",
     body: [
-      "Account information may include your name, email address, profile image, and sign-in provider details when you choose to sign in with Google.",
+      "Stillora has no user accounts. There is nothing to sign up for and no sign-in, so we do not collect your name, email address, or profile image.",
       "Project and upload information may include the media files you upload, export settings, generated export records, and download information needed to provide the service.",
       "Technical information may include device type, browser, app version, IP address, local preferences, logs, and diagnostics used to keep the app reliable and secure.",
     ],
@@ -25,7 +25,7 @@ const sections = [
   {
     title: "How We Use Information",
     body: [
-      "We use information to authenticate users, process uploads, render exports, provide downloads, remember preferences, troubleshoot errors, prevent abuse, and improve Stillora.",
+      "We use information to process uploads, render exports, provide downloads, remember preferences, troubleshoot errors, prevent abuse, and improve Stillora.",
       "Uploaded media is used to create the exports you request. We do not claim ownership of your uploaded files or finished exports.",
     ],
   },
@@ -39,7 +39,7 @@ const sections = [
   {
     title: "Sharing and Service Providers",
     body: [
-      "We may share limited information with service providers that help operate hosting, authentication, file storage, rendering, analytics, security, and customer support.",
+      "We may share limited information with service providers that help operate hosting, file storage, rendering, analytics, security, and customer support.",
       "We may also disclose information if required by law, to protect rights and safety, or to investigate misuse of the service.",
     ],
   },
@@ -47,8 +47,8 @@ const sections = [
     title: "Retention and Deletion",
     body: [
       "We keep information only as long as needed to provide Stillora, maintain records, comply with legal obligations, resolve disputes, and secure the service.",
-      "Temporary uploaded media and rendered exports may be removed automatically. Signed-in users can delete their account from the Stillora mobile app by opening Settings and choosing Delete account.",
-      "If you cannot access the app, contact us using the information below and include the email address you used to sign in.",
+      "Temporary uploaded media and rendered exports may be removed automatically. Because there is no account, there is no profile to delete: usage analytics are tied to a random per-install identifier, and uninstalling the app discards it.",
+      "To ask about the anonymous usage data recorded for a device, contact us using the information below.",
     ],
   },
   {

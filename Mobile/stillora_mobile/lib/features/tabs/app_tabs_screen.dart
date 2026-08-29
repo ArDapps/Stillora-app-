@@ -18,6 +18,7 @@ import '../pro/pro_screen.dart';
 import '../settings/settings_screen.dart';
 import '../silence/silence_screen.dart';
 import '../speed/speed_screen.dart';
+import '../store_screenshots/store_screenshots_screen.dart';
 import '../text_overlay/text_overlay_screen.dart';
 import '../watermark/watermark_screen.dart';
 import 'app_sections.dart';
@@ -42,6 +43,7 @@ class AppTabsScreen extends ConsumerWidget {
     CompressView(),
     ImagesToPdfView(),
     ProView(),
+    StoreScreenshotsView(),
   ];
 
   @override

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { DM_Mono, DM_Sans, Geist, Geist_Mono, Noto_Kufi_Arabic } from "next/font/google";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
+import { ErrorReporter } from "./components/error-reporter";
 import { SessionTracker } from "./components/session-tracker";
 import "./globals.css";
 
@@ -12,6 +13,26 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+// The landing page's stylesheet asks for these three families by name, and the
+// Arabic locale needs real Kufi shaping rather than a Latin fallback.
+const dmSans = DM_Sans({
+  variable: "--font-dm-sans",
+  subsets: ["latin"],
+  weight: ["400", "500", "700"],
+});
+
+const dmMono = DM_Mono({
+  variable: "--font-dm-mono",
+  subsets: ["latin"],
+  weight: ["400", "500"],
+});
+
+const notoKufiArabic = Noto_Kufi_Arabic({
+  variable: "--font-noto-kufi-arabic",
+  subsets: ["arabic"],
+  weight: ["400", "700"],
 });
 
 const TITLE = "Stillora — Turn Images into MP4 Videos with Audio Online";
@@ -90,13 +111,14 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${dmSans.variable} ${dmMono.variable} ${notoKufiArabic.variable} h-full antialiased`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body className="min-h-full flex flex-col">
         <SessionTracker />
+        <ErrorReporter />
         {children}
       </body>
     </html>

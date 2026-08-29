@@ -9,7 +9,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../core/api/api_client.dart';
-import '../../core/auth/auth_controller.dart';
 import '../export/export_controller.dart' show videoEngineProvider;
 
 /// A user-facing failure while converting HTML to video.
@@ -93,7 +92,6 @@ class HtmlToVideoService {
     HtmlToVideoRequest request, {
     CancelToken? cancelToken,
   }) async {
-    final token = _ref.read(authControllerProvider).asData?.value?.token;
     final dio = _ref.read(dioProvider);
 
     // Read + base64-encode the optional soundtrack so it rides in the JSON body.
@@ -117,7 +115,6 @@ class HtmlToVideoService {
           'audio': ?audioBase64,
         },
         options: Options(
-          headers: {if (token != null) 'Authorization': 'Bearer $token'},
           responseType: ResponseType.bytes,
           sendTimeout: const Duration(minutes: 2),
           receiveTimeout: const Duration(minutes: 5),

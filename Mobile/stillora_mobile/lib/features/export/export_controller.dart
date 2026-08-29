@@ -7,8 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:stillora_video_engine/stillora_video_engine.dart' as engine;
 
 import '../../core/api/api_client.dart';
-import '../../core/auth/auth_controller.dart';
 import '../../core/platform/platform_info.dart';
+import '../../core/storage/app_preferences.dart';
 import '../color/color_grade_runner.dart';
 import '../editor/editor_state.dart';
 import '../editor/video_styles.dart';
@@ -151,10 +151,7 @@ class ExportController extends AsyncNotifier<engine.ExportResult?> {
     engine.ExportResult result,
   ) async {
     try {
-      final token = ref.read(authControllerProvider).asData?.value?.token;
-      if (token == null) {
-        return;
-      }
+      final deviceId = ref.read(appPreferencesProvider).deviceId;
       await ref
           .read(dioProvider)
           .post<void>(
@@ -162,8 +159,12 @@ class ExportController extends AsyncNotifier<engine.ExportResult?> {
             data: {
               'presetId': editor.preset.id,
               'duration': result.durationSeconds,
+              'tool': 'create',
+              'platform': platformName(),
             },
-            options: Options(headers: {'Authorization': 'Bearer $token'}),
+            // No account to attribute this to — the device id is what ties the
+            // export to the session that produced it in the dashboard.
+            options: Options(headers: {'x-stillora-device': deviceId}),
           );
     } catch (_) {
       // Telemetry must never disrupt the export flow.

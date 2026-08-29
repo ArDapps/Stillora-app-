@@ -1,4 +1,5 @@
 import { promises as fs } from "node:fs";
+import { logError } from "./error-log";
 import path from "node:path";
 import { query } from "./db";
 import {
@@ -61,7 +62,7 @@ export async function getDownloadLinks(): Promise<DownloadLinkRecord[]> {
     );
     return rows.map(mapRow);
   } catch (error) {
-    console.error("getDownloadLinks failed:", error);
+    void logError({ source: "downloads-store/getDownloadLinks", error });
     return [];
   }
 }
@@ -78,7 +79,7 @@ export async function getDownloadLink(
     );
     return rows[0] ? mapRow(rows[0]) : null;
   } catch (error) {
-    console.error("getDownloadLink failed:", error);
+    void logError({ source: "downloads-store/getDownloadLink", error });
     return null;
   }
 }
@@ -160,7 +161,7 @@ async function removeStoredFile(platform: DownloadPlatform): Promise<void> {
   const existing = await getDownloadLink(platform);
   if (existing?.filePath) {
     await fs.rm(existing.filePath, { force: true }).catch((error) => {
-      console.error("removeStoredFile failed:", error);
+      void logError({ source: "downloads-store/removeStoredFile", error });
     });
   }
 }

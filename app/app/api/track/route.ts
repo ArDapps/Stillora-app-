@@ -1,5 +1,5 @@
-import { getUserFromRequest } from "@/lib/auth";
 import { getClientIp, lookupGeo } from "@/lib/geo";
+import { maybePurge } from "@/lib/retention";
 import {
   recordScreenView,
   trackBatchSession,
@@ -21,12 +21,19 @@ const MAX_BATCH_SESSIONS = 200;
  * heartbeat every ~30s, then `end` on close. The dashboard turns these into
  * session counts, per-country breakdowns, and total time-used.
  *
- * Auth is optional: signed-in users are attributed by account; anonymous
- * visitors are still counted (deduped by hashed IP).
+ * Attribution is by device: clients send a stable `deviceId` (and `isPro`) and
+ * nothing else identifies them. A client that sends no device id falls back to
+ * its hashed IP, so it still counts as one device rather than many.
  */
 export async function POST(request: Request) {
+  // Fire-and-forget: at most one purge a day, claimed in the database, so this
+  // is a single indexed read on every other beacon.
+  void maybePurge();
+
   let body: {
     clientId?: unknown;
+    deviceId?: unknown;
+    isPro?: unknown;
     event?: unknown;
     platform?: unknown;
     appVersion?: unknown;
@@ -46,7 +53,8 @@ export async function POST(request: Request) {
   if (body.event === "batch") {
     const sessions = Array.isArray(body.sessions) ? body.sessions : [];
     if (sessions.length) {
-      const user = await getUserFromRequest(request);
+      const envelopeDeviceId = str(body.deviceId).slice(0, 100);
+      const envelopePro = body.isPro === true;
       const ip = getClientIp(request);
       const userAgent = request.headers.get("user-agent") ?? "";
       const geo = await lookupGeo(ip);
@@ -54,6 +62,8 @@ export async function POST(request: Request) {
       for (const raw of sessions.slice(0, MAX_BATCH_SESSIONS)) {
         const s = raw as {
           clientId?: unknown;
+          deviceId?: unknown;
+          isPro?: unknown;
           startedAt?: unknown;
           durationSeconds?: unknown;
           platform?: unknown;
@@ -65,6 +75,10 @@ export async function POST(request: Request) {
         }
         await trackBatchSession({
           clientId: s.clientId,
+          // Per-session id wins; the envelope's is the fallback for clients
+          // that only send it once per flush.
+          deviceId: str(s.deviceId).slice(0, 100) || envelopeDeviceId,
+          isPro: s.isPro === true || envelopePro,
           startedAt: s.startedAt,
           durationSeconds:
             typeof s.durationSeconds === "number" ? s.durationSeconds : 0,
@@ -73,7 +87,6 @@ export async function POST(request: Request) {
           screens: Array.isArray(s.screens)
             ? s.screens.filter((x): x is string => typeof x === "string")
             : [],
-          user,
           geo,
           ip,
           userAgent,
@@ -89,14 +102,15 @@ export async function POST(request: Request) {
   }
 
   const platform = typeof body.platform === "string" ? body.platform : "web";
-  const user = await getUserFromRequest(request);
+  const deviceId = str(body.deviceId).slice(0, 100);
+  const isPro = body.isPro === true;
 
   // A "screen" event records which part of the app was viewed; it doesn't touch
   // the session row (heartbeats keep that alive).
   if (body.event === "screen") {
     const screen = typeof body.screen === "string" ? body.screen : "";
     if (screen.trim()) {
-      await recordScreenView({ clientId, userSub: user?.sub ?? null, platform, screen });
+      await recordScreenView({ clientId, deviceId, platform, screen });
     }
     return Response.json({ ok: true }, { status: 202 });
   }
@@ -118,14 +132,20 @@ export async function POST(request: Request) {
 
   await trackSession({
     clientId,
+    deviceId,
+    isPro,
     event,
     platform,
     appVersion,
-    user,
     geo,
     ip,
     userAgent,
   });
 
   return Response.json({ ok: true }, { status: 202 });
+}
+
+/** Narrows an unknown JSON field to a trimmed string. */
+function str(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
 }

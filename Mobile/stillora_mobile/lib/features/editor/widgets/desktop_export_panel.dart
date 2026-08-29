@@ -14,14 +14,12 @@ class DesktopExportPanel extends StatelessWidget {
   const DesktopExportPanel({
     super.key,
     required this.editor,
-    required this.isSignedIn,
     required this.onConvert,
     required this.onReset,
     this.compact = false,
   });
 
   final EditorState editor;
-  final bool isSignedIn;
   final VoidCallback onConvert;
   final VoidCallback onReset;
   final bool compact;
@@ -112,16 +110,6 @@ class DesktopExportPanel extends StatelessWidget {
             icon: Icons.timer_rounded,
             label: context.strings.edDuration,
             value: formatDurationClock(editor.totalDurationSeconds),
-            compact: compact,
-          ),
-          _DesktopExportStat(
-            icon: isSignedIn
-                ? Icons.verified_user_rounded
-                : Icons.person_outline_rounded,
-            label: context.strings.account,
-            value: isSignedIn
-                ? context.strings.edSignedIn
-                : context.strings.edGuest,
             compact: compact,
           ),
           SizedBox(height: compact ? 10 : StilloraSpacing.sm),

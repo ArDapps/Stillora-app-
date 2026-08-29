@@ -1,4 +1,5 @@
 import { query } from "./db";
+import { logError } from "./error-log";
 
 export type GeoLocation = {
   country: string;
@@ -77,7 +78,7 @@ export async function lookupGeo(ip: string): Promise<GeoLocation> {
       };
     }
   } catch (error) {
-    console.error("lookupGeo cache read failed:", error);
+    void logError({ source: "geo/lookupGeo cache read", error });
   }
 
   const fresh = await fetchGeo(ip);
@@ -96,7 +97,7 @@ export async function lookupGeo(ip: string): Promise<GeoLocation> {
       [ip, fresh.country, fresh.countryCode, fresh.region, fresh.city],
     );
   } catch (error) {
-    console.error("lookupGeo cache write failed:", error);
+    void logError({ source: "geo/lookupGeo cache write", error });
   }
 
   return fresh;
@@ -129,7 +130,7 @@ async function fetchGeo(ip: string): Promise<GeoLocation | null> {
       city: data.city ?? "",
     };
   } catch (error) {
-    console.error("fetchGeo failed:", error);
+    void logError({ source: "geo/fetchGeo", error });
     return null;
   }
 }

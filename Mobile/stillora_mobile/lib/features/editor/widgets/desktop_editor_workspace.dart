@@ -18,7 +18,6 @@ class DesktopEditorWorkspace extends StatelessWidget {
   const DesktopEditorWorkspace({
     super.key,
     required this.editor,
-    required this.session,
     required this.controller,
     required this.onPickAudio,
     required this.onRecordAudio,
@@ -27,7 +26,6 @@ class DesktopEditorWorkspace extends StatelessWidget {
   });
 
   final EditorState editor;
-  final Object? session;
   final EditorController controller;
   final VoidCallback onPickAudio;
   final VoidCallback onRecordAudio;
@@ -73,7 +71,6 @@ class DesktopEditorWorkspace extends StatelessWidget {
               const SizedBox(height: 10),
               DesktopExportPanel(
                 editor: editor,
-                isSignedIn: session != null,
                 onConvert: onConvert,
                 onReset: onReset,
                 compact: compact,
@@ -136,8 +133,7 @@ class DesktopEditorWorkspace extends StatelessWidget {
                       children: [
                         DesktopExportPanel(
                           editor: editor,
-                          isSignedIn: session != null,
-                          onConvert: onConvert,
+                                    onConvert: onConvert,
                           onReset: onReset,
                           compact: compact,
                         ),

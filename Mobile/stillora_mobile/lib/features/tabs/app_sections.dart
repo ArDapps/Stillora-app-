@@ -33,7 +33,8 @@ enum AppSection {
     12,
     Icons.workspace_premium_outlined,
     Icons.workspace_premium_rounded,
-  );
+  ),
+  storeShots(13, Icons.storefront_outlined, Icons.storefront_rounded);
 
   const AppSection(this.viewIndex, this.icon, this.selectedIcon);
 
@@ -55,6 +56,7 @@ enum AppSection {
     AppSection.compress => s.compress,
     AppSection.pdfConverter => s.pdfConverter,
     AppSection.stilloraPro => s.stilloraPro,
+    AppSection.storeShots => s.storeShots,
   };
 
   String subtitle(AppStrings s) => switch (this) {
@@ -71,6 +73,7 @@ enum AppSection {
     AppSection.compress => s.compressSubtitle,
     AppSection.pdfConverter => s.pdfConverterSubtitle,
     AppSection.stilloraPro => s.stilloraProSubtitle,
+    AppSection.storeShots => s.storeShotsSubtitle,
   };
 
   /// Per-section platform visibility:
@@ -83,6 +86,8 @@ enum AppSection {
   ///  • PDF Converter is pure Dart plus the printing plugin's rasteriser, both
   ///    of which ship on every platform — no gate.
   ///  • Stillora Pro is the upgrade page; it ships everywhere.
+  ///  • Store Screenshots is pure Dart (decode → resize → zip), so it has no
+  ///    gate either — the sizes it renders are the same on every platform.
   bool get isAvailable => switch (this) {
     AppSection.removeSilence ||
     AppSection.watermark ||
@@ -132,8 +137,8 @@ class NavGroup {
 /// Grouped navigation, shared by the desktop sidebar and the phone drawer so
 /// the two can never drift apart.
 ///
-/// DOCUMENT TOOLS holds only the PDF converter today and is intentionally kept
-/// as its own group so further document utilities can slot in beside it.
+/// DOCUMENT TOOLS collects the utilities that produce a file rather than a
+/// video — the PDF converter and the store-screenshot exporter.
 const navGroups = <NavGroup>[
   NavGroup(SidebarGroup.create, [
     AppSection.create,
@@ -148,7 +153,10 @@ const navGroups = <NavGroup>[
     AppSection.compress,
     AppSection.convert,
   ]),
-  NavGroup(SidebarGroup.documentTools, [AppSection.pdfConverter]),
+  NavGroup(SidebarGroup.documentTools, [
+    AppSection.pdfConverter,
+    AppSection.storeShots,
+  ]),
   NavGroup(SidebarGroup.yourContent, [AppSection.library]),
   NavGroup(SidebarGroup.accountApp, [
     AppSection.stilloraPro,
