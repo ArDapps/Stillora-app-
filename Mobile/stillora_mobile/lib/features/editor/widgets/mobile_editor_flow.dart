@@ -7,7 +7,9 @@ import '../../../core/design/stillora_colors.dart';
 import '../../../core/design/stillora_glow.dart';
 import '../../../core/design/stillora_spacing.dart';
 import '../../../core/design/stillora_surface.dart';
+import '../../../core/platform/platform_info.dart';
 import '../../../core/widgets/ad_widget.dart';
+import '../../../core/widgets/section_export_widgets.dart';
 import '../add_audio_screen.dart';
 import '../choose_preset_screen.dart';
 import '../editor_state.dart';
@@ -63,7 +65,8 @@ class MobileEditorFlow extends StatelessWidget {
           ),
           const SizedBox(height: StilloraSpacing.xs),
         ],
-        // Main preview card – tap empty state to upload
+        // Main preview card, or the upload card standing in for it until
+        // there is media to preview.
         _MobilePreviewPanel(editor: editor, controller: controller),
         const SizedBox(height: StilloraSpacing.sm),
         // Step rows: audio and preset
@@ -223,8 +226,13 @@ class _StepRow extends StatelessWidget {
 
 /// The main preview panel on the mobile screen.
 /// Shows selected media in correct output aspect-ratio.
-/// Tapping the empty state navigates to UploadMediaScreen.
 /// When media is selected, shows thumbnail strip with add/replace buttons.
+///
+/// On iPhone/Android there is nothing to preview until media is picked, so
+/// rather than a phone-height frame reading "Upload media to begin" the panel
+/// collapses to the pick card that frame was standing in for — the same card
+/// the Watermark and Text sections open with. The preset row directly below
+/// still carries the ratio/duration controls the panel header would have.
 class _MobilePreviewPanel extends StatelessWidget {
   const _MobilePreviewPanel({required this.editor, required this.controller});
 
@@ -240,6 +248,14 @@ class _MobilePreviewPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (!editor.hasMedia && isMobilePlatform) {
+      return SectionPickBaseCard(
+        title: context.strings.edUploadMedia,
+        subtitle: context.strings.edUploadIntro,
+        onPick: () => context.push(UploadMediaScreen.routePath),
+      );
+    }
+
     return StilloraGlowCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

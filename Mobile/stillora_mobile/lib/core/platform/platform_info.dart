@@ -42,6 +42,19 @@ bool get isIosPlatform {
   return defaultTargetPlatform == TargetPlatform.iOS;
 }
 
+/// True on the phone platforms — iOS and Android.
+///
+/// Used where a phone-sized screen cannot afford chrome a desktop window can:
+/// the live-preview panel, for instance, stays hidden until there is something
+/// to preview instead of parking an empty frame above every control.
+bool get isMobilePlatform {
+  if (kIsWeb) {
+    return false;
+  }
+  return defaultTargetPlatform == TargetPlatform.iOS ||
+      defaultTargetPlatform == TargetPlatform.android;
+}
+
 bool get useFfmpegDesktopExport {
   if (kIsWeb) {
     return false;

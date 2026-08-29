@@ -36,9 +36,11 @@ void main() {
       await pumpPhone(tester, const Size(390, 844));
       expect(tester.takeException(), isNull);
 
-      // Stacked, not split: the empty page list sits at the top and the setup
-      // cards scroll below it.
+      // Stacked, not split: with nothing queued there is no page list to
+      // preview, so the section opens on its setup cards and the export button
+      // waits at the foot of them.
       expect(find.text('Add images or PDFs'), findsWidgets);
+      await tester.scrollUntilVisible(find.text('Export PDF'), 300);
       expect(find.text('Export PDF'), findsOneWidget);
     } finally {
       debugDefaultTargetPlatformOverride = null;
@@ -61,6 +63,8 @@ void main() {
     debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
     try {
       await pumpPhone(tester, const Size(390, 844));
+      // It sits at the foot of the setup cards while the queue is empty.
+      await tester.scrollUntilVisible(find.text('Export PDF'), 300);
       final button = tester.widget<FilledButton>(
         find.ancestor(
           of: find.text('Export PDF'),

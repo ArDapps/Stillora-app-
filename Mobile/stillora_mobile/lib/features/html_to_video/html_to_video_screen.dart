@@ -262,21 +262,29 @@ class _HtmlToVideoViewState extends ConsumerState<HtmlToVideoView> {
           startOver,
           ..._leftColumn(desktop: false),
           const SizedBox(height: StilloraSpacing.md),
-          // Bounded height on mobile: PreviewPane uses an Expanded internally,
-          // which needs a finite height inside the scrolling ListView. Sized
-          // off the shared live-preview budget so the canvas here is in the
-          // same league as every other section's stacked preview.
-          SizedBox(
-            height: mobilePreviewBoxHeight(context, chrome: 80),
-            child: PreviewPane(
-              size: _size,
-              fps: _fps,
-              player: _player,
-              hasResult: _resultFile != null,
-              converting: _converting,
+          // On a phone the pane only earns its share of the screen once there
+          // is a frame in it — a render in flight or a finished MP4. Before
+          // that the markup/URL cards above are what the user is working in,
+          // and an empty "your video renders here" canvas just pushes the
+          // Convert button below the fold.
+          if (_resultFile != null || _converting || !isMobilePlatform) ...[
+            // Bounded height on mobile: PreviewPane uses an Expanded
+            // internally, which needs a finite height inside the scrolling
+            // ListView. Sized off the shared live-preview budget so the canvas
+            // here is in the same league as every other section's stacked
+            // preview.
+            SizedBox(
+              height: mobilePreviewBoxHeight(context, chrome: 80),
+              child: PreviewPane(
+                size: _size,
+                fps: _fps,
+                player: _player,
+                hasResult: _resultFile != null,
+                converting: _converting,
+              ),
             ),
-          ),
-          const SizedBox(height: StilloraSpacing.sm),
+            const SizedBox(height: StilloraSpacing.sm),
+          ],
           _convertButton(),
           if (_resultFile != null) ...[
             const SizedBox(height: StilloraSpacing.sm),

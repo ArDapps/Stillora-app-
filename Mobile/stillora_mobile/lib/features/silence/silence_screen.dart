@@ -88,6 +88,7 @@ class _SilenceViewState extends ConsumerState<SilenceView> {
         child: SectionSplitView(
           onStartOver: controller.reset,
           canStartOver: silence.hasVideo && !_running,
+          hasPreview: silence.hasVideo,
           previewCaption: silence.hasVideo
               ? context.strings.slPreviewCaption
               : null,

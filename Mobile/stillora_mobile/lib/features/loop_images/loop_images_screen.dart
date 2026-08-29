@@ -226,6 +226,11 @@ class LoopImagesView extends ConsumerWidget {
     final controller = ref.read(loopImagesControllerProvider.notifier);
 
     final panel = LoopImagesPanel(fill: fill, onAdd: () => _pick(ref));
+    // Stacked on a phone the empty queue panel is just a taller duplicate of
+    // the "Add images" button sitting right under it — a screenful spent
+    // saying nothing. It appears with the first image. The desktop pane keeps
+    // its drop zone: that is where files are dragged.
+    final showPanel = fill || !isMobilePlatform || state.items.isNotEmpty;
     final convert = SizedBox(
       height: 56,
       child: FilledButton.icon(
@@ -274,8 +279,10 @@ class LoopImagesView extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (fill) Expanded(child: panel) else panel,
-        const SizedBox(height: StilloraSpacing.sm),
+        if (showPanel) ...[
+          if (fill) Expanded(child: panel) else panel,
+          const SizedBox(height: StilloraSpacing.sm),
+        ],
         actions,
         const SizedBox(height: StilloraSpacing.sm),
         convert,

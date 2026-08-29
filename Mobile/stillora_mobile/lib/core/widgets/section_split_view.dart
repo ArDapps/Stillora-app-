@@ -33,6 +33,7 @@ class SectionSplitView extends StatelessWidget {
     this.previewActions,
     this.onStartOver,
     this.canStartOver = true,
+    this.hasPreview = true,
     this.mobilePadding = const EdgeInsets.fromLTRB(16, 16, 16, 24),
   });
 
@@ -56,6 +57,13 @@ class SectionSplitView extends StatelessWidget {
   /// False when there is nothing loaded yet, greying the button out.
   final bool canStartOver;
 
+  /// False while the section has nothing to preview yet (no clip picked, no
+  /// image added). On iPhone/Android the stacked layout then drops the preview
+  /// panel entirely rather than parking an empty frame above the controls —
+  /// see the note in [build]. Desktop keeps the panel either way: its pinned
+  /// pane has the room, and the empty frame tells the user what it is for.
+  final bool hasPreview;
+
   final EdgeInsets mobilePadding;
 
   Widget? _startOverBar() {
@@ -76,18 +84,37 @@ class SectionSplitView extends StatelessWidget {
             useDesktopLayout(context) && constraints.maxWidth >= _splitMinWidth;
 
         if (!split) {
+          // A phone screen is mostly vertical budget, and an empty preview
+          // frame spends a third of it saying "nothing here yet" — pushing the
+          // very control that would fill it below the fold. Every section that
+          // sets [hasPreview] keeps its own pick/upload card in [controls], so
+          // dropping the panel costs no affordance: it appears the moment the
+          // user has something to see.
+          final showPreview = hasPreview || !isMobilePlatform;
           return ListView(
             padding: mobilePadding,
             children: [
               if (startOver != null) startOver,
-              LivePreviewPanel(
-                caption: previewCaption,
-                actions: previewActions,
-                fill: false,
-                child: preview,
-              ),
-              const SizedBox(height: StilloraSpacing.sm),
+              if (showPreview) ...[
+                LivePreviewPanel(
+                  caption: previewCaption,
+                  actions: previewActions,
+                  fill: false,
+                  child: preview,
+                ),
+                const SizedBox(height: StilloraSpacing.sm),
+              ],
               ...controls,
+              // The panel goes, but its pinned action is not part of the
+              // preview — the PDF section's Export button still has to be
+              // reachable. It moves to the foot of the controls rather than
+              // staying up top: without the page list it was sitting under,
+              // a greyed-out "Export PDF" above the section's own title reads
+              // as a broken button rather than the end of the flow.
+              if (!showPreview && previewActions != null) ...[
+                const SizedBox(height: StilloraSpacing.sm),
+                previewActions!,
+              ],
             ],
           );
         }

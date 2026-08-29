@@ -81,6 +81,7 @@ class TextOverlayView extends ConsumerWidget {
         child: SectionSplitView(
           onStartOver: controller.reset,
           canStartOver: st.hasBase,
+          hasPreview: st.hasBase,
           previewCaption: st.hasBase ? context.strings.txtDragHint : null,
           preview: PreviewStage(
             aspectRatio: st.aspectRatio,

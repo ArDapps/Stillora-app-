@@ -80,6 +80,7 @@ class WatermarkView extends ConsumerWidget {
         child: SectionSplitView(
           onStartOver: controller.reset,
           canStartOver: wm.hasBase,
+          hasPreview: wm.hasBase,
           previewCaption: wm.hasBase ? context.strings.wmDragHint : null,
           preview: PreviewStage(
             aspectRatio: wm.aspectRatio,

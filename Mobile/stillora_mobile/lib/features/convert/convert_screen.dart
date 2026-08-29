@@ -62,6 +62,7 @@ class _ConvertViewState extends ConsumerState<ConvertView> {
         child: SectionSplitView(
           onStartOver: controller.clear,
           canStartOver: convert.hasImages && !_running,
+          hasPreview: convert.hasImages,
           previewCaption: convert.hasImages
               ? '${convert.paths.length} image'
                     '${convert.paths.length == 1 ? '' : 's'} → '

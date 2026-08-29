@@ -87,6 +87,7 @@ class _CompressViewState extends ConsumerState<CompressView> {
         child: SectionSplitView(
           onStartOver: controller.reset,
           canStartOver: compress.hasVideo && !_running,
+          hasPreview: compress.hasVideo,
           previewCaption: compress.hasVideo
               ? context.strings.cmpPreviewCaption
               : null,

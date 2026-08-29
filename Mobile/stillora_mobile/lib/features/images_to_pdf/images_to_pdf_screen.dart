@@ -98,6 +98,7 @@ class ImagesToPdfView extends ConsumerWidget {
     return SectionSplitView(
       onStartOver: controller.reset,
       canStartOver: state.pages.isNotEmpty && !state.isBusy,
+      hasPreview: state.pages.isNotEmpty,
       previewCaption: context.strings.pdfReorderHint,
       previewActions: _ExportButton(onExport: () => _export(context, ref)),
       preview: PdfPagesPanel(onAdd: () => _pick(ref)),

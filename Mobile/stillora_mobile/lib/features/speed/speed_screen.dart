@@ -88,6 +88,7 @@ class _SpeedViewState extends ConsumerState<SpeedView> {
         child: SectionSplitView(
           onStartOver: controller.reset,
           canStartOver: speed.hasVideo && !_running,
+          hasPreview: speed.hasVideo,
           previewCaption: speed.hasVideo
               ? context.strings.spPreviewCaption
               : null,

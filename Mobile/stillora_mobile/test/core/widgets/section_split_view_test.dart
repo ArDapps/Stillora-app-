@@ -13,27 +13,38 @@ void main() {
 
   Widget harness(Widget child) => MaterialApp(home: Scaffold(body: child));
 
-  Widget section() => SectionSplitView(
-    previewCaption: 'CAPTION',
-    preview: const SectionVideoPreview(
-      videoPath: null,
-      sourceWidth: 1080,
-      sourceHeight: 1920,
-      emptyLabel: 'EMPTY_STATE',
-    ),
-    controls: [
-      for (var i = 0; i < 30; i++) SizedBox(height: 60, child: Text('ROW_$i')),
-    ],
-  );
+  Widget section({bool hasPreview = true, Widget? previewActions}) =>
+      SectionSplitView(
+        previewCaption: 'CAPTION',
+        hasPreview: hasPreview,
+        previewActions: previewActions,
+        preview: const SectionVideoPreview(
+          videoPath: null,
+          sourceWidth: 1080,
+          sourceHeight: 1920,
+          emptyLabel: 'EMPTY_STATE',
+        ),
+        controls: [
+          for (var i = 0; i < 30; i++)
+            SizedBox(height: 60, child: Text('ROW_$i')),
+        ],
+      );
 
-  Future<void> pumpAt(WidgetTester tester, Size size) async {
+  Future<void> pumpAt(
+    WidgetTester tester,
+    Size size, {
+    bool hasPreview = true,
+    Widget? previewActions,
+  }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() {
       tester.view.resetPhysicalSize();
       tester.view.resetDevicePixelRatio();
     });
-    await tester.pumpWidget(harness(section()));
+    await tester.pumpWidget(
+      harness(section(hasPreview: hasPreview, previewActions: previewActions)),
+    );
     await tester.pump();
   }
 
@@ -81,6 +92,97 @@ void main() {
       final preview = tester.getRect(find.text('LIVE PREVIEW'));
       final firstControl = tester.getRect(find.text('ROW_0'));
       expect(preview.bottom, lessThan(firstControl.top));
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  // Before anything is loaded there is nothing to preview, and on a phone the
+  // empty frame costs a third of the screen — pushing the pick/upload card that
+  // would fill it below the fold. So the panel waits for content there, while
+  // the desktop pane (which has the room) keeps showing the empty state.
+
+  testWidgets('a phone hides the preview panel until there is content', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    try {
+      await pumpAt(tester, const Size(390, 844), hasPreview: false);
+
+      expect(find.text('LIVE PREVIEW'), findsNothing);
+      expect(find.text('EMPTY_STATE'), findsNothing);
+      // The controls take the space the panel gave up.
+      expect(find.text('ROW_0'), findsOneWidget);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('Android hides it too', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    try {
+      await pumpAt(tester, const Size(390, 844), hasPreview: false);
+      expect(find.text('LIVE PREVIEW'), findsNothing);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('the phone panel comes back once content arrives', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    try {
+      await pumpAt(tester, const Size(390, 844));
+      expect(find.text('LIVE PREVIEW'), findsOneWidget);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('a hidden phone panel still leaves its pinned action on screen', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    try {
+      await pumpAt(
+        tester,
+        const Size(390, 844),
+        hasPreview: false,
+        previewActions: const Text('EXPORT'),
+      );
+
+      expect(find.text('LIVE PREVIEW'), findsNothing);
+
+      // The export button is the end of the flow, not part of the preview, so
+      // it survives the panel — at the FOOT of the controls. Up top, with no
+      // page list under it, a greyed-out export reads as a broken button
+      // rather than the end of the flow; at the foot it matches where every
+      // other section puts its export CTA.
+      expect(
+        find.text('EXPORT'),
+        findsNothing,
+        reason: 'the action should be at the foot, not the head, of the list',
+      );
+      await tester.scrollUntilVisible(find.text('EXPORT'), 300);
+      expect(find.text('EXPORT'), findsOneWidget);
+      expect(
+        tester.getRect(find.text('EXPORT')).top,
+        greaterThan(tester.getRect(find.text('ROW_29')).top),
+        reason: 'the action should come after the last control row',
+      );
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('desktop keeps the empty preview pane', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    try {
+      await pumpAt(tester, const Size(1400, 900), hasPreview: false);
+
+      expect(find.text('LIVE PREVIEW'), findsOneWidget);
+      expect(find.text('EMPTY_STATE'), findsOneWidget);
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }
